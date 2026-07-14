@@ -801,9 +801,56 @@ describe('SettingsPage provider model editor', () => {
       throw new Error('Expected OpenAI Codex configured provider row');
     }
 
-    expect(openAiCodexRow.textContent).toContain('OpenAI');
+    expect(openAiCodexRow.textContent).toContain('ChatGPT Plus/Pro (Codex Subscription)');
     expect(openAiCodexRow.textContent).toContain('Advanced name: openai-codex');
-    expect(openAiCodexRow.textContent).toContain('Logged in with saved OAuth credentials.');
+    expect(openAiCodexRow.textContent).toContain('ChatGPT subscription login is saved.');
+    click(openAiCodexRow);
+    await flushAsyncWork();
+    expect(queryButton(container, 'Sign in again')).toBeInstanceOf(HTMLButtonElement);
+    expect(container.querySelector('input[type="password"]')).toBeNull();
+  });
+
+  it('labels the unconfigured ChatGPT subscription separately from OpenAI API access', async () => {
+    providerAuthResult = buildUseApiResult({
+      authFile: '/tmp/auth.json',
+      providers: [
+        {
+          id: 'openai',
+          modelCount: 0,
+          authType: 'none',
+          hasStoredCredential: false,
+          apiKeySupported: true,
+          oauthSupported: false,
+          oauthProviderName: '',
+          oauthUsesCallbackServer: false,
+        },
+        {
+          id: 'openai-codex',
+          modelCount: 0,
+          authType: 'none',
+          hasStoredCredential: false,
+          apiKeySupported: false,
+          oauthSupported: true,
+          oauthProviderName: 'OpenAI',
+          oauthUsesCallbackServer: true,
+        },
+      ],
+    });
+
+    const { container } = renderPage('settings-providers');
+    await flushAsyncWork();
+
+    const providerPicker = container.querySelector('#settings-model-provider-picker');
+    expect(providerPicker).toBeInstanceOf(HTMLSelectElement);
+    expect(Array.from((providerPicker as HTMLSelectElement).options).map((option) => option.textContent)).toEqual(
+      expect.arrayContaining(['OpenAI', 'ChatGPT Plus/Pro (Codex Subscription)']),
+    );
+
+    updateSelectValue(providerPicker as HTMLSelectElement, 'openai-codex');
+    click(queryButton(container, 'Continue'));
+    await flushAsyncWork();
+    expect(queryButton(container, 'OAuth Login')).toBeInstanceOf(HTMLButtonElement);
+    expect(queryButton(container, 'OAuth Login').getAttribute('aria-label')).toBe('Start OAuth login (openai-codex)');
   });
 
   it('adds a model directly to a picked built-in provider without saving the provider first', async () => {

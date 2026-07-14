@@ -26,6 +26,15 @@ describe('sessionAssistantErrors', () => {
     ).toBe('No API key found for the selected model. Configure a provider in Neon Pilot, then try again.');
   });
 
+  it('presents missing OpenAI Codex OAuth as a ChatGPT subscription login problem', () => {
+    expect(
+      getAssistantErrorDisplayMessage({
+        stopReason: 'error',
+        errorMessage: 'No API key for provider: openai-codex',
+      }),
+    ).toBe('Your ChatGPT subscription login is unavailable. Open Settings → Providers and sign in with ChatGPT.');
+  });
+
   it('sanitizes provider keychain command failures', () => {
     expect(
       getAssistantErrorDisplayMessage({

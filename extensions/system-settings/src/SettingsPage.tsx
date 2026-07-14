@@ -522,7 +522,7 @@ const PROVIDER_DISPLAY_NAMES: Record<string, string> = {
   minimax: 'MiniMax',
   'minimax-cn': 'MiniMax China',
   openai: 'OpenAI',
-  'openai-codex': 'OpenAI Codex',
+  'openai-codex': 'ChatGPT Plus/Pro (Codex Subscription)',
   opencode: 'OpenCode',
   'opencode-go': 'OpenCode Gateway',
   openrouter: 'OpenRouter',
@@ -531,12 +531,16 @@ const PROVIDER_DISPLAY_NAMES: Record<string, string> = {
 };
 
 function formatProviderDisplayName(providerId: string, providerAuth?: ProviderAuthSummary | null): string {
+  const normalized = providerId.trim();
+  if (normalized === 'openai-codex') {
+    return PROVIDER_DISPLAY_NAMES[normalized];
+  }
+
   const oauthName = providerAuth?.oauthProviderName?.trim();
   if (oauthName) {
     return oauthName;
   }
 
-  const normalized = providerId.trim();
   if (!normalized) {
     return 'Provider';
   }
@@ -752,6 +756,9 @@ function formatProviderAuthStatus(provider: ProviderAuthSummary | null): string 
     case 'api_key':
       return provider.hasStoredCredential ? 'Stored API key in secure provider secrets.' : 'API key is available.';
     case 'oauth':
+      if (provider.id === 'openai-codex') {
+        return provider.hasStoredCredential ? 'ChatGPT subscription login is saved.' : 'ChatGPT subscription login is available.';
+      }
       return provider.hasStoredCredential ? 'Logged in with saved OAuth credentials.' : 'OAuth credentials are available.';
     case 'environment':
       return 'Credentials resolved from environment or external provider config.';
@@ -4763,7 +4770,9 @@ export function SettingsPage({
                                         ) : (
                                           <>
                                             <SettingsIcon name="external" />
-                                            OAuth Login
+                                            {modalProviderAuth.id === 'openai-codex' && modalProviderAuth.hasStoredCredential
+                                              ? 'Sign in again'
+                                              : 'OAuth Login'}
                                           </>
                                         )}
                                       </ToolbarButton>

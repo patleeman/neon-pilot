@@ -151,8 +151,11 @@ The Providers section lists all configured API providers:
 | OpenAI         | API key          | Configured / Not configured |
 | Google         | API key          | Configured / Not configured |
 | GitHub Copilot | OAuth            | Configured / Not configured |
+| OpenAI Codex   | ChatGPT OAuth    | Saved / Not saved           |
 
 Add a new provider by selecting a known provider and adding credentials. Built-in providers (for example `anthropic`, `openai`, `opencode-go`) will auto-load known model rows after the key is saved; use custom model rows only for overrides and extras.
+
+For ChatGPT Plus/Pro, Settings reports whether the subscription login is saved without treating ordinary access-token expiry as a failed login. If a request reports that the login is unavailable, recover through **OAuth Login** or **Sign in again** rather than entering an OpenAI API key.
 
 Advanced provider and model metadata is edited as structured rows. Headers use string key/value rows; compat flags and model overrides use key/value rows whose values may be JSON literals or objects.
 

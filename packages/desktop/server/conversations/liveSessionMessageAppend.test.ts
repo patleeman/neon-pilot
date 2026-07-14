@@ -135,7 +135,7 @@ describe('live session message append operations', () => {
     expect(e.session.state.messages.at(-1)).toMatchObject({
       role: 'assistant',
       stopReason: 'error',
-      errorMessage: 'No API key found for the selected model. Configure a provider in Neon Pilot, then try again.',
+      errorMessage: 'Your ChatGPT subscription login is unavailable. Open Settings → Providers and sign in with ChatGPT.',
     });
   });
 

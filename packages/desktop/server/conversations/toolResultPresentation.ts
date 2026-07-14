@@ -49,8 +49,17 @@ export function presentTranscriptErrorMessage(message: string): string {
     return 'The request could not start because part of the app runtime was unavailable. Restart Neon Pilot, then try again.';
   }
 
+  if (/No API key (?:found )?for (?:provider:\s*)?openai-codex\b/i.test(trimmed)) {
+    return 'Your ChatGPT subscription login is unavailable. Open Settings → Providers and sign in with ChatGPT.';
+  }
+
   if (/No API key found for (?:the selected model|[\w.-]+)/i.test(trimmed)) {
     return 'No API key found for the selected model. Configure a provider in Neon Pilot, then try again.';
+  }
+
+  const missingProviderCredential = /^No API key for provider:\s*([\w.-]+)$/i.exec(trimmed);
+  if (missingProviderCredential) {
+    return `No credential is available for provider "${missingProviderCredential[1]}". Configure it in Settings, then try again.`;
   }
 
   const providerMatch = /^Failed to resolve API key for provider\s+"([^"]+)"/i.exec(trimmed);

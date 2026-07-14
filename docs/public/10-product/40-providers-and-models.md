@@ -20,6 +20,12 @@ Neon Pilot does not require a hosted Neon Pilot account for model access. You us
 
 Store keys through the app when possible. Do not paste API keys into messages, shell history, screenshots, or shared logs.
 
+## Use a ChatGPT subscription
+
+For OpenAI Codex models, choose **ChatGPT Plus/Pro (Codex Subscription)** and complete **OAuth Login**. Leave the API-key field empty; subscription access uses the saved ChatGPT login rather than an OpenAI API key.
+
+If a request says the subscription login is unavailable, open **Settings → Providers** and sign in with ChatGPT using **OAuth Login** or **Sign in again**. Stable, release-candidate, and Testing builds keep separate credentials, so complete login in the app variant you actually use.
+
 ## Provider flexibility
 
 Provider support follows Pi's provider layer. Depending on your local configuration and installed extensions, you can use hosted models, local runtimes, gateway providers, or custom OpenAI-compatible endpoints.
@@ -43,7 +49,7 @@ For example, an extension can expose a safer edit tool for one model family, add
 If the agent does not reply:
 
 1. Open **Settings** and confirm that a provider and model are selected.
-2. Confirm that the provider key is present and valid.
+2. Confirm that the provider key is present and valid, or that the subscription login is saved.
 3. Try a small prompt in a new conversation.
 4. If you installed the CLI, run:
 
