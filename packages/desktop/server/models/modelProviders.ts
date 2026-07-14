@@ -283,6 +283,14 @@ export function readModelProvidersState(profile: string, options: ModelProviderF
   const normalizedProfile = normalizeProfile(profile);
   const filePath = resolveModelProvidersFilePath(normalizedProfile, options);
   const config = readWritableRawConfig(normalizedProfile, options);
+  return readModelProvidersConfig(filePath, config);
+}
+
+export function readMaterializedModelProvidersState(filePath: string): ModelProviderState {
+  return readModelProvidersConfig(filePath, readRawConfig(filePath));
+}
+
+function readModelProvidersConfig(filePath: string, config: JsonRecord): ModelProviderState {
   const providersSource = isRecord(config.providers) ? config.providers : {};
 
   const providers = Object.entries(providersSource)

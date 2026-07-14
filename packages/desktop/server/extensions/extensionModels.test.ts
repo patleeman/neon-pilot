@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const readModelState = vi.fn();
 const invalidateModelDefinitionsCache = vi.fn();
 const getPiAgentRuntimeDir = vi.fn(() => '/runtime/pi-agent');
+const getRepoRoot = vi.fn(() => '/repo');
 const getStateRoot = vi.fn(() => '/state');
 const invalidateAppTopics = vi.fn();
 const saveModelProviderCapability = vi.fn();
@@ -11,9 +12,11 @@ const deleteModelProviderCapability = vi.fn();
 const deleteModelProviderModelCapability = vi.fn();
 const createModelRegistryForAuthFile = vi.fn();
 const readProviderAuthState = vi.fn();
+const materializeRuntimeResources = vi.fn();
+const createRuntimeState = vi.fn(() => ({ materializeRuntimeResources }));
 
 vi.mock('../models/modelState.js', () => ({ readModelState, invalidateModelDefinitionsCache }));
-vi.mock('@neon-pilot/core', () => ({ getPiAgentRuntimeDir, getStateRoot }));
+vi.mock('@neon-pilot/core', () => ({ getPiAgentRuntimeDir, getRepoRoot, getStateRoot }));
 vi.mock('../shared/appEvents.js', () => ({ invalidateAppTopics }));
 vi.mock('../models/providerDesktopCapability.js', () => ({
   saveModelProviderCapability,
@@ -23,6 +26,7 @@ vi.mock('../models/providerDesktopCapability.js', () => ({
 }));
 vi.mock('../models/modelRegistry.js', () => ({ createModelRegistryForAuthFile }));
 vi.mock('../models/providerAuth.js', () => ({ readProviderAuthState }));
+vi.mock('../app/runtimeState.js', () => ({ createRuntimeState }));
 
 const { createExtensionModelsCapability } = await import('./extensionModels.js');
 
@@ -31,6 +35,7 @@ describe('extensionModels', () => {
     readModelState.mockReset();
     invalidateModelDefinitionsCache.mockReset();
     getPiAgentRuntimeDir.mockReset().mockReturnValue('/runtime/pi-agent');
+    getRepoRoot.mockReset().mockReturnValue('/repo');
     getStateRoot.mockReset().mockReturnValue('/state');
     invalidateAppTopics.mockReset();
     saveModelProviderCapability.mockReset().mockReturnValue({ providers: [] });
@@ -39,6 +44,8 @@ describe('extensionModels', () => {
     deleteModelProviderModelCapability.mockReset().mockReturnValue({ providers: [] });
     createModelRegistryForAuthFile.mockReset().mockReturnValue({ getAll: () => [], getAvailable: () => [], getApiKeyAndHeaders: vi.fn() });
     readProviderAuthState.mockReset().mockReturnValue({ providers: [] });
+    materializeRuntimeResources.mockReset();
+    createRuntimeState.mockClear();
   });
 
   it('lists normalized model capabilities from the runtime settings file', async () => {
@@ -110,6 +117,27 @@ describe('extensionModels', () => {
     expect(createModelRegistryForAuthFile).toHaveBeenCalledWith('/runtime/auth.json');
   });
 
+  it('uses live registry availability for built-in and custom no-auth providers', async () => {
+    const localModel = { id: 'google/gemma-4-12b', provider: 'lm-studio' };
+    const builtInModel = { id: 'deepseek-v4-flash', provider: 'opencode-go' };
+    readModelState.mockResolvedValue({ models: [localModel, builtInModel] });
+    createModelRegistryForAuthFile.mockReturnValue({
+      getAll: () => [localModel, builtInModel],
+      getAvailable: () => [localModel],
+      getApiKeyAndHeaders: async () => ({ ok: true }),
+    });
+
+    await expect(
+      createExtensionModelsCapability({
+        getSettingsFile: () => '/runtime/settings.json',
+        getAuthFile: () => '/runtime/auth.json',
+      }).list(),
+    ).resolves.toMatchObject([
+      { id: 'google/gemma-4-12b', provider: 'lm-studio', authConfigured: true },
+      { id: 'deepseek-v4-flash', provider: 'opencode-go', authConfigured: false },
+    ]);
+  });
+
   it('requires stored credentials for credential-backed providers', async () => {
     readModelState.mockResolvedValue({
       models: [
@@ -122,7 +150,7 @@ describe('extensionModels', () => {
         { id: 'gpt-5', provider: 'openai' },
         { id: 'claude-sonnet', provider: 'anthropic' },
       ],
-      getAvailable: () => [],
+      getAvailable: () => [{ id: 'claude-sonnet', provider: 'anthropic' }],
       getApiKeyAndHeaders: async () => ({ ok: true, apiKey: 'resolved-key' }),
     });
     readProviderAuthState.mockReturnValue({
@@ -193,10 +221,55 @@ describe('extensionModels', () => {
     expect(invalidateAppTopics).toHaveBeenCalledWith('models');
   });
 
-  it('requires a route context for model provider writes', async () => {
-    await expect(createExtensionModelsCapability().saveProvider({ provider: 'ds4' })).rejects.toThrow(
-      'Model provider writes require a host route context.',
+  it('writes model providers through the canonical shared runtime when no route context exists', async () => {
+    await expect(createExtensionModelsCapability().saveProvider({ provider: 'lm-studio' })).resolves.toEqual({ providers: [] });
+
+    expect(createRuntimeState).toHaveBeenCalledWith(
+      expect.objectContaining({
+        repoRoot: '/repo',
+        stateRoot: '/state',
+        agentDir: '/runtime/pi-agent',
+        settingsFile: '/runtime/pi-agent/settings.json',
+      }),
     );
+    expect(saveModelProviderCapability).toHaveBeenCalledWith(
+      expect.objectContaining({
+        getRuntimeScope: expect.any(Function),
+        materializeWebRuntimeConfig: expect.any(Function),
+        getAuthFile: expect.any(Function),
+        getStateRoot: expect.any(Function),
+      }),
+      { provider: 'lm-studio' },
+    );
+  });
+
+  it('preserves partial isolated host boundaries for standalone provider writes', async () => {
+    getPiAgentRuntimeDir.mockImplementation((stateRoot?: string) =>
+      stateRoot === '/isolated' ? '/isolated/runtime' : '/runtime/pi-agent',
+    );
+    const capability = createExtensionModelsCapability({
+      getRepoRoot: () => '/isolated-repo',
+      getStateRoot: () => '/isolated',
+    });
+
+    await capability.saveProvider({ provider: 'lm-studio' });
+
+    expect(getStateRoot).not.toHaveBeenCalled();
+    expect(getRepoRoot).not.toHaveBeenCalled();
+    expect(createRuntimeState).toHaveBeenCalledWith(
+      expect.objectContaining({
+        repoRoot: '/isolated-repo',
+        stateRoot: '/isolated',
+        agentDir: '/isolated/runtime',
+        settingsFile: '/isolated/runtime/settings.json',
+      }),
+    );
+    expect(saveModelProviderCapability).toHaveBeenCalledWith(
+      expect.objectContaining({ getAuthFile: expect.any(Function), getStateRoot: expect.any(Function) }),
+      { provider: 'lm-studio' },
+    );
+    const [context] = saveModelProviderCapability.mock.calls[0] as [{ getAuthFile: () => string }];
+    expect(context.getAuthFile()).toBe('/isolated/runtime/auth.json');
   });
 
   it('requires model permissions when bound to an extension id', async () => {

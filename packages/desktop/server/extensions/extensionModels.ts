@@ -1,3 +1,7 @@
+import { join } from 'node:path';
+
+import { getPiAgentRuntimeDir, getRepoRoot, getStateRoot } from '@neon-pilot/core';
+
 import { createModelRegistryForAuthFile } from '../models/modelRegistry.js';
 import { invalidateModelDefinitionsCache, readModelState } from '../models/modelState.js';
 import { readProviderAuthState } from '../models/providerAuth.js';
@@ -38,15 +42,35 @@ async function importProviderDesktopCapability(): Promise<ProviderDesktopCapabil
   return import('../models/providerDesktopCapability.js');
 }
 
-function providerCapabilityContext(serverContext?: ExtensionBackendServerContext): ProviderDesktopCapabilityContext {
-  if (!serverContext?.getRuntimeScope || !serverContext.materializeWebRuntimeConfig || !serverContext.getAuthFile) {
-    throw new Error('Model provider writes require a host route context.');
+async function providerCapabilityContext(serverContext?: ExtensionBackendServerContext): Promise<ProviderDesktopCapabilityContext> {
+  if (serverContext?.getRuntimeScope && serverContext.materializeWebRuntimeConfig && serverContext.getAuthFile) {
+    return {
+      getRuntimeScope: serverContext.getRuntimeScope,
+      materializeWebRuntimeConfig: serverContext.materializeWebRuntimeConfig,
+      getAuthFile: serverContext.getAuthFile,
+      ...(serverContext.getStateRoot ? { getStateRoot: serverContext.getStateRoot } : {}),
+    };
   }
+
+  // Standalone CLI extension actions do not have an HTTP route context. Build the
+  // same canonical shared runtime boundary so provider writes still materialize
+  // the active model registry instead of writing only the durable definition.
+  const stateRoot = serverContext?.getStateRoot?.() ?? getStateRoot();
+  const agentDir = getPiAgentRuntimeDir(stateRoot);
+  const settingsFile = getRuntimeSettingsFilePath(stateRoot);
+  const { createRuntimeState } = await import('../app/runtimeState.js');
+  const runtimeState = createRuntimeState({
+    repoRoot: serverContext?.getRepoRoot?.() ?? getRepoRoot(),
+    agentDir,
+    settingsFile,
+    stateRoot,
+    logger: { warn: () => undefined },
+  });
   return {
-    getRuntimeScope: serverContext.getRuntimeScope,
-    materializeWebRuntimeConfig: serverContext.materializeWebRuntimeConfig,
-    getAuthFile: serverContext.getAuthFile,
-    ...(serverContext.getStateRoot ? { getStateRoot: serverContext.getStateRoot } : {}),
+    getRuntimeScope: () => 'shared',
+    materializeWebRuntimeConfig: () => runtimeState.materializeRuntimeResources(),
+    getAuthFile: () => join(agentDir, 'auth.json'),
+    getStateRoot: () => stateRoot,
   };
 }
 
@@ -78,6 +102,11 @@ async function modelAuthConfiguredKeys(serverContext?: ExtensionBackendServerCon
 
   try {
     const registry = createModelRegistryForAuthFile(authFile);
+    const availableModelKeys = new Set(
+      registry
+        .getAvailable()
+        .map((model) => `${typeof model.provider === 'string' ? model.provider : ''}\0${typeof model.id === 'string' ? model.id : ''}`),
+    );
     const authState = readProviderAuthState(authFile, serverContext?.getStateRoot?.());
     const providerAuthTypes = new Map(
       authState.providers
@@ -91,6 +120,7 @@ async function modelAuthConfiguredKeys(serverContext?: ExtensionBackendServerCon
         const provider = typeof model.provider === 'string' ? model.provider : '';
         const id = typeof model.id === 'string' ? model.id : '';
         if (!provider || !id) return;
+        if (!availableModelKeys.has(`${provider}\0${id}`)) return;
         const authType = providerAuthTypes.get(provider);
         if (PROVIDERS_REQUIRING_CREDENTIAL.has(provider) && !authType) return;
         if (PROVIDERS_REQUIRING_API_KEY_AUTH_TYPE.has(provider) && authType !== 'api_key') return;
@@ -150,28 +180,32 @@ export function createExtensionModelsCapability(serverContext?: ExtensionBackend
     async saveProvider(input: Parameters<ProviderDesktopCapabilityModule['saveModelProviderCapability']>[1]) {
       assertPermission('models:write', 'models.saveProvider');
       const module = await importProviderDesktopCapability();
-      const result = module.saveModelProviderCapability(providerCapabilityContext(serverContext), input);
+      const result = module.saveModelProviderCapability(await providerCapabilityContext(serverContext), input);
       await afterProviderWrite();
       return result;
     },
     async saveProviderModel(input: Parameters<ProviderDesktopCapabilityModule['saveModelProviderModelCapability']>[1]) {
       assertPermission('models:write', 'models.saveProviderModel');
       const module = await importProviderDesktopCapability();
-      const result = module.saveModelProviderModelCapability(providerCapabilityContext(serverContext), input);
+      const result = module.saveModelProviderModelCapability(await providerCapabilityContext(serverContext), input);
       await afterProviderWrite();
       return result;
     },
     async deleteProvider(provider: string) {
       assertPermission('models:write', 'models.deleteProvider');
       const module = await importProviderDesktopCapability();
-      const result = module.deleteModelProviderCapability(providerCapabilityContext(serverContext), provider);
+      const result = module.deleteModelProviderCapability(await providerCapabilityContext(serverContext), provider);
       await afterProviderWrite();
       return result;
     },
     async deleteProviderModel(input: { provider: string; modelId: string }) {
       assertPermission('models:write', 'models.deleteProviderModel');
       const module = await importProviderDesktopCapability();
-      const result = module.deleteModelProviderModelCapability(providerCapabilityContext(serverContext), input.provider, input.modelId);
+      const result = module.deleteModelProviderModelCapability(
+        await providerCapabilityContext(serverContext),
+        input.provider,
+        input.modelId,
+      );
       await afterProviderWrite();
       return result;
     },

@@ -4,16 +4,20 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const {
   authStorageCreateMock,
+  getProvidersMock,
   getPiAgentRuntimeDirMock,
   modelRegistryCreateMock,
   resolveIndexedProviderApiKeyMock,
   resolveProviderApiKeyMock,
+  readMaterializedModelProvidersStateMock,
 } = vi.hoisted(() => ({
   authStorageCreateMock: vi.fn(),
+  getProvidersMock: vi.fn(() => ['opencode-go', 'openai']),
   getPiAgentRuntimeDirMock: vi.fn(),
   modelRegistryCreateMock: vi.fn(),
   resolveIndexedProviderApiKeyMock: vi.fn(),
   resolveProviderApiKeyMock: vi.fn(),
+  readMaterializedModelProvidersStateMock: vi.fn(() => ({ providers: [] })),
 }));
 
 vi.mock('@neon-pilot/core', () => ({
@@ -28,11 +32,13 @@ vi.mock('@earendil-works/pi-coding-agent', () => ({
     create: modelRegistryCreateMock,
   },
 }));
+vi.mock('@earendil-works/pi-ai/compat', () => ({ getProviders: getProvidersMock }));
 
 vi.mock('../secrets/secretStore.js', () => ({
   resolveIndexedProviderApiKey: resolveIndexedProviderApiKeyMock,
   resolveProviderApiKey: resolveProviderApiKeyMock,
 }));
+vi.mock('./modelProviders.js', () => ({ readMaterializedModelProvidersState: readMaterializedModelProvidersStateMock }));
 
 import { createModelRegistryForAuthFile, createRuntimeModelRegistry } from './modelRegistry.js';
 
@@ -40,9 +46,11 @@ describe('model registry helpers', () => {
   beforeEach(() => {
     authStorageCreateMock.mockReset();
     getPiAgentRuntimeDirMock.mockReset();
+    getProvidersMock.mockReset().mockReturnValue(['opencode-go', 'openai']);
     modelRegistryCreateMock.mockReset();
     resolveIndexedProviderApiKeyMock.mockReset();
     resolveProviderApiKeyMock.mockReset();
+    readMaterializedModelProvidersStateMock.mockReset().mockReturnValue({ providers: [] });
   });
 
   it('creates the runtime model registry inside the pi-agent runtime directory', () => {
@@ -85,6 +93,60 @@ describe('model registry helpers', () => {
       ok: true,
       apiKey: 'secure-key',
     });
+  });
+
+  it('includes custom no-auth provider models without exposing unauthenticated built-in providers', () => {
+    const authStorage = { kind: 'auth-storage' };
+    const localModel = { id: 'google/gemma-4-12b', provider: 'lm-studio', contextWindow: 128_000 };
+    const secondLocalModel = { id: 'google/gemma-4-27b', provider: 'lm-studio', contextWindow: 128_000 };
+    const builtInModel = { id: 'deepseek-v4-flash', provider: 'opencode-go', contextWindow: 400_000 };
+    const registry = {
+      getAll: vi.fn(() => [localModel, secondLocalModel, builtInModel]),
+      getAvailable: vi.fn(() => registry.getAll().filter((model) => registry.hasConfiguredAuth(model))),
+      find: vi.fn(),
+      getApiKeyAndHeaders: vi.fn(async () => ({ ok: true })),
+      hasConfiguredAuth: vi.fn(() => false),
+    };
+    modelRegistryCreateMock.mockReturnValue(registry);
+    getPiAgentRuntimeDirMock.mockReturnValue('/runtime/neon-pilot-runtime');
+    readMaterializedModelProvidersStateMock.mockReturnValue({
+      providers: [
+        { id: 'lm-studio', authHeader: false, models: [] },
+        { id: 'opencode-go', authHeader: false, models: [] },
+      ],
+    });
+
+    const created = createRuntimeModelRegistry(authStorage as never);
+
+    expect(created.getAvailable()).toEqual([localModel, secondLocalModel]);
+    expect(readMaterializedModelProvidersStateMock).toHaveBeenCalledWith('/runtime/neon-pilot-runtime/models.json');
+    expect(readMaterializedModelProvidersStateMock).toHaveBeenCalledTimes(1);
+    expect(created.hasConfiguredAuth(localModel as never)).toBe(true);
+    expect(created.hasConfiguredAuth(builtInModel as never)).toBe(false);
+  });
+
+  it('fails closed when a materialized provider file is temporarily unreadable', () => {
+    const authStorage = { kind: 'auth-storage' };
+    const localModel = { id: 'google/gemma-4-12b', provider: 'lm-studio', contextWindow: 128_000 };
+    const builtInModel = { id: 'deepseek-v4-flash', provider: 'opencode-go', contextWindow: 400_000 };
+    const registry = {
+      getAll: vi.fn(() => [localModel, builtInModel]),
+      getAvailable: vi.fn(() => []),
+      find: vi.fn(),
+      getApiKeyAndHeaders: vi.fn(async () => ({ ok: true })),
+      hasConfiguredAuth: vi.fn(() => false),
+    };
+    getPiAgentRuntimeDirMock.mockReturnValue('/runtime/neon-pilot-runtime');
+    modelRegistryCreateMock.mockReturnValue(registry);
+    readMaterializedModelProvidersStateMock.mockImplementation(() => {
+      throw new SyntaxError('Unexpected end of JSON input');
+    });
+
+    const created = createRuntimeModelRegistry(authStorage as never);
+
+    expect(created.getAvailable()).toEqual([]);
+    expect(created.hasConfiguredAuth(localModel as never)).toBe(false);
+    expect(created.hasConfiguredAuth(builtInModel as never)).toBe(false);
   });
 
   it('creates a registry beside the provided auth file', () => {
