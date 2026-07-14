@@ -13,6 +13,7 @@ import {
 } from './extensionActivityContributionValidation.js';
 import { validateExtensionBackendContribution } from './extensionBackendValidation.js';
 import {
+  validateApplicationContributions,
   validateCliCommandContributions,
   validateCommandContributions,
   validateKeybindingContributions,
@@ -923,7 +924,10 @@ export function setExtensionKeybinding(input: {
   writeExtensionRegistryConfig(applyExtensionKeybindingConfigPatch(config, input), stateRoot);
 }
 
-function validateExtensionContributions(contributes: Record<string, unknown>): void {
+function validateExtensionContributions(contributes: Record<string, unknown>, extensionId: string): void {
+  if (contributes.applications !== undefined) {
+    validateApplicationContributions(contributes.applications);
+  }
   if (contributes.views !== undefined) {
     validateViewContributions(contributes.views);
   }
@@ -934,7 +938,7 @@ function validateExtensionContributions(contributes: Record<string, unknown>): v
   if (contributes.nav !== undefined) {
     validateNavigationContributions(contributes.nav);
   }
-  validateRouteShellRegionReferences(contributes);
+  validateRouteShellRegionReferences(contributes, extensionId);
 
   if (contributes.commands !== undefined) {
     validateCommandContributions(contributes.commands);
@@ -1123,7 +1127,38 @@ function validateExtensionContributions(contributes: Record<string, unknown>): v
   }
 }
 
-function validateRouteShellRegionReferences(contributes: Record<string, unknown>): void {
+function validateRouteShellRegionReferences(contributes: Record<string, unknown>, extensionId: string): void {
+  if (Array.isArray(contributes.applications) && Array.isArray(contributes.views)) {
+    const views = contributes.views.filter((view): view is Record<string, unknown> => isRecord(view));
+    for (const [index, application] of contributes.applications.entries()) {
+      if (!isRecord(application)) continue;
+      const sidebarView = typeof application.sidebarView === 'string' ? application.sidebarView : null;
+      if (sidebarView) {
+        const view = views.find((candidate) => candidate.id === sidebarView);
+        if (!view || view.location !== 'sidebar') {
+          throw new Error(
+            `Extension manifest contributes.applications[${index}].sidebarView "${sidebarView}" must reference a sidebar view in the same extension.`,
+          );
+        }
+      }
+      const startRoute = typeof application.startRoute === 'string' ? application.startRoute : null;
+      if (startRoute) {
+        const applicationId = typeof application.id === 'string' ? `${extensionId}:${application.id}` : null;
+        const ownsStartRoute = views.some(
+          (view) =>
+            view.location === 'main' &&
+            view.applicationId === applicationId &&
+            typeof view.route === 'string' &&
+            (startRoute === view.route || startRoute.startsWith(view.route.endsWith('/') ? view.route : `${view.route}/`)),
+        );
+        if (!ownsStartRoute) {
+          throw new Error(
+            `Extension manifest contributes.applications[${index}].startRoute "${startRoute}" must be handled by a main view assigned to "${applicationId}".`,
+          );
+        }
+      }
+    }
+  }
   if (contributes.nav === undefined) return;
   if (contributes.views === undefined) {
     throw new Error('Extension manifest contributes.nav requires contributes.views with matching main view routes.');
@@ -1218,7 +1253,7 @@ export function parseExtensionManifest(value: unknown): ExtensionManifest {
   }
   if (value.contributes !== undefined) {
     if (!isRecord(value.contributes)) throw new Error('Extension manifest contributes must be an object.');
-    validateExtensionContributions(value.contributes);
+    validateExtensionContributions(value.contributes, value.id as string);
   }
   if (value.backend !== undefined) {
     if (!isRecord(value.backend)) throw new Error('Extension manifest backend must be an object.');

@@ -226,7 +226,7 @@ describe('Layout workbench toggle', () => {
 
     expect(screen.getByText('Conversation draft')).toBeTruthy();
     expect(document.querySelector('[data-workbench-document-pane="true"]')).toBeNull();
-    expect((screen.getByRole('button', { name: 'Show workbench' }) as HTMLButtonElement).disabled).toBe(false);
+    expect(screen.queryByRole('button', { name: 'Show workbench' })).toBeNull();
   });
 
   it('hides the right-sidebar toggle on routes without a declared right sidebar', () => {
@@ -376,22 +376,24 @@ describe('Layout workbench toggle', () => {
     expect(routeARail.getAttribute('data-instance-id')).toBe('right-sidebar');
     expect(evaluateCommandEnablement('layout.canToggleRightSidebar')).toBe(true);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Hide right sidebar' }));
+    act(() => {
+      window.dispatchEvent(new CustomEvent('neon-pilot-desktop-shortcut', { detail: { command: 'layout.toggleRightRail' } }));
+    });
 
     expect(screen.queryByTestId('native-extension-surface')).toBeNull();
-    expect(screen.getByRole('button', { name: 'Show right sidebar' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Show right sidebar' })).toBeNull();
 
     fireEvent.click(screen.getByRole('link', { name: 'Open /route-b' }));
 
     expect(screen.getByText('Route B route')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Hide right sidebar' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Hide right sidebar' })).toBeNull();
     expect(screen.getByTestId('native-extension-surface').getAttribute('data-surface-id')).toBe('route-b-context');
 
     fireEvent.click(screen.getByRole('link', { name: 'Open /route-a' }));
 
     expect(screen.getByText('Route A route')).toBeTruthy();
     expect(screen.queryByTestId('native-extension-surface')).toBeNull();
-    expect(screen.getByRole('button', { name: 'Show right sidebar' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Show right sidebar' })).toBeNull();
   });
 
   it('keys route-owned right sidebar open state by the matched route declaration', () => {
@@ -430,12 +432,14 @@ describe('Layout workbench toggle', () => {
     expect(routeRail.getAttribute('data-hash')).toBe('#rail');
     expect(routeRail.getAttribute('data-instance-id')).toBe('right-sidebar');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Hide right sidebar' }));
+    act(() => {
+      window.dispatchEvent(new CustomEvent('neon-pilot-desktop-shortcut', { detail: { command: 'layout.toggleRightRail' } }));
+    });
     fireEvent.click(screen.getByRole('link', { name: 'Open /route-a/detail' }));
 
     expect(screen.getByText('Route A detail route')).toBeTruthy();
     expect(screen.queryByTestId('native-extension-surface')).toBeNull();
-    expect(screen.getByRole('button', { name: 'Show right sidebar' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Show right sidebar' })).toBeNull();
   });
 
   it('migrates route-owned right sidebar open state from the legacy right-rail storage key', () => {
@@ -471,7 +475,9 @@ describe('Layout workbench toggle', () => {
     expect(screen.getByText('Route A route')).toBeTruthy();
     expect(screen.queryByTestId('native-extension-surface')).toBeNull();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Show right sidebar' }));
+    act(() => {
+      window.dispatchEvent(new CustomEvent('neon-pilot-desktop-shortcut', { detail: { command: 'layout.toggleRightRail' } }));
+    });
 
     expect(screen.getByTestId('native-extension-surface').getAttribute('data-surface-id')).toBe('route-a-context');
     expect(window.localStorage.getItem('pa:right-sidebar-open:%2Froute-a')).toBe('open');
@@ -566,7 +572,7 @@ describe('Layout workbench toggle', () => {
     renderLayout('/conversations/conv-1');
 
     expect(document.querySelector('[data-workbench-document-pane="true"]')).toBeNull();
-    expect(screen.getByRole('button', { name: 'Show workbench' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Show workbench' })).toBeNull();
   });
 
   it('uses the desktop right-rail shortcut to toggle the workbench on conversation routes', () => {
@@ -581,14 +587,14 @@ describe('Layout workbench toggle', () => {
     });
 
     expect(document.querySelector('[data-workbench-document-pane="true"]')).not.toBeNull();
-    expect((screen.getByRole('button', { name: 'Hide workbench' }) as HTMLButtonElement).disabled).toBe(false);
+    expect(screen.queryByRole('button', { name: 'Hide workbench' })).toBeNull();
 
     act(() => {
       window.dispatchEvent(new CustomEvent('neon-pilot-desktop-shortcut', { detail: { action: 'toggle-right-rail' } }));
     });
 
     expect(document.querySelector('[data-workbench-document-pane="true"]')).toBeNull();
-    expect((screen.getByRole('button', { name: 'Show workbench' }) as HTMLButtonElement).disabled).toBe(false);
+    expect(screen.queryByRole('button', { name: 'Show workbench' })).toBeNull();
   });
 
   it('persists workbench mode after toggling app chrome and restores it on rerender', () => {
@@ -597,7 +603,9 @@ describe('Layout workbench toggle', () => {
 
     expect(document.querySelector('[data-workbench-document-pane="true"]')).toBeNull();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Show workbench' }));
+    act(() => {
+      window.dispatchEvent(new CustomEvent('neon-pilot-desktop-shortcut', { detail: { command: 'layout.toggleRightRail' } }));
+    });
 
     expect(window.localStorage.getItem(APP_LAYOUT_MODE_STORAGE_KEY)).toBe('workbench');
     expect(document.querySelector('[data-workbench-document-pane="true"]')).not.toBeNull();
@@ -606,7 +614,7 @@ describe('Layout workbench toggle', () => {
     renderLayout('/conversations/conv-1');
 
     expect(document.querySelector('[data-workbench-document-pane="true"]')).not.toBeNull();
-    expect(screen.getByRole('button', { name: 'Hide workbench' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Hide workbench' })).toBeNull();
   });
 
   it('restores saved sidebar and workbench document widths on conversation workbench routes', () => {
@@ -735,7 +743,7 @@ describe('Layout workbench toggle', () => {
       expect(document.querySelector('[data-workbench-document-pane="true"]')).toBeNull();
     });
     expect(window.localStorage.getItem(APP_LAYOUT_MODE_STORAGE_KEY)).toBe('compact');
-    expect(screen.getByRole('button', { name: 'Show workbench' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Show workbench' })).toBeNull();
   });
 
   it('reuses the existing File Explorer tab from the new-tab launcher', async () => {

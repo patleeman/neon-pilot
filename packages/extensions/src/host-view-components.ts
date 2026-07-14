@@ -17,6 +17,35 @@ export interface HostViewComponentDefinition {
 
 export const HOST_VIEW_COMPONENT_DEFINITIONS: readonly HostViewComponentDefinition[] = [
   {
+    id: 'application.home',
+    title: 'Application home',
+    description: 'Renders the standard Neon Pilot application launcher and recent-work home page.',
+    locations: ['main'],
+    propsSchema: { type: 'object', properties: {}, additionalProperties: false },
+    overrideSlots: {},
+    examples: [{}],
+  },
+  {
+    id: 'application.sidebar',
+    title: 'Application sidebar',
+    description: 'Renders the standard application navigation sidebar for a supplied qualified application id.',
+    locations: ['sidebar'],
+    propsSchema: {
+      type: 'object',
+      properties: {
+        applicationId: { type: 'string', description: 'Qualified application id.' },
+        showConversations: {
+          type: 'boolean',
+          description: 'Whether to show the standard conversation controls and thread list below application navigation.',
+        },
+      },
+      required: ['applicationId'],
+      additionalProperties: false,
+    },
+    overrideSlots: {},
+    examples: [{ applicationId: 'system-agent:agent', showConversations: true }],
+  },
+  {
     id: 'conversation.page',
     title: 'Conversation page',
     description: 'Renders the standard Neon Pilot conversation transcript and composer for a supplied conversation id.',

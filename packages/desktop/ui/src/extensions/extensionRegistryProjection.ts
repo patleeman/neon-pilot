@@ -217,6 +217,40 @@ export interface ExtensionMessageActionRegistration {
 
 export type ExtensionRegistryEntry = ExtensionInstallSummary & ExtensionManifest;
 
+export interface ApplicationRegistration {
+  id: string;
+  extensionId: string;
+  localId: string;
+  title: string;
+  description?: string;
+  icon?: string;
+  startRoute: string;
+  sidebarView?: string;
+  instancePolicy: 'singleton' | 'multiple';
+  defaultPinned: boolean;
+  order: number;
+  available: boolean;
+  implicit: boolean;
+  navigationSlots: Array<{ id: string; label?: string; order: number }>;
+  routes?: string[];
+}
+
+export interface ApplicationNavigationRegistration {
+  id: string;
+  extensionId: string;
+  applicationId: string;
+  label: string;
+  route: string;
+  icon?: string;
+  slot: string;
+  slotLabel?: string;
+  slotOrder: number;
+  order: number;
+  sidebarView?: string;
+  rightSidebarView?: string;
+  pageType?: string;
+}
+
 function normalizeRegistryExtensions(extensions: ExtensionInstallSummary[]): ExtensionRegistryEntry[] {
   return extensions.map((extension) => ({
     ...extension.manifest,
@@ -226,6 +260,8 @@ function normalizeRegistryExtensions(extensions: ExtensionInstallSummary[]): Ext
 
 export const EMPTY_EXTENSION_REGISTRY_STATE: ExtensionRegistryState = {
   extensions: [],
+  applications: [],
+  applicationNavigation: [],
   routes: [],
   surfaces: [],
   topBarElements: [],
@@ -262,6 +298,8 @@ export const INITIAL_EXTENSION_REGISTRY_STATE: ExtensionRegistryState = {
 
 export interface ExtensionRegistryState {
   extensions: ExtensionRegistryEntry[];
+  applications: ApplicationRegistration[];
+  applicationNavigation: ApplicationNavigationRegistration[];
   routes: ExtensionRouteSummary[];
   surfaces: ExtensionSurfaceSummary[];
   topBarElements: ExtensionTopBarElementRegistration[];
@@ -289,6 +327,139 @@ export interface ExtensionRegistryState {
   activityTreeItemActions: ExtensionActivityTreeItemActionRegistration[];
   loading: boolean;
   error: string | null;
+}
+
+function normalizeApplications(extensions: ExtensionRegistryEntry[]): ApplicationRegistration[] {
+  const result: ApplicationRegistration[] = [];
+  for (const extension of extensions) {
+    const declared = extension.contributes?.applications ?? [];
+    if (declared.length > 0) {
+      for (const application of declared) {
+        result.push({
+          id: `${extension.id}:${application.id}`,
+          extensionId: extension.id,
+          localId: application.id,
+          title: application.title,
+          ...(application.description ? { description: application.description } : {}),
+          ...(application.icon ? { icon: application.icon } : {}),
+          startRoute: application.startRoute,
+          ...(application.sidebarView ? { sidebarView: application.sidebarView } : {}),
+          instancePolicy: application.instancePolicy ?? 'singleton',
+          defaultPinned: application.defaultPinned ?? false,
+          order: application.order ?? 0,
+          available: extension.enabled && extension.status !== 'invalid',
+          implicit: false,
+          navigationSlots: (application.navigationSlots ?? []).map((slot) => ({
+            id: slot.id,
+            ...(slot.label ? { label: slot.label } : {}),
+            order: slot.order ?? 0,
+          })),
+        });
+      }
+      continue;
+    }
+
+    const firstNav = extension.contributes?.nav?.find((item) => !item.applicationId);
+    const firstMainView = extension.contributes?.views?.find((view) => view.location === 'main' && view.route && !view.applicationId);
+    const startRoute = firstNav?.route ?? firstMainView?.route;
+    if (!startRoute) continue;
+    result.push({
+      id: `${extension.id}:default`,
+      extensionId: extension.id,
+      localId: 'default',
+      title: extension.name,
+      ...(extension.description ? { description: extension.description } : {}),
+      ...(firstNav?.icon ? { icon: firstNav.icon } : {}),
+      startRoute,
+      instancePolicy: 'singleton',
+      defaultPinned: false,
+      order: 0,
+      available: extension.enabled && extension.status !== 'invalid',
+      implicit: true,
+      navigationSlots: [{ id: 'primary', order: 0 }],
+    });
+  }
+  const routesByApplication = new Map(result.map((application) => [application.id, new Set([application.startRoute])]));
+  for (const extension of extensions) {
+    for (const view of extension.contributes?.views ?? []) {
+      if (view.location !== 'main' || !view.route) continue;
+      const applicationId = view.applicationId ?? `${extension.id}:default`;
+      routesByApplication.get(applicationId)?.add(view.route);
+    }
+  }
+  for (const application of result) {
+    application.routes = [...(routesByApplication.get(application.id) ?? [])];
+  }
+  return result.sort((left, right) => left.order - right.order || left.title.localeCompare(right.title) || left.id.localeCompare(right.id));
+}
+
+function normalizeApplicationNavigation(
+  extensions: ExtensionRegistryEntry[],
+  applications: readonly ApplicationRegistration[],
+): ApplicationNavigationRegistration[] {
+  const applicationsById = new Map(applications.map((application) => [application.id, application]));
+  const result: ApplicationNavigationRegistration[] = [];
+  for (const extension of extensions) {
+    if (!extension.enabled || extension.status === 'invalid') continue;
+    for (const item of extension.contributes?.nav ?? []) {
+      const applicationId = item.applicationId ?? `${extension.id}:default`;
+      const application = applicationsById.get(applicationId);
+      if (!application) continue;
+      const slotId = item.slot ?? (item.section === 'settings' ? 'settings' : 'primary');
+      const declaredSlot = application.navigationSlots.find((slot) => slot.id === slotId);
+      if (application.navigationSlots.length > 0 && !declaredSlot) continue;
+      result.push({
+        id: `${extension.id}:${item.id}`,
+        extensionId: extension.id,
+        applicationId,
+        label: item.label,
+        route: item.route,
+        ...(item.icon ? { icon: item.icon } : {}),
+        slot: slotId,
+        ...(declaredSlot?.label ? { slotLabel: declaredSlot.label } : {}),
+        slotOrder: declaredSlot?.order ?? 0,
+        order: item.order ?? 0,
+        ...(item.sidebarView ? { sidebarView: item.sidebarView } : {}),
+        ...(item.rightSidebarView ? { rightSidebarView: item.rightSidebarView } : {}),
+        ...(item.pageType ? { pageType: item.pageType } : {}),
+      });
+    }
+  }
+  return result.sort(
+    (left, right) =>
+      left.applicationId.localeCompare(right.applicationId) ||
+      left.slotOrder - right.slotOrder ||
+      left.order - right.order ||
+      left.label.localeCompare(right.label) ||
+      left.id.localeCompare(right.id),
+  );
+}
+
+function addApplicationContributionDiagnostics(
+  extensions: ExtensionRegistryEntry[],
+  applications: readonly ApplicationRegistration[],
+): ExtensionRegistryEntry[] {
+  const applicationsById = new Map(applications.map((application) => [application.id, application]));
+  return extensions.map((extension) => {
+    const diagnostics = [...(extension.diagnostics ?? [])];
+    const inspectTarget = (kind: 'navigation' | 'view', id: string, applicationId: string, slot?: string) => {
+      const application = applicationsById.get(applicationId);
+      if (!application) {
+        diagnostics.push(`${kind} "${id}" targets unknown application "${applicationId}".`);
+        return;
+      }
+      if (slot && application.navigationSlots.length > 0 && !application.navigationSlots.some((candidate) => candidate.id === slot)) {
+        diagnostics.push(`${kind} "${id}" targets undeclared navigation slot "${slot}" in "${applicationId}".`);
+      }
+    };
+    for (const item of extension.contributes?.nav ?? []) {
+      if (item.applicationId) inspectTarget('navigation', item.id, item.applicationId, item.slot);
+    }
+    for (const view of extension.contributes?.views ?? []) {
+      if (view.applicationId) inspectTarget('view', view.id, view.applicationId);
+    }
+    return diagnostics.length === (extension.diagnostics?.length ?? 0) ? extension : { ...extension, diagnostics };
+  });
 }
 
 function normalizeTopBarElements(extensions: ExtensionManifest[]): ExtensionTopBarElementRegistration[] {
@@ -777,16 +948,24 @@ export function normalizeExtensionRegistryState(
   surfaces: ExtensionSurfaceSummary[],
   settings: Record<string, unknown>,
 ): ExtensionRegistryState {
-  const registryExtensions = normalizeRegistryExtensions(extensions);
+  const rawRegistryExtensions = normalizeRegistryExtensions(extensions);
+  const applications = normalizeApplications(rawRegistryExtensions);
+  const registryExtensions = addApplicationContributionDiagnostics(rawRegistryExtensions, applications);
   const enabledRegistryExtensions = registryExtensions.filter((extension) => extension.enabled);
   const enabledExtensionIds = new Set(enabledRegistryExtensions.map((extension) => extension.id));
+  const knownApplicationIds = new Set(applications.map((application) => application.id));
   const settingsComponents = normalizeSettingsComponents(enabledRegistryExtensions);
   const composerControls = normalizeComposerControls(enabledRegistryExtensions);
 
   return {
     extensions: registryExtensions,
+    applications,
+    applicationNavigation: normalizeApplicationNavigation(registryExtensions, applications),
     routes: routes.filter((route) => enabledExtensionIds.has(route.extensionId)),
-    surfaces: surfaces.filter((surface) => enabledExtensionIds.has(surface.extensionId)),
+    surfaces: surfaces.filter(
+      (surface) =>
+        enabledExtensionIds.has(surface.extensionId) && (!surface.applicationId || knownApplicationIds.has(surface.applicationId)),
+    ),
     topBarElements: normalizeTopBarElements(enabledRegistryExtensions),
     messageActions: normalizeMessageActions(enabledRegistryExtensions),
     composerShelves: normalizeComposerShelves(enabledRegistryExtensions),

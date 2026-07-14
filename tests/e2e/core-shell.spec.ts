@@ -1,7 +1,7 @@
 /* eslint-disable no-empty-pattern */
 import { expect, test } from '@playwright/test';
 
-import { assertDesktopApiEndpoints, expectCleanViewport, launchTestApp, navigateApp } from './fixtures/electronApp';
+import { assertDesktopApiEndpoints, expectCleanViewport, launchTestApp, navigateApp, seedDisabledExtensions } from './fixtures/electronApp';
 
 async function clickRouteButton(page: import('@playwright/test').Page, route: string): Promise<void> {
   await page.locator(`button[data-route="${route}"]`).first().click();
@@ -9,7 +9,11 @@ async function clickRouteButton(page: import('@playwright/test').Page, route: st
 }
 
 test('app shell routes, command palette, and settings surfaces work in one launch @core-shell', async ({}, testInfo) => {
-  const testApp = await launchTestApp({ testInfo, initialRoute: '/conversations/new' });
+  const testApp = await launchTestApp({
+    testInfo,
+    initialRoute: '/conversations/new',
+    prepareState: (stateRoot) => seedDisabledExtensions(stateRoot, ['system-onboarding']),
+  });
   try {
     const page = testApp.page;
 
@@ -17,7 +21,7 @@ test('app shell routes, command palette, and settings surfaces work in one launc
     await assertDesktopApiEndpoints(page);
     await expectCleanViewport(page);
 
-    await page.getByLabel('Search threads, models, settings').focus();
+    await page.getByRole('button', { name: 'Open Neon Pilot' }).click();
     const palette = page.getByRole('dialog', { name: 'Command palette' });
     await expect(palette).toBeVisible({ timeout: 15_000 });
     await palette.getByLabel('Search command palette').fill('extensions');
@@ -25,19 +29,26 @@ test('app shell routes, command palette, and settings surfaces work in one launc
     await page.keyboard.press('Escape');
     await expect(palette).toHaveCount(0);
 
+    await page.locator('[data-application-id="system-settings:system"]').click();
+    await page.waitForURL((url) => url.pathname === '/settings', { timeout: 30_000 });
     await clickRouteButton(page, '/extensions');
     await expect(page.locator('body')).toContainText(/Extensions|Installed/i, { timeout: 30_000 });
     await assertDesktopApiEndpoints(page);
     await expectCleanViewport(page);
 
+    await page.locator('[data-application-id="system-agent:agent"]').click();
+    await page.waitForURL((url) => url.pathname.startsWith('/conversations'), { timeout: 30_000 });
     await clickRouteButton(page, '/automations');
     await expect(page.locator('body')).toContainText(/Automations|automation/i, { timeout: 30_000 });
     await expectCleanViewport(page);
 
     await clickRouteButton(page, '/routines');
-    await expect(page.locator('body')).toContainText('Checkpoint timeline', { timeout: 45_000 });
+    await expect(page.getByRole('heading', { name: 'Routines', exact: true })).toBeVisible({ timeout: 45_000 });
+    await expect(page.locator('body')).toContainText(/Pick an event|No routines yet/i);
     await expectCleanViewport(page);
 
+    await page.locator('[data-application-id="system-settings:system"]').click();
+    await page.waitForURL((url) => url.pathname === '/extensions', { timeout: 30_000 });
     await clickRouteButton(page, '/settings');
     await expect(page.locator('body')).toContainText(/Settings|Providers|Commands/i, { timeout: 45_000 });
     await expectCleanViewport(page);

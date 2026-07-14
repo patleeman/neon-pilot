@@ -18,11 +18,12 @@ function renderTopBar() {
           activeHostKind: 'local',
           activeHostSummary: 'Local runtime is healthy.',
         }}
-        sidebarOpen
-        onToggleSidebar={() => {}}
-        showRailToggle={false}
-        railOpen={false}
-        onToggleRail={() => {}}
+        applications={[]}
+        applicationWorkspace={{ pinnedApplicationIds: [], pinsInitialized: false, openViews: [], activeViewId: null }}
+        activeApplicationId={null}
+        onActivateApplication={() => {}}
+        onToggleApplicationPinned={() => {}}
+        onCloseApplicationView={() => {}}
       />
     </MemoryRouter>,
   );
@@ -33,22 +34,25 @@ describe('DesktopTopBar interactions', () => {
     vi.restoreAllMocks();
   });
 
-  it('clears the top-bar search query when the command palette closes', () => {
+  it('reflects launcher open state when the command palette opens and closes', () => {
     renderTopBar();
 
-    const input = screen.getByLabelText('Search threads, models, settings') as HTMLInputElement;
-    fireEvent.change(input, { target: { value: 'extensions' } });
+    const launcher = screen.getByRole('button', { name: 'Open Neon Pilot' });
+    expect(launcher.getAttribute('aria-expanded')).toBe('false');
 
-    expect(input.value).toBe('extensions');
+    act(() => {
+      window.dispatchEvent(new CustomEvent(COMMAND_PALETTE_STATE_EVENT, { detail: { open: true } }));
+    });
+    expect(launcher.getAttribute('aria-expanded')).toBe('true');
 
     act(() => {
       window.dispatchEvent(new CustomEvent(COMMAND_PALETTE_STATE_EVENT, { detail: { open: false } }));
     });
 
-    expect(input.value).toBe('');
+    expect(launcher.getAttribute('aria-expanded')).toBe('false');
   });
 
-  it('opens the command palette from top-bar search focus and typed queries', () => {
+  it('opens the unified launcher from the NeonPilot button', () => {
     const openEvents: Array<{ query?: string; scope?: string; anchorRect?: unknown }> = [];
     const listener = vi.fn((event: Event) => {
       openEvents.push((event as CustomEvent).detail ?? {});
@@ -57,22 +61,15 @@ describe('DesktopTopBar interactions', () => {
 
     renderTopBar();
 
-    const input = screen.getByLabelText('Search threads, models, settings') as HTMLInputElement;
-    fireEvent.focus(input);
+    fireEvent.click(screen.getByRole('button', { name: 'Open Neon Pilot' }));
 
     expect(listener).toHaveBeenCalledTimes(1);
-    expect(openEvents.at(-1)).toMatchObject({ query: '', scope: 'all' });
-
-    fireEvent.change(input, { target: { value: 'toggle left sidebar' } });
-
-    expect(input.value).toBe('toggle left sidebar');
-    expect(listener).toHaveBeenCalledTimes(2);
-    expect(openEvents.at(-1)).toMatchObject({ query: 'toggle left sidebar', scope: 'all' });
+    expect(openEvents.at(-1)).toMatchObject({ scope: 'all' });
 
     window.removeEventListener(OPEN_COMMAND_PALETTE_EVENT, listener);
   });
 
-  it('lets scoped command palette shortcut opens reach the palette unchanged', () => {
+  it('normalizes scoped shortcut opens into the unified launcher', async () => {
     const listener = vi.fn();
     window.addEventListener(OPEN_COMMAND_PALETTE_EVENT, listener);
 
@@ -82,8 +79,8 @@ describe('DesktopTopBar interactions', () => {
       window.dispatchEvent(new CustomEvent(OPEN_COMMAND_PALETTE_EVENT, { detail: { scope: 'commands' } }));
     });
 
-    expect(listener).toHaveBeenCalledTimes(1);
-    expect((listener.mock.calls[0]?.[0] as CustomEvent).detail).toEqual({ scope: 'commands' });
+    await waitFor(() => expect(listener).toHaveBeenCalledTimes(1));
+    expect((listener.mock.calls[0]?.[0] as CustomEvent).detail).toMatchObject({ scope: 'all' });
 
     window.removeEventListener(OPEN_COMMAND_PALETTE_EVENT, listener);
   });
@@ -121,11 +118,12 @@ describe('DesktopTopBar interactions', () => {
             activeHostKind: 'local',
             activeHostSummary: 'Local runtime is healthy.',
           }}
-          sidebarOpen
-          onToggleSidebar={() => {}}
-          showRailToggle={false}
-          railOpen={false}
-          onToggleRail={() => {}}
+          applications={[]}
+          applicationWorkspace={{ pinnedApplicationIds: [], pinsInitialized: false, openViews: [], activeViewId: null }}
+          activeApplicationId={null}
+          onActivateApplication={() => {}}
+          onToggleApplicationPinned={() => {}}
+          onCloseApplicationView={() => {}}
         />
       </MemoryRouter>,
     );

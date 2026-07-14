@@ -6,7 +6,7 @@ This reference covers the extension package contract: manifests, frontend/backen
 
 Terminology: **extensions** are Neon Pilot app packages that can add UI, tools, backend actions, settings, and skills. **Agent plugins** are portable Codex/Claude-style capability packages, often with files such as `.codex-plugin/plugin.json`; the bundled Agent Plugins extension imports them from Git or local directories, tracks updates, and exposes compatible skills, docs, hooks, and MCP declarations through Neon Pilot-managed wrappers. Agent plugins are not native app extensions.
 
-Neon Pilot is a **self-extensible harness**: the agent can build, install, inspect, modify, and run extensions for the harness from inside the normal product workflow. This takes Pi's self-extensible architecture into a local desktop client where extensions are intentionally larger than the skills-and-hooks model in Claude Code, Codex, and similar agent harnesses. A native extension can become a complete local application: pages, sidebar/workbench panels, backend actions, tools, commands, settings, setup readiness checks, storage, transcript renderers, prompt/context providers, provider-aware model behavior, lifecycle hooks, and optional skills in one package.
+Neon Pilot is a **self-extensible application platform** with an agent application: the agent can build, install, inspect, modify, and run extensions from inside the normal product workflow. This takes Pi's self-extensible architecture into a local desktop client where extensions are intentionally larger than the skills-and-hooks model in Claude Code, Codex, and similar agent harnesses. A native extension can become a complete local application: pages, application-owned navigation and sidebars, backend actions, tools, commands, settings, setup readiness checks, storage, transcript renderers, prompt/context providers, provider-aware model behavior, lifecycle hooks, and optional skills in one package.
 
 ## Contents
 
@@ -175,6 +175,7 @@ The manifest declares what your extension contributes:
 
 | Field                             | Purpose                                                                                       | Docs                                                                                         |
 | --------------------------------- | --------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `applications`                    | Top-level application definitions, instance policy, default route, and named navigation slots | [See below](#applications)                                                                   |
 | `views`                           | UI surfaces: main pages, route sidebar bodies, route context rails, and workbench panels      | See [Views](#views)                                                                          |
 | `webapps`                         | Locally hosted sidecar webpages exposed through `.localhost` names                            | [See below](#webapps)                                                                        |
 | `nav`                             | App navigation items; can bind route-owned `sidebarView` and `rightSidebarView` regions       | [See below](#route-shell-regions)                                                            |
@@ -319,6 +320,54 @@ ctx.setActiveTools(toolNames: string[]): void;
 ```
 
 `ctx.setActiveTools` is only available on these lifecycle contexts. Global `pi.setActiveTools` is blocked by the desktop runtime.
+
+### Applications
+
+Applications are top-level experiences in the Neon Pilot taskbar. The shell owns global launching, back/forward navigation, pinning, overflow, persistence, and unavailable-view recovery; the application owns everything inside its canvas. Define `instancePolicy: "singleton"` for one restorable application view or `"multiple"` for independently resumable views. Pages use `openPolicy: "internal"`, `"singleton"`, or `"resource"` to decide whether navigation stays inside the current view or creates/reuses a route-backed view.
+
+Application IDs are qualified as `{extensionId}:{applicationId}`. Other extensions can contribute a view or nav item to a qualified application and one of its declared `navigationSlots`. Unknown targets are diagnosed and suppressed rather than rendered as orphan pages.
+
+```json
+{
+  "contributes": {
+    "applications": [
+      {
+        "id": "runner",
+        "title": "Local Models",
+        "startRoute": "/local-models",
+        "instancePolicy": "singleton",
+        "defaultPinned": false,
+        "navigationSlots": [
+          { "id": "primary", "order": 0 },
+          { "id": "tools", "label": "Tools", "order": 10 }
+        ]
+      }
+    ],
+    "views": [
+      {
+        "id": "models",
+        "title": "Models",
+        "location": "main",
+        "route": "/local-models",
+        "applicationId": "local-models:runner",
+        "openPolicy": "internal",
+        "component": "ModelsPage"
+      }
+    ],
+    "nav": [
+      {
+        "id": "models",
+        "label": "Models",
+        "route": "/local-models",
+        "applicationId": "local-models:runner",
+        "slot": "primary"
+      }
+    ]
+  }
+}
+```
+
+Routes without an explicit application owner continue to project as an implicit application for compatibility. New extensions should declare ownership explicitly when they contribute more than one coordinated page or need an application sidebar. See the repository's `docs/application-platform.md` for the full shell contract.
 
 ### Views
 

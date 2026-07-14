@@ -301,6 +301,9 @@ type SidebarExtensionNavItem = ExtensionSurfaceSummary & {
   sidebarView?: string;
   rightSidebarView?: string;
   section?: 'primary' | 'settings';
+  applicationId?: string;
+  slot?: string;
+  order?: number;
   attentionCount?: number;
   attentionSeverity?: 'warning' | 'error';
 };
@@ -564,49 +567,67 @@ function TopNavItem({
 }
 
 function SidebarPrimaryNav({
+  showChat,
   chatActive,
   newConversationBusy,
   newConversationHotkeyLabel,
   items,
+  slotMetadata,
   documentNavigationRoutes,
   onOpenChat,
   onNewConversation,
 }: {
+  showChat: boolean;
   chatActive: boolean;
   newConversationBusy: boolean;
   newConversationHotkeyLabel: string;
   items: SidebarExtensionNavItem[];
+  slotMetadata: ReadonlyMap<string, { label?: string; order: number }>;
   documentNavigationRoutes: readonly string[];
   onOpenChat: () => void;
   onNewConversation: () => void;
 }) {
   return (
     <nav className="relative z-20 shrink-0 space-y-px bg-panel pb-1 pt-3" aria-label="Primary navigation">
-      <div className="relative">
-        <SidebarNavButton onClick={onOpenChat} active={chatActive} className="w-[calc(100%_-_0.5rem)] min-w-0 pr-10 text-secondary" title="Chat">
-          <Ico d={PATH.chatBubble} size={15} />
-          <span className="flex-1 text-left">Chat</span>
-        </SidebarNavButton>
-        <IconButton
-          compact
-          onClick={onNewConversation}
-          disabled={newConversationBusy}
-          className="absolute right-1 top-0 z-10 flex h-7 w-7 justify-center px-0 text-secondary"
-          title={newConversationBusy ? 'Creating conversation...' : `New chat (${newConversationHotkeyLabel})`}
-          aria-label={newConversationBusy ? 'Creating conversation...' : `New chat (${newConversationHotkeyLabel})`}
-        >
-          <Ico d={PATH.plus} size={12} className="shrink-0" />
-        </IconButton>
-      </div>
-      {items.map((item) => (
-        <TopNavItem
-          key={`${item.extensionId}:${item.id}`}
-          to={item.route}
-          icon={getExtensionNavIcon(item.icon)}
-          label={item.label}
-          documentNavigationRoutes={documentNavigationRoutes}
-        />
-      ))}
+      {showChat ? (
+        <div className="relative">
+          <SidebarNavButton
+            onClick={onOpenChat}
+            active={chatActive}
+            className="w-[calc(100%_-_0.5rem)] min-w-0 pr-10 text-secondary"
+            title="Chat"
+          >
+            <Ico d={PATH.chatBubble} size={15} />
+            <span className="flex-1 text-left">Chat</span>
+          </SidebarNavButton>
+          <IconButton
+            compact
+            onClick={onNewConversation}
+            disabled={newConversationBusy}
+            className="absolute right-1 top-0 z-10 flex h-7 w-7 justify-center px-0 text-secondary"
+            title={newConversationBusy ? 'Creating conversation...' : `New chat (${newConversationHotkeyLabel})`}
+            aria-label={newConversationBusy ? 'Creating conversation...' : `New chat (${newConversationHotkeyLabel})`}
+          >
+            <Ico d={PATH.plus} size={12} className="shrink-0" />
+          </IconButton>
+        </div>
+      ) : null}
+      {items.map((item, index) => {
+        const slot = item.slot ?? item.section ?? 'primary';
+        const previous = index > 0 ? (items[index - 1]?.slot ?? items[index - 1]?.section ?? 'primary') : null;
+        const slotLabel = slot !== previous ? slotMetadata.get(slot)?.label : undefined;
+        return (
+          <div key={`${item.extensionId}:${item.id}`}>
+            {slotLabel ? <SectionLabel className="px-4 pb-1 pt-2">{slotLabel}</SectionLabel> : null}
+            <TopNavItem
+              to={item.route}
+              icon={getExtensionNavIcon(item.icon)}
+              label={item.label}
+              documentNavigationRoutes={documentNavigationRoutes}
+            />
+          </div>
+        );
+      })}
     </nav>
   );
 }
@@ -1691,9 +1712,11 @@ const SessionRow = memo(function SessionRow({
 
 export interface SidebarProps {
   onNewConversation?: (input?: { cwd?: string | null }) => boolean | Promise<boolean>;
+  applicationId?: string | null;
+  showConversations?: boolean;
 }
 
-export function Sidebar({ onNewConversation }: SidebarProps = {}) {
+export function Sidebar({ onNewConversation, applicationId = 'system-agent:agent', showConversations = true }: SidebarProps = {}) {
   const navigate = useNavigate();
   const location = useLocation();
   const { versions } = useAppEvents();
@@ -3828,35 +3851,69 @@ export function Sidebar({ onNewConversation }: SidebarProps = {}) {
       });
     return [...legacy, ...native];
   }, [extensionRegistry.extensions, extensionRegistry.routes, extensionRegistry.surfaces]);
-  const primaryNavItems = useMemo(() => extensionNavItems.filter((item) => (item.section ?? 'primary') === 'primary'), [extensionNavItems]);
+  const applicationNavItems = useMemo(() => {
+    const legacyApplicationRegistry = extensionRegistry.applications === undefined;
+    const application = (extensionRegistry.applications ?? []).find((candidate) => candidate.id === applicationId);
+    const slotOrder = new Map((application?.navigationSlots ?? []).map((slot) => [slot.id, slot.order]));
+    return extensionNavItems
+      .filter((item) => legacyApplicationRegistry || (item.applicationId ?? `${item.extensionId}:default`) === applicationId)
+      .sort(
+        (left, right) =>
+          (slotOrder.get(left.slot ?? left.section ?? 'primary') ?? 0) - (slotOrder.get(right.slot ?? right.section ?? 'primary') ?? 0) ||
+          (left.order ?? 0) - (right.order ?? 0) ||
+          left.label.localeCompare(right.label),
+      );
+  }, [applicationId, extensionNavItems, extensionRegistry.applications]);
+  const applicationSlotMetadata = useMemo(
+    () =>
+      new Map(
+        ((extensionRegistry.applications ?? []).find((candidate) => candidate.id === applicationId)?.navigationSlots ?? []).map((slot) => [
+          slot.id,
+          slot,
+        ]),
+      ),
+    [applicationId, extensionRegistry.applications],
+  );
+  const primaryNavItems = useMemo(
+    () =>
+      applicationNavItems.filter(
+        (item) =>
+          (item.slot ?? item.section ?? 'primary') !== 'settings' &&
+          !(applicationId === 'system-agent:agent' && item.route === '/conversations'),
+      ),
+    [applicationId, applicationNavItems],
+  );
   const settingsNavItems = useMemo(
     () =>
-      extensionNavItems
-        .filter((item) => item.section === 'settings')
+      applicationNavItems
+        .filter((item) => (item.slot ?? item.section) === 'settings')
         .map((item, index) => ({ item, index }))
         .sort((left, right) => settingsNavItemOrder(left.item) - settingsNavItemOrder(right.item) || left.index - right.index)
         .map(({ item }) => item),
-    [extensionNavItems],
+    [applicationNavItems],
   );
-  const documentNavigationRoutes = useMemo(() => extensionNavItems.map((item) => item.route), [extensionNavItems]);
+  const documentNavigationRoutes = useMemo(() => applicationNavItems.map((item) => item.route), [applicationNavItems]);
   const activeSidebarSurface = useMemo(() => {
     return resolveRouteSidebarSurface({
       pathname: location.pathname,
-      navItems: extensionNavItems,
+      navItems: applicationNavItems,
       surfaces: extensionRegistry.surfaces,
     });
-  }, [extensionNavItems, extensionRegistry.surfaces, location.pathname]);
-  const showThreadSidebar = isChatShellRoute(location.pathname);
+  }, [applicationNavItems, extensionRegistry.surfaces, location.pathname]);
+  const legacyApplicationRegistry = extensionRegistry.applications === undefined;
+  const showThreadSidebar = showConversations && (!legacyApplicationRegistry || isChatShellRoute(location.pathname));
   const newConversationHotkeyLabel = getNewConversationHotkeyLabel();
   const chatButtonActive = location.pathname === DRAFT_CONVERSATION_ROUTE;
   return (
     <>
       <aside className="flex-1 flex flex-col overflow-hidden">
         <SidebarPrimaryNav
+          showChat={showConversations}
           chatActive={chatButtonActive}
           newConversationBusy={false}
           newConversationHotkeyLabel={newConversationHotkeyLabel}
           items={primaryNavItems}
+          slotMetadata={applicationSlotMetadata}
           documentNavigationRoutes={documentNavigationRoutes}
           onOpenChat={handleOpenChat}
           onNewConversation={() => {

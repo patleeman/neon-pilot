@@ -143,7 +143,10 @@
         "label": "Automations",
         "route": "/automations",
         "icon": "automation",
-        "pageType": "table"
+        "pageType": "table",
+        "applicationId": "system-agent:agent",
+        "slot": "work",
+        "order": 10
       }
     ],
     "views": [
@@ -153,6 +156,7 @@
         "location": "main",
         "route": "/automations",
         "component": "AutomationsPage",
+        "applicationId": "system-agent:agent",
         "activation": "on-route"
       }
     ],

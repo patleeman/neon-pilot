@@ -13,6 +13,8 @@ type ExtensionIconName =
   | 'sparkle'
   | 'terminal';
 type ExtensionRightSurfaceScope = 'global' | 'conversation' | 'workspace' | 'selection';
+export type ExtensionApplicationInstancePolicy = 'singleton' | 'multiple';
+export type ExtensionApplicationViewPolicy = 'internal' | 'singleton' | 'resource';
 export type ExtensionViewPlacement = 'primary' | 'workbench-tool';
 export type ExtensionViewScope = 'global' | 'workspace' | 'conversation';
 export type ExtensionViewActivation = 'always' | 'on-route' | 'on-open' | 'on-demand';
@@ -28,6 +30,25 @@ interface ExtensionBackendActionSummary {
 interface ExtensionFrontendManifest {
   entry: string;
   styles?: string[];
+}
+
+export interface ExtensionApplicationNavigationSlot {
+  id: string;
+  label?: string;
+  order?: number;
+}
+
+export interface ExtensionApplicationContribution {
+  id: string;
+  title: string;
+  description?: string;
+  icon?: ExtensionIconName;
+  startRoute: string;
+  sidebarView?: string;
+  instancePolicy?: ExtensionApplicationInstancePolicy;
+  defaultPinned?: boolean;
+  order?: number;
+  navigationSlots?: ExtensionApplicationNavigationSlot[];
 }
 
 interface ExtensionPromptReferenceContribution {
@@ -82,6 +103,8 @@ interface ExtensionViewContribution {
   location: 'main' | 'rightRail' | 'workbench' | 'sidebar';
   component: ExtensionComponentReference;
   route?: string;
+  applicationId?: string;
+  openPolicy?: ExtensionApplicationViewPolicy;
   /** Side-region instance boundary. Invalid on `main` views. */
   scope?: ExtensionRightSurfaceScope | ExtensionViewScope;
   icon?: ExtensionIconName;
@@ -119,6 +142,9 @@ interface ExtensionNavContribution {
   rightSidebarView?: string;
   /** Optional design-system page type annotation for route inventory and conformance. */
   pageType?: ExtensionPageType;
+  applicationId?: string;
+  slot?: string;
+  order?: number;
   section?: 'primary' | 'settings';
 }
 
@@ -429,6 +455,7 @@ interface ExtensionSettingsComponentContribution {
 }
 
 interface ExtensionContributions {
+  applications?: ExtensionApplicationContribution[];
   views?: ExtensionViewContribution[];
   webapps?: ExtensionWebappContribution[];
   nav?: ExtensionNavContribution[];

@@ -2,6 +2,17 @@ import { Component, type ReactNode, startTransition, Suspense, useCallback, useE
 import { Link, Outlet, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 
 import { useAppEvents } from '../app/contexts';
+import { APPLICATION_ACTIVATE_EVENT, type ApplicationActivateDetail } from '../applications/applicationEvents';
+import {
+  closeApplicationView,
+  fallbackApplication,
+  focusApplicationRoute,
+  readStoredApplicationWorkspace,
+  reconcileApplicationWorkspace,
+  resolveApplicationForRoute,
+  toggleApplicationPinned,
+  writeStoredApplicationWorkspace,
+} from '../applications/applicationWorkspace';
 import { api } from '../client/api';
 import { OPEN_COMMAND_PALETTE_EVENT, type OpenCommandPaletteDetail } from '../commands/commandPaletteEvents';
 import { DESKTOP_SHORTCUT_EVENT } from '../commands/desktopShortcutEvents';
@@ -24,6 +35,7 @@ import { canExecuteExtensionCommand, executeExtensionCommand, setExtensionComman
 import { buildExtensionCommandNotification } from '../extensions/extensionCommandNotifications';
 import { EXTENSION_MODAL_CLOSE_COMMAND_EVENT } from '../extensions/extensionModalCommands';
 import { EXTENSION_REGISTRY_CHANGED_EVENT } from '../extensions/extensionRegistryEvents';
+import type { ApplicationNavigationRegistration, ApplicationRegistration } from '../extensions/extensionRegistryProjection';
 import { findMatchingExtensionKeybinding, isShortcutCaptureActive, isShortcutCaptureEventTarget } from '../extensions/keybindings';
 import { NativeExtensionSurfaceHost } from '../extensions/NativeExtensionSurfaceHost';
 import { readExtensionSelection, setExtensionSelection } from '../extensions/selection';
@@ -189,6 +201,8 @@ const SETUP_READINESS_CLOSE_EVENT = 'neon-pilot-setup-readiness-close';
 const SIDEBAR_AUTO_COLLAPSE_WIDTH = 720;
 const LEGACY_ROUTE_RIGHT_RAIL_OPEN_STORAGE_KEY_PREFIX = 'pa:right-rail-open:';
 const ROUTE_RIGHT_SIDEBAR_OPEN_STORAGE_KEY_PREFIX = 'pa:right-sidebar-open:';
+const NO_APPLICATIONS: readonly ApplicationRegistration[] = [];
+const NO_APPLICATION_NAVIGATION: readonly ApplicationNavigationRegistration[] = [];
 
 function buildRouteRightRailOpenStorageKey(pathname: string): string {
   return `${ROUTE_RIGHT_SIDEBAR_OPEN_STORAGE_KEY_PREFIX}${encodeURIComponent(pathname || '/')}`;
@@ -227,7 +241,6 @@ const ConversationArtifactRailContent = lazyRouteWithRecovery('layout-artifact-r
 const ConversationArtifactWorkbenchPane = lazyRouteWithRecovery('layout-artifact-workbench', () =>
   import('./ConversationArtifactWorkbench').then((module) => ({ default: module.ConversationArtifactWorkbenchPane })),
 );
-const Sidebar = lazyRouteWithRecovery('layout-sidebar', () => import('./Sidebar').then((module) => ({ default: module.Sidebar })));
 const ChatRail = lazyRouteWithRecovery('layout-chat-rail', () =>
   import('./chat/ChatRail').then((module) => ({ default: module.ChatRail })),
 );
@@ -1783,6 +1796,7 @@ export function Layout() {
   const [draftConversationCwd, setDraftConversationCwd] = useState(() => readDraftConversationCwd().trim());
   const activeExtensionCommandSourceRef = useRef<string | null>(null);
   const [desktopEnvironment, setDesktopEnvironment] = useState<DesktopEnvironmentState | null>(null);
+  const [applicationWorkspace, setApplicationWorkspace] = useState(readStoredApplicationWorkspace);
   const [appLayoutMode, setAppLayoutMode] = useState<AppLayoutMode>(() => readAppLayoutMode());
   const [activeWorkbenchTabId, setActiveWorkbenchTabId] = useState<string | null>(() => readStoredWorkbenchTabs().activeTabId);
   const [openWorkbenchTabs, setOpenWorkbenchTabs] = useState<WorkbenchTabInstance[]>(() => readStoredWorkbenchTabs().tabs);
@@ -1851,6 +1865,110 @@ export function Layout() {
   const [registeredRightRailControl, setRegisteredRightRailControl] = useState<DesktopRightRailControl | null>(null);
   const railWidth = rail.width;
   const extensionRegistry = useExtensionRegistry();
+  const registryApplications = extensionRegistry.applications ?? NO_APPLICATIONS;
+  const registryApplicationNavigation = extensionRegistry.applicationNavigation ?? NO_APPLICATION_NAVIGATION;
+  const activeApplication = useMemo(
+    () => resolveApplicationForRoute(location.pathname, registryApplications, registryApplicationNavigation),
+    [location.pathname, registryApplicationNavigation, registryApplications],
+  );
+  useEffect(() => {
+    if (extensionRegistry.loading || location.pathname !== '/home') return;
+    const home = registryApplications.find((application) => application.id === 'system-home:home');
+    if (!home || home.available) return;
+    const fallback = fallbackApplication(applicationWorkspace, registryApplications);
+    if (fallback && fallback.id !== home.id) navigate(fallback.startRoute, { replace: true });
+  }, [applicationWorkspace, extensionRegistry.loading, location.pathname, navigate, registryApplications]);
+  const activeApplicationViewPolicy = useMemo(() => {
+    if (!activeApplication) return 'internal' as const;
+    const matchingView = extensionRegistry.surfaces
+      .filter(
+        (surface) =>
+          surface.location === 'main' &&
+          surface.applicationId === activeApplication.id &&
+          typeof surface.route === 'string' &&
+          routeMatchesPrefix(location.pathname, surface.route),
+      )
+      .sort((left, right) => (right.route?.length ?? 0) - (left.route?.length ?? 0))[0];
+    return matchingView?.openPolicy ?? 'internal';
+  }, [activeApplication, extensionRegistry.surfaces, location.pathname]);
+  useEffect(() => {
+    if (extensionRegistry.loading || registryApplications.length === 0) return;
+    setApplicationWorkspace((current) => {
+      const reconciled = reconcileApplicationWorkspace(current, registryApplications);
+      const next = activeApplication
+        ? focusApplicationRoute(
+            reconciled,
+            activeApplication,
+            `${location.pathname}${location.search}${location.hash}`,
+            undefined,
+            activeApplicationViewPolicy,
+          )
+        : reconciled;
+      writeStoredApplicationWorkspace(next);
+      return next;
+    });
+  }, [
+    activeApplication,
+    activeApplicationViewPolicy,
+    extensionRegistry.loading,
+    location.hash,
+    location.pathname,
+    location.search,
+    registryApplications,
+  ]);
+
+  const activateApplication = useCallback(
+    (application: ApplicationRegistration) => {
+      const existing = applicationWorkspace.openViews
+        .filter((view) => view.applicationId === application.id)
+        .sort((left, right) => Date.parse(right.lastActiveAt) - Date.parse(left.lastActiveAt))[0];
+      navigate(existing?.route ?? application.startRoute);
+    },
+    [applicationWorkspace.openViews, navigate],
+  );
+
+  useEffect(() => {
+    function handleApplicationActivate(event: Event) {
+      const applicationId = (event as CustomEvent<ApplicationActivateDetail>).detail?.applicationId;
+      const application = registryApplications.find((candidate) => candidate.id === applicationId && candidate.available);
+      if (application) activateApplication(application);
+    }
+    window.addEventListener(APPLICATION_ACTIVATE_EVENT, handleApplicationActivate);
+    return () => window.removeEventListener(APPLICATION_ACTIVATE_EVENT, handleApplicationActivate);
+  }, [activateApplication, registryApplications]);
+
+  const activateApplicationView = useCallback(
+    (view: { route: string }) => {
+      navigate(view.route);
+    },
+    [navigate],
+  );
+
+  const togglePinnedApplication = useCallback((applicationId: string) => {
+    setApplicationWorkspace((current) => {
+      const next = toggleApplicationPinned(current, applicationId);
+      writeStoredApplicationWorkspace(next);
+      return next;
+    });
+  }, []);
+
+  const dismissApplicationView = useCallback(
+    (viewId: string) => {
+      setApplicationWorkspace((current) => {
+        const dismissedActiveView = current.activeViewId === viewId;
+        const next = closeApplicationView(current, viewId);
+        writeStoredApplicationWorkspace(next);
+        if (dismissedActiveView) {
+          const nextActiveView = next.openViews.find((view) => view.id === next.activeViewId);
+          const fallback = fallbackApplication(next, registryApplications);
+          const nextRoute = nextActiveView?.route ?? fallback?.startRoute;
+          if (nextRoute) window.setTimeout(() => navigate(nextRoute), 0);
+        }
+        return next;
+      });
+    },
+    [navigate, registryApplications],
+  );
   const routeShellNavItems = useMemo<RouteShellNavItem[]>(
     () => buildRouteShellNavItems(extensionRegistry.extensions),
     [extensionRegistry.extensions],
@@ -1932,7 +2050,23 @@ export function Layout() {
     };
   }, []);
 
-  const effectiveSidebarOpen = sidebarOpen;
+  const activeApplicationSidebarSurface = useMemo(
+    () =>
+      activeApplication?.sidebarView
+        ? (extensionRegistry.surfaces.find(
+            (surface) =>
+              surface.extensionId === activeApplication.extensionId &&
+              surface.id === activeApplication.sidebarView &&
+              surface.location === 'sidebar',
+          ) ?? null)
+        : null,
+    [activeApplication, extensionRegistry.surfaces],
+  );
+  // Keep the shell usable during a rolling frontend/backend upgrade where the
+  // registry predates application registrations. The compatibility path can be
+  // removed once every supported host always emits `applications`.
+  const legacyApplicationRegistry = extensionRegistry.applications === undefined;
+  const effectiveSidebarOpen = sidebarOpen && (activeApplicationSidebarSurface !== null || legacyApplicationRegistry);
   useEffect(() => {
     const root = document.documentElement;
     const previous = root.style.getPropertyValue('--neon-pilot-sidebar-offset');
@@ -3543,12 +3677,13 @@ export function Layout() {
         <div className="flex h-screen flex-col overflow-hidden bg-base text-primary select-none">
           <DesktopTopBar
             environment={desktopEnvironment}
-            sidebarOpen={effectiveSidebarOpen}
-            onToggleSidebar={handlePrimarySidebarToggle}
-            showRailToggle={canToggleRightRail}
-            railOpen={canToggleWorkbench ? showWorkbench : (activeRightRailControl?.railOpen ?? false)}
-            railToggleLabel={canToggleWorkbench ? { open: 'Hide workbench', closed: 'Show workbench' } : undefined}
-            onToggleRail={canToggleWorkbench ? handleWorkbenchToggle : (activeRightRailControl?.toggleRail ?? (() => {}))}
+            applications={registryApplications}
+            applicationWorkspace={applicationWorkspace}
+            activeApplicationId={activeApplication?.id ?? null}
+            onActivateApplication={activateApplication}
+            onActivateApplicationView={activateApplicationView}
+            onToggleApplicationPinned={togglePinnedApplication}
+            onCloseApplicationView={dismissApplicationView}
             trailingExtra={
               <>
                 <SetupReadinessButton
@@ -3571,14 +3706,20 @@ export function Layout() {
                 style={{ width: sidebar.width }}
                 className="relative z-20 flex-shrink-0 flex flex-col overflow-hidden bg-panel border-r border-border-subtle"
               >
-                <Suspense fallback={<div className="flex-1 bg-panel" aria-label="Loading sidebar" />}>
-                  <Sidebar
-                    onNewConversation={(args) =>
-                      startNewConversationFromLayout(true, {
-                        cwd: args?.cwd,
-                      })
-                    }
-                  />
+                <Suspense fallback={<div className="flex-1 bg-panel" aria-label="Loading application sidebar" />}>
+                  {legacyApplicationRegistry ? (
+                    <div className="flex-1 bg-panel" aria-label="Loading sidebar" />
+                  ) : (
+                    <NativeExtensionSurfaceHost
+                      surface={activeApplicationSidebarSurface!}
+                      pathname={location.pathname}
+                      search={location.search}
+                      hash={location.hash}
+                      conversationId={activeConversationId}
+                      cwd={activeWorkspaceCwd}
+                      instanceId={`application-sidebar:${activeApplication?.id ?? 'unknown'}`}
+                    />
+                  )}
                 </Suspense>
               </div>
             ) : null}

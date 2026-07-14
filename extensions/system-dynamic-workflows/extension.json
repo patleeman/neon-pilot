@@ -37,6 +37,7 @@
         "location": "main",
         "route": "/workflows",
         "component": "WorkflowsPage",
+        "applicationId": "system-agent:agent",
         "icon": "graph",
         "activation": "on-route"
       },
@@ -59,6 +60,9 @@
         "icon": "graph",
         "pageType": "editor",
         "section": "primary",
+        "applicationId": "system-agent:agent",
+        "slot": "work",
+        "order": 40,
         "sidebarView": "workflows-sidebar"
       }
     ],

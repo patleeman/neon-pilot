@@ -11,6 +11,18 @@ import {
 describe('extensionViewContributionValidation', () => {
   it('validates view-adjacent contribution groups', () => {
     expect(validateViewContributions([{ id: 'view', title: 'View', location: 'main', component: 'View' }])).toBeUndefined();
+    expect(
+      validateViewContributions([
+        {
+          id: 'view',
+          title: 'View',
+          location: 'main',
+          component: 'View',
+          applicationId: 'system-agent:agent',
+          openPolicy: 'internal',
+        },
+      ]),
+    ).toBeUndefined();
     expect(validateViewContributions([{ id: 'sidebar', title: 'Sidebar', location: 'sidebar', component: 'Sidebar' }])).toBeUndefined();
     expect(validateWebappContributions([{ id: 'app', title: 'App', entry: 'dist/webapp/index.html' }])).toBeUndefined();
     expect(validateWebappContributions([{ id: 'dev', title: 'Dev', target: 'http://127.0.0.1:4173/' }])).toBeUndefined();
@@ -34,6 +46,9 @@ describe('extensionViewContributionValidation', () => {
     expect(() =>
       validateViewContributions([{ id: 'view', title: 'View', location: 'main', component: 'View', placement: 'primary' }]),
     ).toThrow('Extension manifest contributes.views[0].placement is only valid for side-region views.');
+    expect(() =>
+      validateViewContributions([{ id: 'view', title: 'View', location: 'sidebar', component: 'View', openPolicy: 'internal' }]),
+    ).toThrow('openPolicy is only valid for main views');
     expect(() => validateWebappContributions([{ id: 'app', title: 'App' }])).toThrow(
       'Extension manifest contributes.webapps[0] must declare entry or target.',
     );

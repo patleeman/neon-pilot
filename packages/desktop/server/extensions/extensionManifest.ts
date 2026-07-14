@@ -141,6 +141,7 @@ export interface ExtensionFrontend {
 }
 
 export interface ExtensionContributions {
+  applications?: ExtensionApplicationContribution[];
   views?: ExtensionViewContribution[];
   webapps?: ExtensionWebappContribution[];
   nav?: ExtensionNavContribution[];
@@ -586,6 +587,28 @@ export interface ExtensionHostComponentReference {
 
 export type ExtensionComponentReference = string | ExtensionHostComponentReference;
 
+export type ExtensionApplicationInstancePolicy = 'singleton' | 'multiple';
+export type ExtensionApplicationViewPolicy = 'internal' | 'singleton' | 'resource';
+
+export interface ExtensionApplicationNavigationSlot {
+  id: string;
+  label?: string;
+  order?: number;
+}
+
+export interface ExtensionApplicationContribution {
+  id: string;
+  title: string;
+  description?: string;
+  icon?: ExtensionIconName;
+  startRoute: string;
+  sidebarView?: string;
+  instancePolicy?: ExtensionApplicationInstancePolicy;
+  defaultPinned?: boolean;
+  order?: number;
+  navigationSlots?: ExtensionApplicationNavigationSlot[];
+}
+
 export interface ExtensionViewContribution {
   id: string;
   title: string;
@@ -601,6 +624,8 @@ export interface ExtensionViewContribution {
   location: 'main' | 'rightRail' | 'workbench' | 'sidebar';
   component: ExtensionComponentReference;
   route?: string;
+  applicationId?: string;
+  openPolicy?: ExtensionApplicationViewPolicy;
   /** Side-region instance boundary. Invalid on `main` views. */
   scope?: ExtensionRightSurfaceScope | ExtensionViewScope;
   icon?: ExtensionIconName;
@@ -636,6 +661,9 @@ export interface ExtensionNavContribution {
    * the page-type taxonomy is being vetted; it does not change routing behavior.
    */
   pageType?: ExtensionPageType;
+  applicationId?: string;
+  slot?: string;
+  order?: number;
   section?: 'primary' | 'settings';
 }
 

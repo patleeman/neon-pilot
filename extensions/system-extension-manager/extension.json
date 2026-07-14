@@ -180,6 +180,9 @@
         "icon": "sparkle",
         "pageType": "table",
         "section": "settings",
+        "applicationId": "system-settings:system",
+        "slot": "primary",
+        "order": 10,
         "rightSidebarView": "extension-details-rail"
       }
     ],
@@ -190,6 +193,7 @@
         "location": "main",
         "route": "/extensions",
         "component": "ExtensionManagerPage",
+        "applicationId": "system-settings:system",
         "activation": "on-route"
       },
       {

@@ -28,6 +28,7 @@
         "location": "main",
         "route": "/gateways",
         "component": "GatewaysPage",
+        "applicationId": "system-agent:agent",
         "icon": "app",
         "activation": "on-route"
       },
@@ -46,11 +47,14 @@
     "nav": [
       {
         "id": "gateways-nav",
-        "label": "Gateways",
+        "label": "Channels",
         "route": "/gateways",
         "icon": "app",
         "pageType": "setup",
         "section": "primary",
+        "applicationId": "system-agent:agent",
+        "slot": "work",
+        "order": 20,
         "rightSidebarView": "gateway-context-rail"
       }
     ],

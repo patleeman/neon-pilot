@@ -72,6 +72,7 @@ The public website docs are built by scanning [`docs/public`](public). Put human
 - [Development workflow](development.md) — validation, UI QA, checkpoints, and secret scanning
 - [Client workflow tests](client-workflow-tests.md) — frontend workflow coverage matrix for chat, sidebar, extensions, settings, geometry, and recovery paths
 - [Desktop API Boundary](desktop-api-boundary.md) — HTTP data plane, WebSocket realtime plane, and native-only IPC policy
+- [Application platform](application-platform.md) — application-shell ownership, extension application contributions, taskbar behavior, and launcher semantics
 - [Daemon](daemon.md) — background process and runtime lifecycle
 - [Sandboxing](public/10-product/50-sandboxing.md) — shared process execution launcher, wrapper extensions, and direct process API policy
 - [Filesystem Authority](filesystem-authority.md) — shared scoped filesystem boundary, backend seam, policy hooks, and command-sandbox root grants

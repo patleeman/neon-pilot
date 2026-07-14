@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
+import { APPLICATION_ACTIVATE_EVENT } from '../applications/applicationEvents';
 import { api } from '../client/api';
 import {
   ALL_COMMAND_PALETTE_SCOPE,
-  COMMAND_PALETTE_SCOPE_OPTIONS,
   COMMAND_PALETTE_SECTION_LABELS,
   type CommandPaletteItem,
   type CommandPaletteScope,
@@ -41,10 +41,11 @@ import type {
   ExtensionQuickOpenRegistration,
   ExtensionSearchProviderRegistration,
 } from '../extensions/types';
+import { useExtensionRegistry } from '../extensions/useExtensionRegistry';
 import { useConversations } from '../hooks/useConversations';
 import type { ConversationContentSearchMatch } from '../shared/types';
 import { useAllSessions, useSessionsReady } from '../store';
-import { cx, Keycap, PanelMessage, RowButton, SearchInput, SectionLabel, SegmentedControl } from './ui';
+import { cx, Keycap, PanelMessage, RowButton, SearchInput, SectionLabel } from './ui';
 
 type ExtensionQuickOpenProvider = {
   list?: () => Promise<ExtensionQuickOpenItem[]> | ExtensionQuickOpenItem[];
@@ -87,10 +88,11 @@ export function CommandPalette() {
   const requestedThreadBootstrapRef = useRef(false);
   const macPlatform = useMemo(() => isMacPlatform(), []);
   const sessions = useAllSessions();
+  const extensionRegistry = useExtensionRegistry();
   const sessionsReady = useSessionsReady();
   const { pinnedSessions, tabs, archivedSessions, openSession, loading: sessionsLoading, refetch } = useConversations();
   const [open, setOpen] = useState(false);
-  const [scope, setScope] = useState<CommandPaletteScope>(THREADS_COMMAND_PALETTE_SCOPE);
+  const [scope, setScope] = useState<CommandPaletteScope>(ALL_COMMAND_PALETTE_SCOPE);
   const [anchorRect, setAnchorRect] = useState<OpenCommandPaletteDetail['anchorRect'] | null>(null);
   const [query, setQuery] = useState('');
   const [cursor, setCursor] = useState(0);
@@ -161,9 +163,39 @@ export function CommandPalette() {
     }));
     return [...hostItems, ...extensionItems];
   }, [commandContextRevision, extensionCommands, location.pathname, navigate, open]);
+  const applicationItems = useMemo<CommandPaletteItem<CommandPaletteAction>[]>(
+    () =>
+      extensionRegistry.applications
+        .filter((application) => application.available)
+        .map((application, index) => ({
+          id: `application:${application.id}`,
+          section: 'applications',
+          title: application.title,
+          subtitle: application.description,
+          meta: 'Application',
+          keywords: [application.id, application.extensionId],
+          order: index,
+          action: { kind: 'navigate' as const, to: application.startRoute },
+        })),
+    [extensionRegistry.applications],
+  );
+  const applicationPageItems = useMemo<CommandPaletteItem<CommandPaletteAction>[]>(
+    () =>
+      extensionRegistry.applicationNavigation.map((item, index) => ({
+        id: `application-page:${item.id}`,
+        section: 'pages',
+        title: item.label,
+        subtitle: extensionRegistry.applications.find((application) => application.id === item.applicationId)?.title,
+        meta: 'Page',
+        keywords: [item.route, item.applicationId, item.slot],
+        order: index,
+        action: { kind: 'navigate' as const, to: item.route },
+      })),
+    [extensionRegistry.applicationNavigation, extensionRegistry.applications],
+  );
   const fileItems =
     scope === ALL_COMMAND_PALETTE_SCOPE
-      ? [...commandItems, ...quickOpenItems]
+      ? [...applicationItems, ...applicationPageItems, ...commandItems, ...quickOpenItems]
       : scope === COMMANDS_COMMAND_PALETTE_SCOPE
         ? commandItems
         : quickOpenItems;
@@ -179,20 +211,7 @@ export function CommandPalette() {
         .sort((left, right) => left.order - right.order || left.label.localeCompare(right.label)),
     [quickOpenRegistrations],
   );
-  const searchProviderScopes = useMemo(
-    () => extensionSearchProviders.map((provider) => ({ value: provider.id, label: provider.title })),
-    [extensionSearchProviders],
-  );
   const quickOpenScopeLabel = quickOpenScopes.find((option) => option.value === scope)?.label ?? 'items';
-  const scopeOptions = useMemo(
-    () => [
-      ...COMMAND_PALETTE_SCOPE_OPTIONS,
-      { value: COMMANDS_COMMAND_PALETTE_SCOPE, label: 'Commands' },
-      ...quickOpenScopes.map(({ value, label }) => ({ value, label })),
-      ...searchProviderScopes,
-    ],
-    [quickOpenScopes, searchProviderScopes],
-  );
   const quickOpenSectionLabels = useMemo(
     () => ({
       ...Object.fromEntries(quickOpenScopes.map((option) => [option.value, option.label])),
@@ -212,7 +231,7 @@ export function CommandPalette() {
       archivedConversationItems,
       fileItems,
       searchedConversationItems,
-      searchedFileItems: extensionSearchItems.length > 0 ? extensionSearchItems : searchedFileItems,
+      searchedFileItems: [...extensionSearchItems, ...searchedFileItems],
     });
   }, [
     archivedConversationItems,
@@ -250,7 +269,7 @@ export function CommandPalette() {
 
   const openPalette = useCallback((options: OpenCommandPaletteDetail = {}) => {
     setQuery(options.query ?? '');
-    setScope(options.scope ?? (options.anchorRect ? ALL_COMMAND_PALETTE_SCOPE : THREADS_COMMAND_PALETTE_SCOPE));
+    setScope(ALL_COMMAND_PALETTE_SCOPE);
     setAnchorRect(options.anchorRect ?? null);
     setCursor(0);
     setBusyItemId(null);
@@ -392,7 +411,8 @@ export function CommandPalette() {
   }, [canLoadMoreArchivedThreads, groups]);
 
   const activeSearchProvider = extensionSearchProviders.find((provider) => provider.id === scope) ?? null;
-  const shouldSearchExtensionProvider = open && Boolean(activeSearchProvider) && query.trim().length > 0;
+  const shouldSearchExtensionProvider =
+    open && query.trim().length > 0 && (scope === ALL_COMMAND_PALETTE_SCOPE || Boolean(activeSearchProvider));
   const quickOpenScopeActive =
     scope !== ALL_COMMAND_PALETTE_SCOPE &&
     scope !== THREADS_COMMAND_PALETTE_SCOPE &&
@@ -445,7 +465,7 @@ export function CommandPalette() {
   }, [query, shouldSearchConversationsByContent]);
 
   useEffect(() => {
-    if (!shouldSearchExtensionProvider || !activeSearchProvider) {
+    if (!shouldSearchExtensionProvider) {
       setExtensionSearchLoading(false);
       setExtensionSearchError(null);
       setExtensionSearchItems([]);
@@ -458,14 +478,20 @@ export function CommandPalette() {
 
     const handle = window.setTimeout(() => {
       void api
-        .extensionSearch({ query: query.trim(), limit: FILE_SEARCH_LIMIT, providerId: activeSearchProvider.id })
+        .extensionSearch({
+          query: query.trim(),
+          limit: FILE_SEARCH_LIMIT,
+          ...(activeSearchProvider ? { providerId: activeSearchProvider.id } : {}),
+        })
         .then((result: { providers: ExtensionSearchProviderRegistration[]; items: ExtensionSearchItem[] }) => {
           if (cancelled) return;
           setExtensionSearchItems(
             result.items.flatMap((item: ExtensionSearchItem, index: number) => {
               const provider =
                 result.providers.find((candidate: ExtensionSearchProviderRegistration) => candidate.id === item.providerId) ??
-                activeSearchProvider;
+                activeSearchProvider ??
+                result.providers[0];
+              if (!provider) return [];
               const normalized = normalizeExtensionSearchItem(provider, item, index);
               return normalized ? [normalized] : [];
             }),
@@ -549,6 +575,15 @@ export function CommandPalette() {
       setBusyItemId(item.id);
 
       try {
+        if (item.id.startsWith('application:')) {
+          window.dispatchEvent(
+            new CustomEvent(APPLICATION_ACTIVATE_EVENT, {
+              detail: { applicationId: item.id.slice('application:'.length) },
+            }),
+          );
+          closePalette();
+          return;
+        }
         const handled = await activateCommandPaletteItem(item, {
           commandItems,
           location,
@@ -625,21 +660,6 @@ export function CommandPalette() {
         return;
       }
 
-      if (event.key === 'Tab') {
-        event.preventDefault();
-        const scopeValues = scopeOptions.map((option) => option.value);
-        const currentIndex = scopeValues.indexOf(scope);
-        const direction = event.shiftKey ? -1 : 1;
-        const nextIndex = currentIndex === -1 ? 0 : (currentIndex + direction + scopeValues.length) % scopeValues.length;
-        const nextScope = scopeValues[nextIndex];
-        setScope(nextScope);
-        setCursor(0);
-        setActionError(null);
-        setArchivedVisibleLimit(THREADS_EMPTY_QUERY_PAGE_SIZE);
-        window.requestAnimationFrame(() => inputRef.current?.focus());
-        return;
-      }
-
       if (event.key === 'Enter') {
         event.preventDefault();
         const active = visibleItems[cursor];
@@ -687,7 +707,7 @@ export function CommandPalette() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [activateItem, closePalette, cursor, open, scope, scopeOptions, visibleItems]);
+  }, [activateItem, closePalette, cursor, open, visibleItems]);
 
   useEffect(() => {
     if (!open) return;
@@ -753,22 +773,18 @@ export function CommandPalette() {
     quickOpenSearchLoading,
   ]);
   const showSectionHeaders = groups.length > 1;
+  const displayedLoadingSections = scope === ALL_COMMAND_PALETTE_SCOPE && visibleCount > 0 ? [] : loadingSections;
   const labelForSection = useCallback(
     (section: CommandPaletteSection) => quickOpenSectionLabels[section] ?? COMMAND_PALETTE_SECTION_LABELS[section] ?? section,
     [quickOpenSectionLabels],
   );
-  const searchPlaceholder =
-    scope === ALL_COMMAND_PALETTE_SCOPE
-      ? 'Search threads, models, settings…'
-      : scope === THREADS_COMMAND_PALETTE_SCOPE
-        ? 'Search threads…'
-        : `Open ${labelForSection(scope).toLowerCase()}…`;
+  const searchPlaceholder = 'Search applications, pages, conversations, and actions…';
 
   if (!open) {
     return null;
   }
 
-  const anchoredPanelWidth = anchorRect ? Math.min(anchorRect.width, window.innerWidth - 32) : undefined;
+  const anchoredPanelWidth = anchorRect ? Math.min(680, window.innerWidth - 32) : undefined;
   const anchoredPanelLeft =
     anchorRect && anchoredPanelWidth ? Math.min(Math.max(16, anchorRect.left), window.innerWidth - anchoredPanelWidth - 16) : undefined;
   let runningIndex = -1;
@@ -798,7 +814,7 @@ export function CommandPalette() {
         style={{
           position: anchorRect ? 'fixed' : undefined,
           left: anchoredPanelLeft !== undefined ? `${anchoredPanelLeft}px` : undefined,
-          top: anchorRect ? `${anchorRect.top}px` : undefined,
+          top: anchorRect ? `${anchorRect.top + anchorRect.height + 6}px` : undefined,
           width: anchoredPanelWidth !== undefined ? `${anchoredPanelWidth}px` : undefined,
           maxWidth: anchorRect ? undefined : '560px',
           maxHeight: anchorRect ? `min(560px, calc(100vh - ${anchorRect.top + 12}px))` : 'min(560px, calc(100vh - 7rem))',
@@ -827,21 +843,7 @@ export function CommandPalette() {
             <Keycap className="ui-command-palette-keycap">{macPlatform ? '⌘K' : 'Ctrl+K'}</Keycap>
           </div>
 
-          <div className="ui-command-palette-toolbar">
-            <SegmentedControl
-              value={scope}
-              options={scopeOptions}
-              ariaLabel="Command palette scope"
-              className="ui-command-palette-scope-control font-mono text-[10px]"
-              onChange={(nextScope) => {
-                setScope(nextScope);
-                setCursor(0);
-                setActionError(null);
-                setArchivedVisibleLimit(THREADS_EMPTY_QUERY_PAGE_SIZE);
-                window.requestAnimationFrame(() => inputRef.current?.focus());
-              }}
-            />
-
+          <div className="ui-command-palette-toolbar justify-end">
             <div className="ui-command-palette-shortcuts">
               <span>{visibleCount > 0 ? `${cursor + 1}/${visibleCount}` : '0/0'}</span>
               <span>↵ open</span>
@@ -933,7 +935,7 @@ export function CommandPalette() {
             </section>
           ))}
 
-          {loadingSections.map((section) => (
+          {displayedLoadingSections.map((section) => (
             <section key={`loading:${section}`} className="pb-2 last:pb-0">
               {showSectionHeaders && (
                 <div className="px-2.5 pb-1 flex items-center gap-2">
@@ -968,16 +970,17 @@ export function CommandPalette() {
             </section>
           )}
 
-          {extensionSearchError && activeSearchProvider && (
+          {extensionSearchError && (
             <section className="pb-2 last:pb-0">
               <PanelMessage tone="danger" className="px-2.5 py-3 text-[12px]">
-                Failed to search {activeSearchProvider.title.toLowerCase()}: {extensionSearchError}
+                Failed to search {activeSearchProvider ? activeSearchProvider.title.toLowerCase() : 'extension content'}:{' '}
+                {extensionSearchError}
               </PanelMessage>
             </section>
           )}
 
           {visibleCount === 0 &&
-            loadingSections.length === 0 &&
+            displayedLoadingSections.length === 0 &&
             !(conversationContentSearchError && scope === THREADS_COMMAND_PALETTE_SCOPE) &&
             !(quickOpenError && quickOpenScopeActive) &&
             !(quickOpenSearchError && quickOpenScopeActive) &&

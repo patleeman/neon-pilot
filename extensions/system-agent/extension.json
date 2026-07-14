@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 2,
+  "id": "system-agent",
+  "name": "Agent",
+  "description": "Conversation and agent-work application for Neon Pilot.",
+  "version": "0.1.0",
+  "contributes": {
+    "applications": [
+      {
+        "id": "agent",
+        "title": "Agent",
+        "description": "Conversations, automations, channels, and evaluations.",
+        "icon": "sparkle",
+        "startRoute": "/conversations/new",
+        "sidebarView": "application-sidebar",
+        "instancePolicy": "singleton",
+        "defaultPinned": true,
+        "order": 10,
+        "navigationSlots": [
+          { "id": "primary", "order": 0 },
+          { "id": "work", "label": "Work", "order": 10 },
+          { "id": "tools", "label": "Tools", "order": 20 }
+        ]
+      }
+    ],
+    "views": [
+      {
+        "id": "conversation-page",
+        "title": "Chat",
+        "location": "main",
+        "route": "/conversations",
+        "applicationId": "system-agent:agent",
+        "openPolicy": "internal",
+        "component": { "host": "conversation.page" },
+        "routeCapabilities": ["workbench", "workbenchFilePane"]
+      },
+      {
+        "id": "application-sidebar",
+        "title": "Agent navigation",
+        "location": "sidebar",
+        "component": {
+          "host": "application.sidebar",
+          "props": { "applicationId": "system-agent:agent", "showConversations": true }
+        }
+      }
+    ],
+    "nav": [
+      {
+        "id": "chat",
+        "label": "Chat",
+        "route": "/conversations",
+        "icon": "sparkle",
+        "pageType": "conversation",
+        "applicationId": "system-agent:agent",
+        "slot": "primary",
+        "order": 0
+      }
+    ]
+  },
+  "permissions": []
+}

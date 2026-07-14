@@ -38,6 +38,7 @@ vi.mock('./useExtensionRegistry', () => ({
 
 describe('ExtensionPage', () => {
   afterEach(() => {
+    window.localStorage.clear();
     vi.mocked(useExtensionRegistry).mockReset();
     vi.mocked(useExtensionRegistry).mockReturnValue({
       loading: false,
@@ -106,6 +107,50 @@ describe('ExtensionPage', () => {
     expect(host.getAttribute('data-extension-id')).toBe('system-settings');
     expect(host.getAttribute('data-surface-id')).toBe('providers');
     expect(screen.queryByText(/Extension surface unavailable/i)).toBeNull();
+  });
+
+  it('keeps a disabled application recoverable even when its stale surface is still registered', () => {
+    vi.mocked(useExtensionRegistry).mockReturnValue({
+      loading: false,
+      error: null,
+      applications: [
+        {
+          id: 'fixture:reports',
+          extensionId: 'fixture',
+          title: 'Reports',
+          startRoute: '/reports-home',
+          routes: ['/reports-home', '/reports'],
+          instancePolicy: 'singleton',
+          available: false,
+          navigationSlots: [],
+        },
+      ],
+      applicationNavigation: [],
+      surfaces: [
+        {
+          extensionId: 'fixture',
+          id: 'reports-page',
+          title: 'Reports',
+          location: 'main',
+          route: '/reports',
+          component: 'ReportsPage',
+          packageType: 'user',
+          frontend: { entry: 'dist/frontend.js' },
+        },
+      ],
+      routes: [],
+      extensions: [],
+    } as never);
+
+    render(
+      <MemoryRouter initialEntries={['/reports']}>
+        <ExtensionPage />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText('Reports can’t open')).toBeTruthy();
+    expect(screen.getByText(/saved view has been kept/i)).toBeTruthy();
+    expect(screen.queryByTestId('surface-host')).toBeNull();
   });
 
   it('keeps registry loading visually quiet while preserving status semantics', () => {
@@ -256,5 +301,34 @@ describe('ExtensionPage', () => {
     expect(screen.getByRole('link', { name: 'Go to Chat' }).getAttribute('href')).toBe('/conversations/new');
     expect(screen.queryByText(/Extension surface unavailable/i)).toBeNull();
     expect(addNotification).not.toHaveBeenCalled();
+  });
+
+  it('recovers a missing saved application view whose route includes search and hash state', () => {
+    window.localStorage.setItem(
+      'neon-pilot:application-workspace:v1',
+      JSON.stringify({
+        pinnedApplicationIds: [],
+        pinsInitialized: true,
+        activeViewId: 'missing:reports:/reports',
+        openViews: [
+          {
+            id: 'missing:reports:/reports',
+            applicationId: 'missing:reports',
+            route: '/reports?tab=quarterly#summary',
+            title: 'Reports · quarterly',
+            lastActiveAt: '2026-01-01T00:00:00.000Z',
+          },
+        ],
+      }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={['/reports?tab=quarterly#summary']}>
+        <ExtensionPage />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText('Reports can’t open')).toBeTruthy();
+    expect(screen.getByText(/saved view has been kept/i)).toBeTruthy();
   });
 });

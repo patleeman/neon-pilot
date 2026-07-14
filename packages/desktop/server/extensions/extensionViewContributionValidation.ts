@@ -70,6 +70,13 @@ export function validateViewContributions(value: unknown): void {
     validateEnum(view.location, ['main', 'rightRail', 'workbench', 'sidebar'], `contributes.views[${index}].location`);
     validateViewComponent(view.component, `contributes.views[${index}].component`);
     validateOptionalString(view.route, `contributes.views[${index}].route`);
+    validateOptionalString(view.applicationId, `contributes.views[${index}].applicationId`);
+    if (view.openPolicy !== undefined) {
+      if (view.location !== 'main') {
+        throw new Error(`Extension manifest contributes.views[${index}].openPolicy is only valid for main views.`);
+      }
+      validateEnum(view.openPolicy, ['internal', 'singleton', 'resource'], `contributes.views[${index}].openPolicy`);
+    }
     if (view.location === 'main' && view.scope !== undefined) {
       throw new Error(`Extension manifest contributes.views[${index}].scope is only valid for side-region views.`);
     }

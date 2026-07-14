@@ -116,7 +116,7 @@ Supported top-level fields:
 - `id`, `name`, `description`, `version`. Runtime derives `packageType` from install location: repo/app-bundled packages are system extensions; runtime-installed packages are user extensions.
 - `frontend`: native React bundle entry and optional styles.
 - `backend`: backend module entry, backend actions, backend protocol entrypoints, and optional agent lifecycle factory.
-- `contributes`: views, webapps, nav, commands, keybindings, slash commands, mentions, quick-open providers, search providers, gateway providers, prompt reference resolvers, skills, tools, prompt assembly providers/hooks, conversation connection providers, transcript renderers, transcript blocks, selection actions, subscriptions, themes, topBarElements, setupItems, messageActions, composerShelves, composerControls, toolbarActions, conversationDecorators, conversationLifecycle, composer attachment providers/renderers/resolvers, activity tree item elements/styles/actions, contextMenus, statusBarItems, sidebar views, secrets, and settings metadata.
+- `contributes`: applications, views, webapps, nav, commands, keybindings, slash commands, mentions, quick-open providers, search providers, gateway providers, prompt reference resolvers, skills, tools, prompt assembly providers/hooks, conversation connection providers, transcript renderers, transcript blocks, selection actions, subscriptions, themes, topBarElements, setupItems, messageActions, composerShelves, composerControls, toolbarActions, conversationDecorators, conversationLifecycle, composer attachment providers/renderers/resolvers, activity tree item elements/styles/actions, contextMenus, statusBarItems, sidebar views, secrets, and settings metadata.
 - `dependsOn`: required or optional extension dependencies surfaced by diagnostics and available for runtime discovery.
 - `permissions`: declared capability intent.
 
@@ -153,7 +153,53 @@ Minimal example:
 }
 ```
 
-Nav items can also declare route-owned shell regions. Every nav route must match a `main` view with the same route. `sidebarView` replaces the middle-left contextual sidebar body while the route is active. `rightSidebarView` renders a right-sidebar context rail and makes the shell's right-sidebar toggle visible on that route.
+### Applications and application pages
+
+An extension can contribute a top-level application. Applications receive the desktop canvas below Neon Pilot's taskbar and own their internal navigation, sidebar, inspectors, and page layouts. `instancePolicy: "singleton"` restores one last-active view; `"multiple"` permits independently resumable views. Named `navigationSlots` let the owner control where its own and third-party navigation contributions appear.
+
+```json
+{
+  "contributes": {
+    "applications": [
+      {
+        "id": "board",
+        "title": "Agent Board",
+        "startRoute": "/ext/agent-board",
+        "instancePolicy": "singleton",
+        "defaultPinned": true,
+        "navigationSlots": [
+          { "id": "primary", "order": 0 },
+          { "id": "tools", "label": "Tools", "order": 10 }
+        ]
+      }
+    ],
+    "views": [
+      {
+        "id": "page",
+        "title": "Agent Board",
+        "location": "main",
+        "route": "/ext/agent-board",
+        "applicationId": "agent-board:board",
+        "openPolicy": "internal",
+        "component": "AgentBoardPage"
+      }
+    ],
+    "nav": [
+      {
+        "id": "nav",
+        "label": "Board",
+        "route": "/ext/agent-board",
+        "applicationId": "agent-board:board",
+        "slot": "primary"
+      }
+    ]
+  }
+}
+```
+
+Application IDs are qualified as `{extensionId}:{applicationId}`. Another extension may target a declared application and slot with that qualified ID. Unknown application or slot targets produce extension diagnostics and are not rendered as orphan navigation. `openPolicy: "internal"` keeps a page inside the current application view, `"singleton"` reuses one matching page view, and `"resource"` opens distinct route-backed resource views. See `docs/application-platform.md` for shell behavior and ownership boundaries.
+
+Nav items can also declare route-owned application regions. Every nav route must match a `main` view with the same route. `sidebarView` temporarily replaces the application's default sidebar body while the route is active. `rightSidebarView` renders a route-owned context rail inside the application canvas.
 
 Before adding a route, choose one approved page type from `docs/design/page-template-standards.md`: Conversation, Table, Editor, Settings, Dashboard, or Setup. First-party routes must annotate the nav item with `pageType` (`"conversation"`, `"table"`, `"editor"`, `"settings"`, `"dashboard"`, or `"setup"`) so conformance sweeps can audit the intended template. If an extension appears to need another recurring page type, document the missing behavior instead of inventing local shell chrome.
 
@@ -188,13 +234,13 @@ Use `QuietLoadingState` for route, contextual-left, and right-sidebar `Suspense`
 }
 ```
 
-If a route does not declare `sidebarView`, the global sidebar nav remains and the middle contextual area is blank. Do not rely on Threads showing outside Chat routes. If a route does not declare `rightSidebarView`, the shell hides the right-sidebar toggle. Route-owned right-sidebar views require `location: "rightRail"` and `placement: "primary"`; `scope` is optional and defaults through the host.
+If a route does not declare `sidebarView`, the application's default sidebar remains. If a route does not declare `rightSidebarView`, no route-owned context rail is mounted. Route-owned right-sidebar views require `location: "rightRail"` and `placement: "primary"`; `scope` is optional and defaults through the host.
 
 Main views own only the route's primary page. Do not put `placement` or `scope` on `location: "main"` views; those fields are valid only for side-region views and are rejected by manifest validation.
 
 For table/list pages, publish the selected object through `pa.selection.set({ kind: "resource", resource: { type, id, label, source, data } })` and render the detail in the route-owned `rightSidebarView`. Resource selections are cleared when the active route shell changes, so each route should publish its own selected resource and render a compact empty state before selection. Keep normal object inspection out of modals unless the flow is truly blocking or transient.
 
-Route-owned context rails are opened through route navigation plus the shell right-sidebar toggle. They are not standalone command-palette tools. Tab-local workbench rails may still be opened directly with `rail.open`.
+Route-owned context rails are part of the application interior and are not standalone launcher tools. Tab-local workbench rails may still be opened directly with `rail.open`.
 
 Common route shapes:
 

@@ -26,6 +26,7 @@
         "location": "main",
         "route": "/model-arena",
         "component": "ModelArenaPage",
+        "applicationId": "system-agent:agent",
         "activation": "on-route"
       },
       {
@@ -41,11 +42,14 @@
     "nav": [
       {
         "id": "model-arena-nav",
-        "label": "Model Arena",
+        "label": "Evaluations",
         "route": "/model-arena",
         "icon": "graph",
         "pageType": "dashboard",
-        "rightSidebarView": "model-arena-context-rail"
+        "rightSidebarView": "model-arena-context-rail",
+        "applicationId": "system-agent:agent",
+        "slot": "work",
+        "order": 30
       }
     ],
     "messageActions": [

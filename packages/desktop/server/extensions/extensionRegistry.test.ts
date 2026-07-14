@@ -428,6 +428,27 @@ describe('extension registry', () => {
     expect(() =>
       parseExtensionManifest({
         schemaVersion: 2,
+        id: 'application-owner',
+        name: 'Application owner',
+        contributes: {
+          applications: [{ id: 'first', title: 'First', startRoute: '/shared' }],
+          views: [
+            {
+              id: 'shared',
+              title: 'Shared',
+              location: 'main',
+              route: '/shared',
+              component: 'Shared',
+              applicationId: 'application-owner:second',
+            },
+          ],
+        },
+      }),
+    ).toThrow('must be handled by a main view assigned to "application-owner:first"');
+
+    expect(() =>
+      parseExtensionManifest({
+        schemaVersion: 2,
         id: 'bad-ext',
         name: 'Bad Ext',
         contributes: {

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  validateApplicationContributions,
   validateCliCommandContributions,
   validateCommandContributions,
   validateKeybindingContributions,
@@ -11,6 +12,20 @@ import {
 
 describe('extensionBasicContributionValidation', () => {
   it('validates basic contribution groups', () => {
+    expect(
+      validateApplicationContributions([
+        {
+          id: 'agent',
+          title: 'Agent',
+          startRoute: '/conversations/new',
+          sidebarView: 'sidebar',
+          instancePolicy: 'singleton',
+          defaultPinned: true,
+          order: 10,
+          navigationSlots: [{ id: 'work', label: 'Work', order: 10 }],
+        },
+      ]),
+    ).toBeUndefined();
     expect(
       validateNavigationContributions([{ id: 'home', label: 'Home', route: '/home', section: 'primary', pageType: 'table' }]),
     ).toBeUndefined();
@@ -36,6 +51,20 @@ describe('extensionBasicContributionValidation', () => {
   });
 
   it('preserves validation error paths', () => {
+    expect(() =>
+      validateApplicationContributions([
+        { id: 'agent', title: 'Agent', startRoute: '/agent' },
+        { id: 'agent', title: 'Duplicate', startRoute: '/duplicate' },
+      ]),
+    ).toThrow('duplicate id "agent"');
+    expect(() =>
+      validateApplicationContributions([
+        { id: 'agent', title: 'Agent', startRoute: '/agent', navigationSlots: [{ id: 'work' }, { id: 'work' }] },
+      ]),
+    ).toThrow('navigationSlots contains duplicate id "work"');
+    expect(() => validateApplicationContributions([{ id: 'agent', title: 'Agent', startRoute: '/agent', order: 1.5 }])).toThrow(
+      'order must be an integer',
+    );
     expect(() => validateNavigationContributions([{ id: 'home', label: 'Home' }])).toThrow(
       'Extension manifest contributes.nav[0].route must be a non-empty string.',
     );

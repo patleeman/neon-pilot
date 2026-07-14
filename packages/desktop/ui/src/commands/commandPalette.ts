@@ -33,6 +33,8 @@ interface CommandPaletteSectionResult<TAction = unknown> {
 export const THREAD_COMMAND_PALETTE_SECTIONS: CommandPaletteSection[] = ['open', 'archived'];
 
 export const COMMAND_PALETTE_SECTION_LABELS: Record<CommandPaletteSection, string> = {
+  applications: 'Applications',
+  pages: 'Pages',
   open: 'Open threads',
   commands: 'Commands',
   archived: 'Archived threads',
@@ -286,12 +288,14 @@ function readVisibleCommandPaletteSections<TAction>(
   }
 
   const sections = new Set<CommandPaletteSection>();
-  sections.add('open');
-  sections.add('commands');
-  sections.add('archived');
+  sections.add('applications');
+  sections.add('pages');
   for (const item of items) {
     sections.add(item.section);
   }
+  sections.add('open');
+  sections.add('commands');
+  sections.add('archived');
   return [...sections];
 }
 

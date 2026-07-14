@@ -8358,18 +8358,10 @@ export function ConversationPage({ draft = false, conversationId }: { draft?: bo
                   </div>
                 )
               }
-              title={
-                showNewConversationSetup ? (
-                  <span className="sr-only">Choose a workspace</span>
-                ) : isLiveSession ? (
-                  'No messages yet'
-                ) : (
-                  'This conversation is empty'
-                )
-              }
+              title={showNewConversationSetup ? 'Start a conversation' : isLiveSession ? 'No messages yet' : 'This conversation is empty'}
               body={
                 showNewConversationSetup
-                  ? undefined
+                  ? 'Choose a saved workspace, browse for a folder, or start without one. You can change the workspace later.'
                   : isLiveSession
                     ? 'This conversation is live but has no messages yet. Send a prompt to get started.'
                     : 'Send a message in Neon Pilot to start this conversation.'

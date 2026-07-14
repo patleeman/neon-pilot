@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 2,
+  "id": "system-home",
+  "name": "Home",
+  "description": "Application launcher and recent-work starting point.",
+  "version": "0.1.0",
+  "contributes": {
+    "applications": [
+      {
+        "id": "home",
+        "title": "Home",
+        "description": "Open applications and resume recent work.",
+        "icon": "app",
+        "startRoute": "/home",
+        "instancePolicy": "singleton",
+        "defaultPinned": true,
+        "order": 0,
+        "navigationSlots": [{ "id": "primary", "order": 0 }]
+      }
+    ],
+    "views": [
+      {
+        "id": "home-page",
+        "title": "Home",
+        "location": "main",
+        "route": "/home",
+        "applicationId": "system-home:home",
+        "openPolicy": "internal",
+        "component": { "host": "application.home" }
+      }
+    ],
+    "nav": [
+      {
+        "id": "home",
+        "label": "Home",
+        "route": "/home",
+        "icon": "app",
+        "pageType": "dashboard",
+        "applicationId": "system-home:home",
+        "slot": "primary",
+        "order": 0
+      }
+    ]
+  },
+  "permissions": []
+}

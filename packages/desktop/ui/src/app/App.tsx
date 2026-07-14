@@ -1,20 +1,11 @@
-import { Component, type ReactNode, Suspense, useMemo } from 'react';
-import { BrowserRouter, Navigate, Route, Routes, useLocation, useParams } from 'react-router-dom';
+import { Component, type ReactNode, useMemo } from 'react';
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 
-import { recordClientPerfTimingOnce } from '../client/perfDiagnostics';
+import { fallbackApplication, readStoredApplicationWorkspace, resolveApplicationForRoute } from '../applications/applicationWorkspace';
 import { Layout } from '../components/Layout';
 import { Button, ButtonLink, Notice, QuietLoadingState, SectionLabel, SurfacePanel } from '../components/ui';
-import { resolveConversationIndexRedirect } from '../conversation/conversationRoutes';
-import {
-  hasDraftConversationAttachments,
-  hasDraftConversationContextDocs,
-  readDraftConversationComposer,
-  readDraftConversationCwd,
-} from '../conversation/draftConversation';
 import { ExtensionRouteHost } from '../extensions/ExtensionRouteHost';
-import { ExtensionRegistryProvider } from '../extensions/useExtensionRegistry';
-import { useConversations } from '../hooks/useConversations';
-import { ConversationPage } from '../pages/ConversationPage';
+import { ExtensionRegistryProvider, useExtensionRegistry } from '../extensions/useExtensionRegistry';
 import { ThemeProvider } from '../ui-state/theme';
 import { AppDataContext, AppEventsContext, LiveTitlesContext, SseConnectionContext, SystemStatusContext } from './contexts';
 import { useDesktopAppEventRuntime } from './useDesktopAppEventRuntime';
@@ -94,62 +85,20 @@ class AppErrorBoundary extends Component<{ children: ReactNode }, AppErrorBounda
   }
 }
 
-function ConversationsRouteRedirect() {
-  const { openIds, pinnedIds, layoutHydrating } = useConversations();
-  const hasDraft =
-    readDraftConversationComposer().trim().length > 0 ||
-    readDraftConversationCwd().trim().length > 0 ||
-    hasDraftConversationAttachments() ||
-    hasDraftConversationContextDocs();
-
-  if (layoutHydrating) {
-    return <QuietLoadingState label="Loading conversations" />;
+function ApplicationIndexRedirect() {
+  const registry = useExtensionRegistry();
+  if (registry.loading) return <QuietLoadingState label="Loading applications" />;
+  const workspace = readStoredApplicationWorkspace();
+  const activeView = workspace.openViews.find((view) => view.id === workspace.activeViewId);
+  const restoredApplication = activeView
+    ? resolveApplicationForRoute(activeView.route, registry.applications, registry.applicationNavigation)
+    : null;
+  if (activeView && restoredApplication?.id === activeView.applicationId) {
+    return <Navigate to={activeView.route} replace />;
   }
-
-  const redirectPath = resolveConversationIndexRedirect({
-    openIds,
-    pinnedIds,
-    hasDraft,
-  });
-
-  return <Navigate to={redirectPath} replace />;
-}
-
-function readConversationNavigationStart(conversationId: string): number | null {
-  const candidate = (globalThis as { __NEON_PILOT_LAST_SPA_NAVIGATION__?: { path?: string; startedAtMs?: number } })
-    .__NEON_PILOT_LAST_SPA_NAVIGATION__;
-  return candidate?.path === `/conversations/${conversationId}` && typeof candidate.startedAtMs === 'number' ? candidate.startedAtMs : null;
-}
-
-function suspendRoute(element: React.ReactNode) {
-  return <Suspense fallback={<QuietLoadingState label="Loading route" />}>{element}</Suspense>;
-}
-
-function DraftConversationRoute() {
-  return suspendRoute(<ConversationPage key="draft" draft />);
-}
-
-function SavedConversationRoute() {
-  const { id } = useParams<{ id?: string }>();
-  const location = useLocation();
-  if (id) {
-    const navigationStartedAtMs = readConversationNavigationStart(id);
-    if (navigationStartedAtMs !== null) {
-      recordClientPerfTimingOnce(`conversation.routeRender:${id}:${navigationStartedAtMs}`, {
-        name: 'conversation.routeRender',
-        startedAtMs: navigationStartedAtMs,
-        meta: { conversationId: id },
-      });
-    }
-  }
-  const surfaceKey =
-    location.state &&
-    typeof location.state === 'object' &&
-    'preserveConversationSurfaceKey' in location.state &&
-    location.state.preserveConversationSurfaceKey === 'draft'
-      ? 'draft'
-      : (id ?? 'conversation');
-  return suspendRoute(<ConversationPage key={surfaceKey} />);
+  const home = registry.applications.find((application) => application.id === 'system-home:home' && application.available);
+  const fallback = home ?? fallbackApplication(workspace, registry.applications);
+  return <Navigate to={fallback?.startRoute ?? '/conversations/new'} replace />;
 }
 
 export function App() {
@@ -184,13 +133,10 @@ export function App() {
               <LiveTitlesContext.Provider value={liveTitlesContextValue}>
                 <ThemeProvider>
                   <ExtensionRegistryProvider>
-                    <BrowserRouter future={{ v7_startTransition: true }}>
+                    <BrowserRouter>
                       <Routes>
                         <Route path="/" element={<Layout />}>
-                          <Route index element={<Navigate to="/conversations/new" replace />} />
-                          <Route path="conversations" element={<ConversationsRouteRedirect />} />
-                          <Route path="conversations/new" element={<DraftConversationRoute />} />
-                          <Route path="conversations/:id" element={<SavedConversationRoute />} />
+                          <Route index element={<ApplicationIndexRedirect />} />
                           <Route path="*" element={<ExtensionRouteHost />} />
                         </Route>
                       </Routes>

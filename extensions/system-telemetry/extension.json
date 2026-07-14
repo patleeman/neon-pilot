@@ -46,6 +46,7 @@
         "location": "main",
         "route": "/telemetry",
         "component": "TelemetryPage",
+        "applicationId": "system-settings:system",
         "activation": "on-route"
       }
     ],
@@ -55,7 +56,10 @@
         "label": "Diagnostics",
         "route": "/telemetry",
         "icon": "graph",
-        "pageType": "dashboard"
+        "pageType": "dashboard",
+        "applicationId": "system-settings:system",
+        "slot": "primary",
+        "order": 30
       }
     ],
     "cliCommands": [

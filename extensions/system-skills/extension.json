@@ -48,6 +48,9 @@
         "icon": "sparkle",
         "pageType": "table",
         "section": "settings",
+        "applicationId": "system-settings:system",
+        "slot": "primary",
+        "order": 20,
         "rightSidebarView": "skills-context-rail"
       }
     ],
@@ -58,6 +61,7 @@
         "location": "main",
         "route": "/skills",
         "component": "SkillsPage",
+        "applicationId": "system-settings:system",
         "activation": "on-route"
       },
       {

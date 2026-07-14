@@ -15,11 +15,12 @@ function renderTopBar(
     <MemoryRouter>
       <DesktopTopBar
         environment={environment}
-        sidebarOpen
-        onToggleSidebar={() => {}}
-        showRailToggle={false}
-        railOpen={false}
-        onToggleRail={() => {}}
+        applications={[]}
+        applicationWorkspace={{ pinnedApplicationIds: [], pinsInitialized: false, openViews: [], activeViewId: null }}
+        activeApplicationId={null}
+        onActivateApplication={() => {}}
+        onToggleApplicationPinned={() => {}}
+        onCloseApplicationView={() => {}}
         {...overrides}
       />
     </MemoryRouter>,
@@ -162,23 +163,21 @@ describe('DesktopTopBar', () => {
     expect(html).not.toContain('>Local<');
   });
 
-  it('keeps the panel toggles on the outside edges of the top bar controls', () => {
-    const html = renderTopBar(
-      {
-        isElectron: true,
-        activeHostId: 'local',
-        activeHostLabel: 'Local',
-        activeHostKind: 'local',
-        activeHostSummary: 'Local runtime is healthy.',
-        launchMode: 'stable',
-        launchLabel: null,
-      },
-      { showRailToggle: true, railOpen: true },
-    );
+  it('keeps global navigation together without application panel toggles', () => {
+    const html = renderTopBar({
+      isElectron: true,
+      activeHostId: 'local',
+      activeHostLabel: 'Local',
+      activeHostKind: 'local',
+      activeHostSummary: 'Local runtime is healthy.',
+      launchMode: 'stable',
+      launchLabel: null,
+    });
 
-    expect(html.indexOf('Hide sidebar')).toBeLessThan(html.indexOf('Go back'));
+    expect(html).toContain('Open Neon Pilot');
     expect(html.indexOf('Go back')).toBeLessThan(html.indexOf('Go forward'));
-    expect(html.indexOf('Go forward')).toBeLessThan(html.indexOf('Hide right sidebar'));
+    expect(html).not.toContain('Hide sidebar');
+    expect(html).not.toContain('Hide right sidebar');
   });
 
   it('keeps the top bar chrome draggable except for interactive controls', () => {
@@ -194,7 +193,7 @@ describe('DesktopTopBar', () => {
 
     expect(html).toContain('class="ui-desktop-top-bar" style="-webkit-app-region:drag"');
     expect(html).toContain('class="ui-desktop-top-bar__controls" style="-webkit-app-region:no-drag"');
-    expect(html).toContain('ui-command-search-trigger ui-desktop-top-bar__search" style="-webkit-app-region:no-drag"');
+    expect(html).toContain('ui-desktop-top-bar__launcher');
     expect(html).not.toContain('ui-desktop-top-bar__brand');
     expect(html).not.toContain('ui-desktop-top-bar__brand-label');
   });
@@ -226,25 +225,6 @@ describe('DesktopTopBar', () => {
     expect(html).not.toContain('aria-label="Workbench"');
     expect(html).not.toContain('aria-label="Compact"');
     expect(html).not.toContain('aria-label="View mode"');
-  });
-
-  it('can relabel the primary collapse control for workbench mode', () => {
-    const html = renderTopBar(
-      {
-        isElectron: true,
-        activeHostId: 'local',
-        activeHostLabel: 'Local',
-        activeHostKind: 'local',
-        activeHostSummary: 'Local runtime is healthy.',
-      },
-      {
-        sidebarOpen: true,
-        sidebarToggleLabel: { open: 'Hide workbench', closed: 'Show workbench' },
-      },
-    );
-
-    expect(html).toContain('aria-label="Hide workbench"');
-    expect(html).not.toContain('aria-label="Hide sidebar"');
   });
 
   it('does not render desktop chrome outside the desktop shell', () => {

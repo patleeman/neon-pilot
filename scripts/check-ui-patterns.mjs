@@ -285,7 +285,8 @@ const rules = [
   },
   {
     id: 'manifest-unbound-sidebar-view',
-    message: 'sidebar view is not bound from nav[].sidebarView; route contextual-left regions must be declared from nav or removed',
+    message:
+      'sidebar view is not bound from applications[].sidebarView or nav[].sidebarView; application and route contextual-left regions must be declared or removed',
     extensions: new Set(['.json']),
     appliesTo: ({ file }) =>
       /^extensions\/[^/]+\/extension\.json$/.test(file) || /^docs\/extension-templates\/templates\/[^/]+\/extension\.json$/.test(file),
@@ -295,7 +296,8 @@ const rules = [
       if (typeof view?.id !== 'string') return false;
       const manifest = parseJsonDocument(lines);
       const nav = Array.isArray(manifest?.contributes?.nav) ? manifest.contributes.nav : [];
-      return !nav.some((item) => item?.sidebarView === view.id);
+      const applications = Array.isArray(manifest?.contributes?.applications) ? manifest.contributes.applications : [];
+      return !nav.some((item) => item?.sidebarView === view.id) && !applications.some((item) => item?.sidebarView === view.id);
     },
   },
   {

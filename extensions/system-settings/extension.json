@@ -10,6 +10,23 @@
     "styles": ["dist/frontend.css"]
   },
   "contributes": {
+    "applications": [
+      {
+        "id": "system",
+        "title": "System",
+        "description": "Settings, extensions, skills, and diagnostics.",
+        "icon": "gear",
+        "startRoute": "/settings",
+        "sidebarView": "application-sidebar",
+        "instancePolicy": "singleton",
+        "defaultPinned": true,
+        "order": 20,
+        "navigationSlots": [
+          { "id": "primary", "order": 0 },
+          { "id": "settings", "label": "Settings", "order": 20 }
+        ]
+      }
+    ],
     "settings": {
       "secrets.provider": {
         "type": "select",
@@ -50,6 +67,9 @@
         "route": "/settings",
         "icon": "gear",
         "pageType": "settings",
+        "applicationId": "system-settings:system",
+        "slot": "primary",
+        "order": 0,
         "section": "settings",
         "sidebarView": "settings-sidebar"
       }
@@ -262,6 +282,12 @@
       }
     ],
     "views": [
+      {
+        "id": "application-sidebar",
+        "title": "System navigation",
+        "location": "sidebar",
+        "component": { "host": "application.sidebar", "props": { "applicationId": "system-settings:system" } }
+      },
       {
         "id": "settings",
         "title": "Settings",

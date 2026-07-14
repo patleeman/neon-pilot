@@ -9,6 +9,51 @@ import {
 
 const EXTENSION_PAGE_TYPES = ['conversation', 'table', 'editor', 'settings', 'dashboard', 'setup'] as const;
 
+export function validateApplicationContributions(value: unknown): void {
+  const applications = assertRecordArray(value, 'contributes.applications');
+  const applicationIds = new Set<string>();
+  for (const [index, application] of applications.entries()) {
+    const applicationId = requireString(application.id, `contributes.applications[${index}].id`);
+    if (applicationIds.has(applicationId)) {
+      throw new Error(`Extension manifest contributes.applications contains duplicate id "${applicationId}".`);
+    }
+    applicationIds.add(applicationId);
+    requireString(application.title, `contributes.applications[${index}].title`);
+    requireString(application.startRoute, `contributes.applications[${index}].startRoute`);
+    validateOptionalString(application.sidebarView, `contributes.applications[${index}].sidebarView`);
+    validateOptionalString(application.description, `contributes.applications[${index}].description`);
+    if (application.icon !== undefined) {
+      validateEnum(application.icon, EXTENSION_ICON_NAMES, `contributes.applications[${index}].icon`);
+    }
+    if (application.instancePolicy !== undefined) {
+      validateEnum(application.instancePolicy, ['singleton', 'multiple'], `contributes.applications[${index}].instancePolicy`);
+    }
+    if (application.defaultPinned !== undefined && typeof application.defaultPinned !== 'boolean') {
+      throw new Error(`Extension manifest contributes.applications[${index}].defaultPinned must be a boolean.`);
+    }
+    if (application.order !== undefined && !Number.isSafeInteger(application.order)) {
+      throw new Error(`Extension manifest contributes.applications[${index}].order must be an integer.`);
+    }
+    if (application.navigationSlots !== undefined) {
+      const slotIds = new Set<string>();
+      for (const [slotIndex, slot] of assertRecordArray(
+        application.navigationSlots,
+        `contributes.applications[${index}].navigationSlots`,
+      ).entries()) {
+        const slotId = requireString(slot.id, `contributes.applications[${index}].navigationSlots[${slotIndex}].id`);
+        if (slotIds.has(slotId)) {
+          throw new Error(`Extension manifest contributes.applications[${index}].navigationSlots contains duplicate id "${slotId}".`);
+        }
+        slotIds.add(slotId);
+        validateOptionalString(slot.label, `contributes.applications[${index}].navigationSlots[${slotIndex}].label`);
+        if (slot.order !== undefined && !Number.isSafeInteger(slot.order)) {
+          throw new Error(`Extension manifest contributes.applications[${index}].navigationSlots[${slotIndex}].order must be an integer.`);
+        }
+      }
+    }
+  }
+}
+
 export function validateNavigationContributions(value: unknown): void {
   for (const [index, nav] of assertRecordArray(value, 'contributes.nav').entries()) {
     requireString(nav.id, `contributes.nav[${index}].id`);
@@ -18,6 +63,11 @@ export function validateNavigationContributions(value: unknown): void {
     validateOptionalString(nav.badgeAction, `contributes.nav[${index}].badgeAction`);
     validateOptionalString(nav.sidebarView, `contributes.nav[${index}].sidebarView`);
     validateOptionalString(nav.rightSidebarView, `contributes.nav[${index}].rightSidebarView`);
+    validateOptionalString(nav.applicationId, `contributes.nav[${index}].applicationId`);
+    validateOptionalString(nav.slot, `contributes.nav[${index}].slot`);
+    if (nav.order !== undefined && !Number.isSafeInteger(nav.order)) {
+      throw new Error(`Extension manifest contributes.nav[${index}].order must be an integer.`);
+    }
     if (nav.pageType !== undefined) validateEnum(nav.pageType, EXTENSION_PAGE_TYPES, `contributes.nav[${index}].pageType`);
     if (nav.section !== undefined) validateEnum(nav.section, ['primary', 'settings'], `contributes.nav[${index}].section`);
   }

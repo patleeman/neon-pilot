@@ -56,6 +56,7 @@
         "location": "main",
         "route": "/routines",
         "component": "RoutinesPage",
+        "applicationId": "system-agent:agent",
         "icon": "automation",
         "activation": "on-route"
       },
@@ -88,6 +89,9 @@
         "icon": "automation",
         "pageType": "editor",
         "section": "primary",
+        "applicationId": "system-agent:agent",
+        "slot": "work",
+        "order": 50,
         "sidebarView": "routines-sidebar",
         "rightSidebarView": "routines-context-rail"
       }

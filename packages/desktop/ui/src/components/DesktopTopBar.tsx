@@ -1,34 +1,17 @@
 import { type CSSProperties, useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 
+import type { ApplicationViewState, ApplicationWorkspaceState } from '../applications/applicationWorkspace';
 import { ALL_COMMAND_PALETTE_SCOPE } from '../commands/commandPalette';
 import { COMMAND_PALETTE_STATE_EVENT, type CommandPaletteStateDetail, OPEN_COMMAND_PALETTE_EVENT } from '../commands/commandPaletteEvents';
 import { getDesktopBridge, isDesktopShell } from '../desktop/desktopBridge';
 import { setExtensionCommandContext } from '../extensions/commands';
+import type { ApplicationRegistration } from '../extensions/extensionRegistryProjection';
 import { TopBarElementHost } from '../extensions/TopBarElementHost';
 import { useExtensionRegistry } from '../extensions/useExtensionRegistry';
 import type { DesktopAppPreferencesState, DesktopEnvironmentState, DesktopNavigationState } from '../shared/types';
-import { cx, Keycap, Pill, SearchInput, ToolbarButton } from './ui';
-
-function LeftSidebarToggleIcon({ open }: { open: boolean }) {
-  return (
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.2" aria-hidden="true">
-      <rect x="1.5" y="2" width="11" height="10" rx="1.8" />
-      <path d="M4.75 2v10" />
-      {open ? <path d="M6 7h2.5" /> : <path d="M7.9 5.4 6.2 7l1.7 1.6" />}
-    </svg>
-  );
-}
-
-function RightRailToggleIcon({ open }: { open: boolean }) {
-  return (
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.2" aria-hidden="true">
-      <rect x="1.5" y="2" width="11" height="10" rx="1.8" />
-      <path d="M9.25 2v10" />
-      {open ? <path d="M8 7H5.5" /> : <path d="M6.1 5.4 7.8 7l-1.7 1.6" />}
-    </svg>
-  );
-}
+import { ApplicationTaskbar } from './ApplicationTaskbar';
+import { Keycap, Pill, ToolbarButton } from './ui';
 
 function UpdateReadyIcon() {
   return (
@@ -84,33 +67,29 @@ export function readBrowserNavigationState(): DesktopNavigationState {
 
 export function DesktopTopBar({
   environment,
-  sidebarOpen,
-  onToggleSidebar,
-  sidebarToggleLabel,
-  showRailToggle,
-  railOpen,
-  railToggleLabel,
-  onToggleRail,
+  applications,
+  applicationWorkspace,
+  activeApplicationId,
+  onActivateApplication,
+  onActivateApplicationView,
+  onToggleApplicationPinned,
+  onCloseApplicationView,
   trailingExtra,
 }: {
   environment: DesktopEnvironmentState | null;
-  sidebarOpen: boolean;
-  onToggleSidebar: () => void;
-  sidebarToggleLabel?: { open: string; closed: string };
-  showRailToggle: boolean;
-  railOpen: boolean;
-  railToggleLabel?: { open: string; closed: string };
-  onToggleRail: () => void;
+  applications: readonly ApplicationRegistration[];
+  applicationWorkspace: ApplicationWorkspaceState;
+  activeApplicationId: string | null;
+  onActivateApplication: (application: ApplicationRegistration) => void;
+  onActivateApplicationView: (view: ApplicationViewState) => void;
+  onToggleApplicationPinned: (applicationId: string) => void;
+  onCloseApplicationView: (viewId: string) => void;
   trailingExtra?: React.ReactNode;
 }) {
   const location = useLocation();
-  const effectiveSidebarToggleLabel = sidebarToggleLabel ?? { open: 'Hide sidebar', closed: 'Show sidebar' };
-  const effectiveRailToggleLabel = railToggleLabel ?? { open: 'Hide right sidebar', closed: 'Show right sidebar' };
   const { topBarElements } = useExtensionRegistry();
-  const searchShellRef = useRef<HTMLDivElement | null>(null);
-  const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const launcherRef = useRef<HTMLButtonElement | null>(null);
   const browserNavigationSyncTimerRef = useRef<number | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [navigation, setNavigation] = useState<DesktopNavigationState>({
     canGoBack: false,
@@ -249,12 +228,11 @@ export function DesktopTopBar({
     setAppPreferences(state);
   }
 
-  function openPaletteFromSearch(query = searchQuery) {
-    const rect = searchShellRef.current?.getBoundingClientRect();
+  function openLauncher() {
+    const rect = launcherRef.current?.getBoundingClientRect();
     window.dispatchEvent(
       new CustomEvent(OPEN_COMMAND_PALETTE_EVENT, {
         detail: {
-          query,
           scope: ALL_COMMAND_PALETTE_SCOPE,
           anchorRect: rect ? { left: rect.left, top: rect.top, width: rect.width, height: rect.height } : undefined,
         },
@@ -267,9 +245,6 @@ export function DesktopTopBar({
       const detail = (event as CustomEvent<CommandPaletteStateDetail>).detail;
       const open = Boolean(detail?.open);
       setPaletteOpen(open);
-      if (!open) {
-        setSearchQuery('');
-      }
     }
 
     window.addEventListener(COMMAND_PALETTE_STATE_EVENT, handlePaletteState);
@@ -280,18 +255,13 @@ export function DesktopTopBar({
     function handlePaletteShortcut(event: Event) {
       const detail = (event as CustomEvent<{ anchorRect?: unknown; query?: string; scope?: unknown }>).detail;
       if (detail?.anchorRect) return;
-      if (typeof detail?.scope === 'string' && detail.scope.trim().length > 0) return;
       event.stopImmediatePropagation();
-      const input = searchInputRef.current;
-      if (!input) return;
-      input.focus();
-      input.select();
-      window.requestAnimationFrame(() => openPaletteFromSearch(detail?.query ?? searchQuery));
+      window.requestAnimationFrame(openLauncher);
     }
 
     window.addEventListener(OPEN_COMMAND_PALETTE_EVENT, handlePaletteShortcut, true);
     return () => window.removeEventListener(OPEN_COMMAND_PALETTE_EVENT, handlePaletteShortcut, true);
-  }, [searchQuery]);
+  }, []);
 
   if (!showDesktopChrome) {
     return null;
@@ -310,12 +280,14 @@ export function DesktopTopBar({
         <div className="ui-desktop-top-bar__traffic-light-gap" aria-hidden="true" style={dragStyle} />
         <div className="ui-desktop-top-bar__controls" style={noDragStyle}>
           <ToolbarButton
-            className="ui-desktop-top-bar__icon-button"
-            onClick={onToggleSidebar}
-            aria-label={sidebarOpen ? effectiveSidebarToggleLabel.open : effectiveSidebarToggleLabel.closed}
-            title={sidebarOpen ? effectiveSidebarToggleLabel.open : effectiveSidebarToggleLabel.closed}
+            ref={launcherRef}
+            className="ui-desktop-top-bar__launcher"
+            onClick={openLauncher}
+            aria-label="Open Neon Pilot"
+            aria-expanded={paletteOpen}
           >
-            <LeftSidebarToggleIcon open={sidebarOpen} />
+            <span>NeonPilot</span>
+            <Keycap>⌘K</Keycap>
           </ToolbarButton>
           <ToolbarButton
             className="ui-desktop-top-bar__icon-button"
@@ -346,27 +318,16 @@ export function DesktopTopBar({
           </Pill>
         ) : null}
       </div>
-      <div className="ui-desktop-top-bar__center flex items-center justify-center gap-2" style={dragStyle}>
-        <div
-          ref={searchShellRef}
-          className={cx('ui-command-search-trigger ui-desktop-top-bar__search', paletteOpen && 'pointer-events-none opacity-0')}
-          style={noDragStyle}
-        >
-          <span aria-hidden="true">⌕</span>
-          <SearchInput
-            ref={searchInputRef}
-            value={searchQuery}
-            onFocus={() => openPaletteFromSearch()}
-            onChange={(event) => {
-              setSearchQuery(event.target.value);
-              openPaletteFromSearch(event.target.value);
-            }}
-            placeholder="Search threads, models, settings…"
-            aria-label="Search threads, models, settings"
-            className="ui-desktop-top-bar__search-input h-6 min-w-0 flex-1 border-0 bg-transparent px-0 py-0 font-mono text-[11px] tracking-normal text-secondary placeholder:text-dim"
-          />
-          <Keycap className="ui-desktop-top-bar__search-keycap">⌘K</Keycap>
-        </div>
+      <div className="ui-desktop-top-bar__center" style={noDragStyle}>
+        <ApplicationTaskbar
+          applications={applications}
+          workspace={applicationWorkspace}
+          activeApplicationId={activeApplicationId}
+          onActivate={onActivateApplication}
+          onActivateView={onActivateApplicationView}
+          onTogglePinned={onToggleApplicationPinned}
+          onCloseView={onCloseApplicationView}
+        />
       </div>
       <div className="ui-desktop-top-bar__trailing" style={noDragStyle}>
         {topBarElements.map((element) => (
@@ -386,16 +347,6 @@ export function DesktopTopBar({
           </ToolbarButton>
         ) : null}
         {trailingExtra}
-        {showRailToggle ? (
-          <ToolbarButton
-            className="ui-desktop-top-bar__icon-button"
-            onClick={onToggleRail}
-            aria-label={railOpen ? effectiveRailToggleLabel.open : effectiveRailToggleLabel.closed}
-            title={railOpen ? effectiveRailToggleLabel.open : effectiveRailToggleLabel.closed}
-          >
-            <RightRailToggleIcon open={railOpen} />
-          </ToolbarButton>
-        ) : null}
       </div>
     </div>
   );

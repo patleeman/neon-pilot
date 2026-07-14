@@ -294,6 +294,32 @@ export interface ExtensionHostComponentReference {
 
 export type ExtensionComponentReference = string | ExtensionHostComponentReference;
 
+export type ExtensionApplicationInstancePolicy = 'singleton' | 'multiple';
+export type ExtensionApplicationViewPolicy = 'internal' | 'singleton' | 'resource';
+
+export interface ExtensionApplicationNavigationSlot {
+  id: string;
+  label?: string;
+  order?: number;
+}
+
+export interface ExtensionApplicationContribution {
+  /** Stable id scoped to this extension. Other extensions target it as "{extensionId}:{id}". */
+  id: string;
+  title: string;
+  description?: string;
+  icon?: ExtensionIconName;
+  /** Route restored when the application has no more specific last-active route. */
+  startRoute: string;
+  /** Optional owner-provided sidebar view rendered across this application's pages. */
+  sidebarView?: string;
+  /** Whether the shell reuses one application view or permits multiple resumable instances. */
+  instancePolicy?: ExtensionApplicationInstancePolicy;
+  defaultPinned?: boolean;
+  order?: number;
+  navigationSlots?: ExtensionApplicationNavigationSlot[];
+}
+
 export interface ExtensionViewContribution {
   id: string;
   title: string;
@@ -308,6 +334,10 @@ export interface ExtensionViewContribution {
   location: 'main' | 'rightRail' | 'workbench' | 'sidebar';
   component: ExtensionComponentReference;
   route?: string;
+  /** Owning application id, expressed as "{extensionId}:{applicationId}". */
+  applicationId?: string;
+  /** Whether this page stays internal to its application view or may identify a reusable/resource view. */
+  openPolicy?: ExtensionApplicationViewPolicy;
   scope?: ExtensionRightSurfaceScope | ExtensionViewScope;
   icon?: ExtensionIconName;
   /** Controls where this view appears across compact/workbench layout modes. */
@@ -363,6 +393,12 @@ export interface ExtensionNavContribution {
    * conformance audits while the taxonomy is being vetted.
    */
   pageType?: ExtensionPageType;
+  /** Owning application id, expressed as "{extensionId}:{applicationId}". */
+  applicationId?: string;
+  /** Named navigation slot declared by the owning application. */
+  slot?: string;
+  /** Stable order within the named slot. Lower values appear first. */
+  order?: number;
   /** Nav section. Default 'primary'. Use 'settings' for items in the settings area. */
   section?: 'primary' | 'settings';
 }
@@ -913,6 +949,7 @@ export interface ExtensionSettingsComponentContribution {
 }
 
 export interface ExtensionContributions {
+  applications?: ExtensionApplicationContribution[];
   views?: ExtensionViewContribution[];
   webapps?: ExtensionWebappContribution[];
   nav?: ExtensionNavContribution[];

@@ -323,7 +323,9 @@ describe('CommandPalette', () => {
 
     expect(await screen.findByText('Settings migration notes')).toBeTruthy();
     expect(await screen.findByText('Open Composer Settings')).toBeTruthy();
-    expect(screen.getByDisplayValue('settings').getAttribute('placeholder')).toBe('Search threads, models, settings…');
+    expect(screen.getByDisplayValue('settings').getAttribute('placeholder')).toBe(
+      'Search applications, pages, conversations, and actions…',
+    );
   });
 
   it('activates the highest scoring thread result on Enter even when it is archived', async () => {

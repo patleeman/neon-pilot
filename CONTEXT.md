@@ -71,6 +71,18 @@ A package that contributes product features on top of core: pages, panels, tools
 
 Extensions are Neon Pilot's product concept for installable capabilities. A native extension is implemented directly against the Neon Pilot extension API; an imported extension may wrap another ecosystem's package format, such as a Codex plugin, Claude skill package, MCP bundle, instruction pack, or prompt template pack.
 
+### Application
+
+A top-level user experience contributed by an extension and hosted by the Neon Pilot app shell. An application owns its internal navigation, pages, resources, inspectors, and working layout.
+
+Use **application** for experiences such as Agent, Home, or a local-model workspace. Do not use **application** as a synonym for an extension: one extension may contribute an application, contribute to another application, or do both.
+
+### Application contribution
+
+An extension-provided addition to an application, such as an internal navigation destination, page, command, inspector, or launcher result.
+
+Use **application contribution** when distinguishing an extension's user-facing placement from the extension package itself.
+
 ### Self-extensible harness
 
 A harness whose agent can build, install, modify, and run its own extensions from inside the product workflow.
@@ -407,15 +419,39 @@ Use **cwd** only when referring to the concrete execution field or command envir
 
 ### App shell
 
-The persistent desktop frame around product pages: top-level navigation, sidebars/rails, pane layout, shortcuts, and route hosting.
+The persistent desktop frame around applications: the application taskbar, launcher, navigation history, global status, routing, and application hosting.
 
 Use **app shell** for layout chrome, not for extension-owned feature content.
 
-### Left sidebar
+### Application taskbar
 
-The primary navigation sidebar on the left side of the desktop app. It contains app-level destinations and conversation/thread navigation.
+The shell-owned row of pinned and open applications. Selecting an application restores its active application view; application-owned pages and resources do not become taskbar items.
 
-Use **left sidebar** for the app-level navigation area. Do not call it the right rail or a pane.
+Use **application taskbar** or **taskbar**, not tab bar or window list.
+
+### Launcher
+
+The shell-owned searchable menu opened from the Neon Pilot control or Command-K. It finds applications, application pages, resources, and commands, and routes the result through the owning application.
+
+Use **launcher** for this universal navigation surface. Do not describe it as a separate start menu and command palette.
+
+### Application view
+
+A resumable shell-level instance of an application. Singleton applications reuse one application view; applications that support multiple instances may open more than one.
+
+Application-owned pages and resources may change inside an application view without becoming additional shell-level views.
+
+### Application sidebar
+
+An application-owned navigation region on the left side of its canvas. It may contain the application's destinations and resource navigation, such as Agent pages and conversations.
+
+Use **application sidebar** when ownership matters. It is not global app-shell navigation.
+
+### Inspector
+
+An application-owned contextual region for selected-object details, metadata, logs, previews, or secondary actions.
+
+Use **inspector** for application context UI. It is not a persistent global right sidebar.
 
 ### Extension rail
 
@@ -453,7 +489,7 @@ A split-pane workspace for conversation-adjacent surfaces such as file detail vi
 
 ### View
 
-An extension-contributed UI surface, such as a main page, tab-local rail panel, or workbench detail.
+An application or extension UI surface. Prefer the more precise **application view**, **page**, **inspector**, **extension rail**, or **detail view** when the ownership and role are known.
 
 ### Activity tree
 
