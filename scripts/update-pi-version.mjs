@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { execFileSync } from 'node:child_process';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -12,7 +12,7 @@ export function resolvePiDependencyRange(version) {
     throw new Error('Pi version must be a non-empty string.');
   }
 
-  return `^${version.trim()}`;
+  return version.trim();
 }
 
 export function applyLatestPiVersion(rootPackage, latestVersion) {
@@ -49,6 +49,42 @@ export function applyLatestPiVersion(rootPackage, latestVersion) {
   };
 }
 
+export function applyLatestPiPatchVersion(workspaceYaml, latestVersion) {
+  if (typeof workspaceYaml !== 'string' || workspaceYaml.length === 0) {
+    throw new Error('pnpm-workspace.yaml must be a non-empty string.');
+  }
+
+  const version = latestVersion?.trim();
+  if (!version) {
+    throw new Error('Pi version must be a non-empty string.');
+  }
+
+  const patchEntryPattern = /'@earendil-works\/pi-ai@([^']+)': patches\/@earendil-works__pi-ai@([^\s]+)\.patch/;
+  const match = workspaceYaml.match(patchEntryPattern);
+  if (!match) {
+    throw new Error('pnpm-workspace.yaml is missing the versioned Pi AI patch registration.');
+  }
+
+  const [, dependencyVersion, fileVersion] = match;
+  if (dependencyVersion !== fileVersion) {
+    throw new Error(`Pi AI patch registration is inconsistent: dependency ${dependencyVersion}, file ${fileVersion}.`);
+  }
+
+  if (dependencyVersion === version) {
+    return { changed: false, workspaceYaml, previousVersion: dependencyVersion, nextVersion: version };
+  }
+
+  return {
+    changed: true,
+    workspaceYaml: workspaceYaml.replace(
+      patchEntryPattern,
+      `'@earendil-works/pi-ai@${version}': patches/@earendil-works__pi-ai@${version}.patch`,
+    ),
+    previousVersion: dependencyVersion,
+    nextVersion: version,
+  };
+}
+
 export function fetchLatestPiVersion() {
   const [primaryPackageName] = PI_PACKAGE_NAMES;
   const stdout = execFileSync('npm', ['view', primaryPackageName, 'version', '--json'], { encoding: 'utf-8' }).trim();
@@ -61,9 +97,8 @@ export function fetchLatestPiVersion() {
   return parsed.trim();
 }
 
-export function updatePiVersionForRelease(rootPackagePath) {
+export function updatePiVersionForRelease(rootPackagePath, latestVersion = fetchLatestPiVersion()) {
   const rootPackage = JSON.parse(readFileSync(rootPackagePath, 'utf-8'));
-  const latestVersion = fetchLatestPiVersion();
   const result = applyLatestPiVersion(rootPackage, latestVersion);
 
   if (!result.changed) {
@@ -73,6 +108,29 @@ export function updatePiVersionForRelease(rootPackagePath) {
 
   writeFileSync(rootPackagePath, `${JSON.stringify(result.packageJson, null, 2)}\n`);
   console.log(`Updated Pi to ${result.nextRange}.`);
+  return result;
+}
+
+export function updatePiPatchForRelease(repoRoot, latestVersion) {
+  const workspacePath = resolve(repoRoot, 'pnpm-workspace.yaml');
+  const result = applyLatestPiPatchVersion(readFileSync(workspacePath, 'utf-8'), latestVersion);
+  if (!result.changed) {
+    console.log(`Pi AI patch already registered for ${result.nextVersion}.`);
+    return result;
+  }
+
+  const previousPatchPath = resolve(repoRoot, 'patches', `@earendil-works__pi-ai@${result.previousVersion}.patch`);
+  const nextPatchPath = resolve(repoRoot, 'patches', `@earendil-works__pi-ai@${result.nextVersion}.patch`);
+  if (!existsSync(previousPatchPath)) {
+    throw new Error(`Registered Pi AI patch does not exist: ${previousPatchPath}`);
+  }
+  if (existsSync(nextPatchPath)) {
+    throw new Error(`Refusing to overwrite existing Pi AI patch: ${nextPatchPath}`);
+  }
+
+  renameSync(previousPatchPath, nextPatchPath);
+  writeFileSync(workspacePath, result.workspaceYaml);
+  console.log(`Updated Pi AI patch registration to ${result.nextVersion}.`);
   return result;
 }
 
@@ -88,8 +146,14 @@ function isDirectExecution() {
 if (isDirectExecution()) {
   const scriptDir = dirname(fileURLToPath(import.meta.url));
   const repoRoot = resolve(scriptDir, '..');
-  const packagePaths = [resolve(repoRoot, 'package.json'), resolve(repoRoot, 'packages', 'desktop', 'package.json')];
+  const latestVersion = fetchLatestPiVersion();
+  const packagePaths = [
+    resolve(repoRoot, 'package.json'),
+    resolve(repoRoot, 'packages', 'desktop', 'package.json'),
+    resolve(repoRoot, 'extensions', 'system-model-gateway', 'package.json'),
+  ];
   for (const packagePath of packagePaths) {
-    updatePiVersionForRelease(packagePath);
+    updatePiVersionForRelease(packagePath, latestVersion);
   }
+  updatePiPatchForRelease(repoRoot, latestVersion);
 }
