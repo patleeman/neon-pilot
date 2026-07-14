@@ -156,13 +156,13 @@ describe('ApplicationTaskbar', () => {
     );
 
     fireEvent.click(screen.getByRole('button', { name: '1 more applications' }));
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Manage Reports' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Reports views and actions' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Reports · quarterly' }));
     expect(activateView).toHaveBeenCalledWith(reportsView);
     expect(screen.queryByRole('menu', { name: 'More applications' })).toBeNull();
 
     fireEvent.click(screen.getByRole('button', { name: '1 more applications' }));
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Manage Reports' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Reports views and actions' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Unpin application' }));
     expect(togglePinned).toHaveBeenCalledWith(reports.id);
   });

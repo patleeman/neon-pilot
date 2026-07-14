@@ -2,11 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 
 import type { ApplicationViewState, ApplicationWorkspaceState } from '../applications/applicationWorkspace';
 import type { ApplicationRegistration } from '../extensions/extensionRegistryProjection';
+import { ApplicationIcon } from './ApplicationIcon';
 import { MenuItem, MenuShell, ToolbarButton } from './ui';
-
-function applicationGlyph(application: ApplicationRegistration): string {
-  return application.title.trim().slice(0, 1).toUpperCase() || 'A';
-}
 
 export function applicationTaskbarOrder(
   applications: readonly ApplicationRegistration[],
@@ -68,7 +65,7 @@ export function ApplicationTaskbar({
     if (!node || typeof ResizeObserver === 'undefined') return;
     const observer = new ResizeObserver(([entry]) => {
       const width = entry?.contentRect.width ?? node.clientWidth;
-      setVisibleCount(Math.max(1, Math.min(8, Math.floor((width - 36) / 112))));
+      setVisibleCount(Math.max(1, Math.min(12, Math.floor((width - 34) / 42))));
     });
     observer.observe(node);
     return () => observer.disconnect();
@@ -185,9 +182,7 @@ export function ApplicationTaskbar({
             setMenuApplicationId(application.id);
           }}
         >
-          <span className="ui-application-taskbar__glyph" aria-hidden="true">
-            {applicationGlyph(application)}
-          </span>
+          <ApplicationIcon icon={application.icon} title={application.title} />
           <span className="ui-application-taskbar__label">{application.title}</span>
           {views.length > 1 ? <span className="ui-application-taskbar__count">{views.length}</span> : null}
         </ToolbarButton>
@@ -224,16 +219,14 @@ export function ApplicationTaskbar({
                       onActivate(application);
                     }}
                   >
-                    <span className="ui-application-taskbar__glyph" aria-hidden="true">
-                      {applicationGlyph(application)}
-                    </span>
+                    <ApplicationIcon icon={application.icon} title={application.title} className="ui-application-icon--menu" />
                     <span className="min-w-0 flex-1 truncate">{application.title}</span>
                     {workspace.openViews.some((view) => view.applicationId === application.id) ? (
                       <span className="text-dim">Open</span>
                     ) : null}
                   </MenuItem>
                   <MenuItem onClick={() => setMenuApplicationId((current) => (current === application.id ? null : application.id))}>
-                    Manage {application.title}
+                    {application.title} views and actions
                   </MenuItem>
                   {menuApplicationId === application.id
                     ? renderApplicationManagement(

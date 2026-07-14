@@ -74,7 +74,7 @@
   }
 
   .ui-desktop-top-bar__center {
-    @apply relative z-10 self-stretch justify-self-stretch;
+    @apply relative z-10 min-w-0 self-stretch justify-self-stretch;
   }
 
   .ui-toolbar-button.ui-desktop-top-bar__launcher {
@@ -82,32 +82,62 @@
   }
 
   .ui-application-taskbar {
-    @apply flex h-full min-w-0 items-center gap-0.5 overflow-visible;
+    @apply flex h-full min-w-0 items-center gap-1 overflow-visible;
   }
 
   .ui-toolbar-button.ui-application-taskbar__item {
-    @apply h-7 min-h-0 max-w-40 min-w-0 rounded-sm border-0 bg-transparent px-2 text-[11px] text-secondary shadow-none hover:border-0 hover:bg-elevated hover:text-primary;
+    @apply relative h-7 min-h-0 w-7 min-w-7 rounded-md border-0 bg-transparent px-0 text-[11px] text-secondary shadow-none hover:border-0 hover:bg-elevated/70 hover:text-primary;
   }
 
   .ui-toolbar-button.ui-application-taskbar__item[aria-pressed='true'] {
-    @apply bg-elevated text-primary;
-    box-shadow: inset 0 -1px 0 rgb(var(--color-accent) / 0.72);
+    @apply w-auto max-w-36 bg-surface px-1.5 text-primary;
+    box-shadow:
+      inset 0 0 0 1px rgb(var(--color-border-subtle) / 0.92),
+      0 1px 2px rgb(0 0 0 / 0.05);
   }
 
-  .ui-application-taskbar__glyph {
-    @apply flex h-4 w-4 shrink-0 items-center justify-center rounded-sm bg-surface text-[9px] font-semibold text-secondary;
+  .ui-application-icon {
+    @apply flex h-5 w-5 shrink-0 items-center justify-center rounded-[5px] text-secondary;
+  }
+
+  .ui-application-icon svg {
+    @apply h-3.5 w-3.5;
+  }
+
+  .ui-application-icon > span {
+    @apply text-[9px] font-semibold;
+  }
+
+  .ui-toolbar-button.ui-application-taskbar__item[aria-pressed='true'] .ui-application-icon {
+    @apply bg-elevated text-primary;
+  }
+
+  .ui-application-icon--menu {
+    @apply mr-0.5 h-5 w-5 bg-elevated text-primary;
+  }
+
+  .ui-application-icon--palette {
+    @apply h-8 w-8 rounded-md bg-elevated text-primary;
+  }
+
+  .ui-application-icon--palette svg {
+    @apply h-[18px] w-[18px];
   }
 
   .ui-application-taskbar__label {
-    @apply min-w-0 truncate;
+    @apply hidden min-w-0 truncate pr-0.5;
+  }
+
+  .ui-toolbar-button.ui-application-taskbar__item[aria-pressed='true'] .ui-application-taskbar__label {
+    @apply block;
   }
 
   .ui-application-taskbar__count {
-    @apply shrink-0 font-mono text-[9px] text-dim;
+    @apply absolute -right-1 -top-1 flex h-3.5 min-w-3.5 shrink-0 items-center justify-center rounded-full bg-secondary px-0.5 font-mono text-[8px] text-base;
   }
 
   .ui-toolbar-button.ui-application-taskbar__overflow {
-    @apply h-7 min-h-0 min-w-7 rounded-sm border-0 bg-transparent px-1 text-[10px] text-secondary shadow-none hover:border-0 hover:bg-elevated hover:text-primary;
+    @apply h-7 min-h-0 min-w-7 rounded-md border-0 bg-transparent px-1 text-[10px] text-secondary shadow-none hover:border-0 hover:bg-elevated hover:text-primary;
   }
 
   .ui-menu-shell.ui-application-taskbar__menu,
@@ -344,6 +374,12 @@
     @apply fixed inset-0 z-[120] flex items-center justify-center p-4;
   }
 
+  .ui-overlay-backdrop[data-command-palette='true'] {
+    @apply items-start justify-center px-4 pb-4 pt-[12vh];
+    background: rgb(var(--color-base) / 0.42);
+    backdrop-filter: blur(7px);
+  }
+
   .ui-dialog-shell {
     @apply w-full overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-2xl flex flex-col;
     box-shadow:
@@ -352,47 +388,49 @@
   }
 
   .ui-command-palette-shell {
-    @apply border-border-default bg-panel shadow-none;
-    border-radius: 2px !important;
+    @apply w-[min(680px,calc(100vw-32px))] border-border-default bg-panel;
+    max-height: min(620px, 74vh);
+    border-radius: 8px !important;
     box-shadow:
-      0 18px 48px rgb(0 0 0 / 0.34),
-      0 0 0 1px rgb(var(--color-border-subtle) / 0.86);
+      0 24px 70px rgb(0 0 0 / 0.24),
+      0 2px 10px rgb(0 0 0 / 0.08),
+      0 0 0 1px rgb(var(--color-border-subtle) / 0.72);
   }
 
   .ui-command-palette-header {
-    @apply border-b border-border-subtle bg-panel px-3 py-2.5;
-  }
-
-  .ui-command-palette-header-anchored {
-    @apply px-2.5 pb-2 pt-0.5;
+    @apply border-b border-border-subtle bg-panel p-2.5;
   }
 
   .ui-command-palette-search-row {
-    @apply min-h-7 rounded-sm border border-transparent bg-transparent px-1.5;
+    @apply flex h-11 items-center gap-2 rounded-md border border-border-subtle bg-elevated/60 px-3;
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.25);
   }
 
   .ui-command-palette-search-row:focus-within {
-    @apply border-border-subtle bg-surface/35;
-  }
-
-  .ui-command-palette-search-row-anchored {
-    @apply h-7;
+    @apply border-steel/45 bg-surface;
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.3),
+      0 0 0 2px rgb(var(--color-steel) / 0.1);
   }
 
   .ui-command-palette-search-icon {
-    @apply text-dim/75;
+    @apply flex h-5 w-5 shrink-0 items-center justify-center text-secondary;
+  }
+
+  .ui-command-palette-search-icon svg {
+    @apply h-[17px] w-[17px];
   }
 
   .ui-search-input.ui-command-palette-input {
-    @apply text-[13px] leading-5;
+    @apply h-full border-0 bg-transparent px-0 text-[15px] leading-5 shadow-none outline-none;
   }
 
   .ui-search-input.ui-command-palette-input-default {
-    @apply text-[13px];
+    @apply text-[15px];
   }
 
   .ui-command-palette-keycap {
-    @apply min-w-0 shrink-0 rounded-none border-0 bg-transparent px-0 text-[10px] text-dim shadow-none;
+    @apply min-w-0 shrink-0 rounded border border-border-subtle bg-panel px-1.5 py-0.5 text-[10px] text-dim shadow-none;
   }
 
   .ui-command-palette-toolbar {
@@ -413,23 +451,35 @@
   }
 
   .ui-command-palette-shortcuts {
-    @apply gap-1.5 text-[10px] text-dim/65;
+    @apply flex items-center gap-3 text-[10px] text-dim;
   }
 
   .ui-command-palette-list {
-    @apply flex-1 overflow-y-auto px-1 py-1.5;
+    @apply flex-1 overflow-y-auto p-2;
+  }
+
+  .ui-command-palette-section {
+    @apply pb-2 last:pb-0;
+  }
+
+  .ui-command-palette-section-header {
+    @apply flex items-center px-2 pb-1 pt-1;
+  }
+
+  .ui-command-palette-app-grid {
+    @apply grid grid-cols-3 gap-1.5;
   }
 
   .ui-row-button.ui-command-palette-result {
-    @apply min-h-8 items-start gap-2 rounded-sm px-2.5 py-1.5;
+    @apply min-h-10 items-center gap-2.5 rounded-md px-2 py-1.5;
   }
 
   .ui-row-button.ui-command-palette-result:hover {
-    @apply bg-elevated/55;
+    @apply bg-elevated/65;
   }
 
   .ui-row-button.ui-command-palette-result.ui-row-button-selected {
-    @apply bg-elevated text-primary;
+    @apply bg-steel/10 text-primary;
   }
 
   .ui-row-button.ui-command-palette-result.ui-row-button-selected:focus-visible {
@@ -438,13 +488,80 @@
       0 0 0 2px rgb(var(--color-steel) / 0.18);
   }
 
-  .ui-command-palette-result-accent {
-    @apply rounded-sm;
-    background: rgb(var(--color-border-subtle) / 0.7);
+  .ui-row-button.ui-command-palette-app-card {
+    @apply min-h-[52px] items-center rounded-md border border-border-subtle bg-surface/45 px-2.5 py-2 shadow-none;
   }
 
-  .ui-command-palette-result-accent-selected {
-    background: rgb(var(--color-steel));
+  .ui-row-button.ui-command-palette-app-card:hover,
+  .ui-row-button.ui-command-palette-app-card.ui-row-button-selected {
+    @apply border-steel/35 bg-steel/10;
+  }
+
+  .ui-command-palette-result-copy {
+    @apply min-w-0 flex-1 text-left;
+  }
+
+  .ui-command-palette-result-title {
+    @apply truncate text-[13px] font-medium leading-[17px] text-primary;
+  }
+
+  .ui-command-palette-result-subtitle {
+    @apply mt-px line-clamp-1 text-[10.5px] leading-[14px] text-secondary;
+  }
+
+  .ui-command-palette-app-card .ui-command-palette-result-subtitle {
+    @apply hidden;
+  }
+
+  .ui-command-palette-result-type {
+    @apply max-w-24 shrink-0 truncate rounded bg-elevated px-1.5 py-0.5 text-[9px] text-dim;
+  }
+
+  .ui-command-palette-result-enter {
+    @apply hidden w-4 shrink-0 text-center text-[11px] text-secondary;
+  }
+
+  .ui-row-button.ui-command-palette-result.ui-row-button-selected .ui-command-palette-result-enter {
+    @apply block;
+  }
+
+  .ui-palette-item-icon {
+    @apply flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-elevated text-secondary;
+  }
+
+  .ui-palette-item-icon svg {
+    @apply h-4 w-4;
+  }
+
+  .ui-command-palette-footer {
+    @apply flex h-8 shrink-0 items-center justify-between border-t border-border-subtle bg-elevated/35 px-3 text-[10px] text-dim;
+  }
+
+  @media (max-width: 640px) {
+    .ui-overlay-backdrop[data-command-palette='true'] {
+      @apply px-2 pt-12;
+    }
+
+    .ui-command-palette-shell {
+      @apply w-[calc(100vw-16px)];
+      max-height: calc(100vh - 64px);
+    }
+
+    .ui-command-palette-app-grid {
+      @apply grid-cols-2;
+    }
+
+    .ui-command-palette-result-type {
+      @apply hidden;
+    }
+
+    .ui-command-palette-footer > span:first-child {
+      @apply hidden;
+    }
+
+    .ui-command-palette-footer {
+      @apply justify-end;
+    }
   }
 
   .ui-input-shell {

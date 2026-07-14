@@ -4,7 +4,9 @@ import { expect, test } from '@playwright/test';
 import { apiJson, expectCleanViewport, launchTestApp, seedDisabledExtensions } from './fixtures/electronApp';
 
 async function capture(page: import('@playwright/test').Page, testInfo: import('@playwright/test').TestInfo, name: string) {
-  await testInfo.attach(name, { body: await page.screenshot({ fullPage: true }), contentType: 'image/png' });
+  const path = testInfo.outputPath(`${name}.png`);
+  await page.screenshot({ path, fullPage: true });
+  await testInfo.attach(name, { path, contentType: 'image/png' });
 }
 
 async function expectPathname(page: import('@playwright/test').Page, pathname: string) {
@@ -34,9 +36,12 @@ test('application taskbar, launcher, app navigation, overflow, and persistence w
     const launcher = page.getByRole('dialog', { name: 'Command palette' });
     await expect(launcher).toBeVisible();
     await expect(launcher.getByText('Applications', { exact: true })).toBeVisible();
+    await expect(launcher.locator('.ui-command-palette-app-grid')).toBeVisible();
+    await expect(launcher.getByRole('button', { name: 'Agent', exact: true })).toBeVisible();
+    await capture(page, testInfo, 'application-shell-launcher-applications');
     await launcher.getByLabel('Search command palette').fill('evaluations');
     await expect(launcher.getByText('Evaluations', { exact: true })).toBeVisible();
-    await capture(page, testInfo, 'application-shell-launcher');
+    await capture(page, testInfo, 'application-shell-launcher-search');
     await launcher.getByText('Evaluations', { exact: true }).click();
     await expectPathname(page, '/model-arena');
     await expect(page.locator('[data-application-id="system-agent:agent"]')).toHaveAttribute('aria-pressed', 'true');
@@ -66,7 +71,7 @@ test('application taskbar, launcher, app navigation, overflow, and persistence w
     await expect(page.getByText('Threads', { exact: true })).toBeVisible();
     await capture(page, testInfo, 'application-shell-agent');
 
-    await page.setViewportSize({ width: 540, height: 720 });
+    await page.setViewportSize({ width: 360, height: 720 });
     await expect(page.getByRole('button', { name: /more applications/ })).toBeVisible();
     await page.getByRole('button', { name: /more applications/ }).click();
     const overflowMenu = page.getByRole('menu', { name: 'More applications' });

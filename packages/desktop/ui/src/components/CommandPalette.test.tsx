@@ -378,7 +378,7 @@ describe('CommandPalette', () => {
     });
 
     expect(await screen.findByText('ROW81 marker other open')).toBeTruthy();
-    expect(await screen.findByText('ROW81 marker exact archived')).toBeTruthy();
+    expect((await screen.findAllByText('ROW81 marker exact archived')).length).toBeGreaterThan(0);
 
     fireEvent.keyDown(window, { key: 'Enter' });
 

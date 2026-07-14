@@ -45,6 +45,7 @@ import { useExtensionRegistry } from '../extensions/useExtensionRegistry';
 import { useConversations } from '../hooks/useConversations';
 import type { ConversationContentSearchMatch } from '../shared/types';
 import { useAllSessions, useSessionsReady } from '../store';
+import { ApplicationIcon, PaletteItemIcon } from './ApplicationIcon';
 import { cx, Keycap, PanelMessage, RowButton, SearchInput, SectionLabel } from './ui';
 
 type ExtensionQuickOpenProvider = {
@@ -193,9 +194,10 @@ export function CommandPalette() {
       })),
     [extensionRegistry.applicationNavigation, extensionRegistry.applications],
   );
+  const visibleCommandItems = query.trim().length === 0 ? commandItems.filter((item) => !item.disabled) : commandItems;
   const fileItems =
     scope === ALL_COMMAND_PALETTE_SCOPE
-      ? [...applicationItems, ...applicationPageItems, ...commandItems, ...quickOpenItems]
+      ? [...applicationItems, ...applicationPageItems, ...visibleCommandItems, ...quickOpenItems]
       : scope === COMMANDS_COMMAND_PALETTE_SCOPE
         ? commandItems
         : quickOpenItems;
@@ -244,10 +246,14 @@ export function CommandPalette() {
     searchedFileItems,
   ]);
 
-  const emptyQueryLimits = useMemo(
-    () => (scope === THREADS_COMMAND_PALETTE_SCOPE && query.trim().length === 0 ? { archived: archivedVisibleLimit } : undefined),
-    [archivedVisibleLimit, query, scope],
-  );
+  const emptyQueryLimits = useMemo(() => {
+    if (query.trim().length > 0) return undefined;
+    if (scope === THREADS_COMMAND_PALETTE_SCOPE) return { archived: archivedVisibleLimit };
+    if (scope === ALL_COMMAND_PALETTE_SCOPE) {
+      return { applications: 6, pages: 5, open: 5, commands: 4, archived: 0 };
+    }
+    return undefined;
+  }, [archivedVisibleLimit, query, scope]);
   const groups = useMemo(
     () =>
       searchCommandPaletteItems(allItems, {
@@ -258,7 +264,14 @@ export function CommandPalette() {
       }),
     [allItems, emptyQueryLimits, query, quickOpenSectionLabels, scope],
   );
-  const visibleItems = useMemo(() => groups.flatMap((group) => group.items), [groups]);
+  const presentationGroups = useMemo(() => {
+    if (scope !== ALL_COMMAND_PALETTE_SCOPE || query.trim().length === 0) return groups;
+    const items = groups
+      .flatMap((group) => group.items)
+      .sort((left, right) => right.score - left.score || (left.order ?? 0) - (right.order ?? 0));
+    return items.length > 0 ? [{ section: 'results', label: 'Results', total: items.length, items }] : [];
+  }, [groups, query, scope]);
+  const visibleItems = useMemo(() => presentationGroups.flatMap((group) => group.items), [presentationGroups]);
   const preferredCursor = useMemo(() => selectPreferredCommandPaletteCursor(visibleItems, query), [query, visibleItems]);
 
   const closePalette = useCallback(() => {
@@ -772,7 +785,7 @@ export function CommandPalette() {
     quickOpenScopeActive,
     quickOpenSearchLoading,
   ]);
-  const showSectionHeaders = groups.length > 1;
+  const showSectionHeaders = presentationGroups.length > 1 || query.trim().length === 0;
   const displayedLoadingSections = scope === ALL_COMMAND_PALETTE_SCOPE && visibleCount > 0 ? [] : loadingSections;
   const labelForSection = useCallback(
     (section: CommandPaletteSection) => quickOpenSectionLabels[section] ?? COMMAND_PALETTE_SECTION_LABELS[section] ?? section,
@@ -784,21 +797,12 @@ export function CommandPalette() {
     return null;
   }
 
-  const anchoredPanelWidth = anchorRect ? Math.min(680, window.innerWidth - 32) : undefined;
-  const anchoredPanelLeft =
-    anchorRect && anchoredPanelWidth ? Math.min(Math.max(16, anchorRect.left), window.innerWidth - anchoredPanelWidth - 16) : undefined;
   let runningIndex = -1;
 
   return (
     <div
       className="ui-overlay-backdrop"
       data-command-palette="true"
-      style={{
-        background: 'transparent',
-        alignItems: 'flex-start',
-        justifyContent: 'center',
-        padding: anchorRect ? 0 : '5.5rem 1.75rem 1.75rem',
-      }}
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) {
           closePalette();
@@ -811,19 +815,16 @@ export function CommandPalette() {
         aria-modal="true"
         aria-label="Command palette"
         className="ui-dialog-shell ui-command-palette-shell"
-        style={{
-          position: anchorRect ? 'fixed' : undefined,
-          left: anchoredPanelLeft !== undefined ? `${anchoredPanelLeft}px` : undefined,
-          top: anchorRect ? `${anchorRect.top + anchorRect.height + 6}px` : undefined,
-          width: anchoredPanelWidth !== undefined ? `${anchoredPanelWidth}px` : undefined,
-          maxWidth: anchorRect ? undefined : '560px',
-          maxHeight: anchorRect ? `min(560px, calc(100vh - ${anchorRect.top + 12}px))` : 'min(560px, calc(100vh - 7rem))',
-          overscrollBehavior: 'contain',
-        }}
+        style={{ overscrollBehavior: 'contain' }}
       >
-        <div className={cx('ui-command-palette-header', anchorRect && 'ui-command-palette-header-anchored')}>
-          <div className={cx('ui-command-palette-search-row', anchorRect && 'ui-command-palette-search-row-anchored')}>
-            <span className="ui-command-palette-search-icon">⌕</span>
+        <div className="ui-command-palette-header">
+          <div className="ui-command-palette-search-row">
+            <span className="ui-command-palette-search-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round">
+                <circle cx="10.75" cy="10.75" r="6.25" />
+                <path d="m15.5 15.5 4 4" />
+              </svg>
+            </span>
             <SearchInput
               ref={inputRef}
               value={query}
@@ -835,20 +836,9 @@ export function CommandPalette() {
               }}
               placeholder={searchPlaceholder}
               aria-label="Search command palette"
-              className={cx(
-                'ui-command-palette-input',
-                anchorRect ? 'ui-command-palette-input-compact' : 'ui-command-palette-input-default',
-              )}
+              className="ui-command-palette-input ui-command-palette-input-default"
             />
             <Keycap className="ui-command-palette-keycap">{macPlatform ? '⌘K' : 'Ctrl+K'}</Keycap>
-          </div>
-
-          <div className="ui-command-palette-toolbar justify-end">
-            <div className="ui-command-palette-shortcuts">
-              <span>{visibleCount > 0 ? `${cursor + 1}/${visibleCount}` : '0/0'}</span>
-              <span>↵ open</span>
-              <span>esc close</span>
-            </div>
           </div>
 
           {actionError && (
@@ -876,55 +866,78 @@ export function CommandPalette() {
             setArchivedVisibleLimit((current) => current + THREADS_EMPTY_QUERY_PAGE_SIZE);
           }}
         >
-          {groups.map((group) => (
-            <section key={group.section} className="pb-1 last:pb-0">
+          {presentationGroups.map((group) => (
+            <section
+              key={group.section}
+              className={cx(
+                'ui-command-palette-section',
+                group.section === 'applications' && query.trim().length === 0 && 'is-applications',
+              )}
+            >
               {showSectionHeaders && (
-                <div className="px-2.5 pb-0.5 flex items-center gap-2">
+                <div className="ui-command-palette-section-header">
                   <SectionLabel>{group.label}</SectionLabel>
-                  <span className="ui-section-count">
-                    {group.items.length}
-                    {group.total > group.items.length ? `/${group.total}` : ''}
-                  </span>
                 </div>
               )}
 
-              {group.items.map((item) => {
-                runningIndex += 1;
-                const itemIndex = runningIndex;
-                const isSelected = itemIndex === cursor;
-                const isBusy = busyItemId === item.id;
-                const secondaryText = [item.subtitle, item.meta].filter(Boolean).join(' · ');
+              <div className={cx(group.section === 'applications' && query.trim().length === 0 && 'ui-command-palette-app-grid')}>
+                {group.items.map((item) => {
+                  runningIndex += 1;
+                  const itemIndex = runningIndex;
+                  const isSelected = itemIndex === cursor;
+                  const isBusy = busyItemId === item.id;
+                  const isApplicationCard = item.section === 'applications' && query.trim().length === 0;
+                  const application = item.id.startsWith('application:')
+                    ? extensionRegistry.applications.find((candidate) => candidate.id === item.id.slice('application:'.length))
+                    : undefined;
+                  const typeLabel =
+                    item.section === 'applications'
+                      ? 'Application'
+                      : item.section === 'pages'
+                        ? 'Page'
+                        : item.section === 'open' || item.section === 'archived'
+                          ? 'Thread'
+                          : item.meta || 'Action';
 
-                return (
-                  <RowButton
-                    key={item.id}
-                    data-command-palette-idx={itemIndex}
-                    onMouseEnter={() => setCursor(itemIndex)}
-                    onClick={() => {
-                      void activateItem(item);
-                    }}
-                    disabled={item.disabled || isBusy}
-                    selected={isSelected}
-                    className={cx('ui-command-palette-result group disabled:cursor-not-allowed', item.disabled && 'opacity-55')}
-                    title={item.subtitle ?? item.meta ?? item.title}
-                  >
-                    <span
-                      className={cx('ui-command-palette-result-accent mt-[3px]', isSelected && 'ui-command-palette-result-accent-selected')}
-                    />
-
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-[13px] leading-[1.2] text-primary">{item.title}</p>
-                      {secondaryText && (
-                        <p className="mt-px truncate text-[10.5px] leading-[1.15] text-secondary" title={secondaryText}>
-                          {secondaryText}
-                        </p>
+                  return (
+                    <RowButton
+                      key={item.id}
+                      data-command-palette-idx={itemIndex}
+                      onMouseEnter={() => setCursor(itemIndex)}
+                      onClick={() => {
+                        void activateItem(item);
+                      }}
+                      disabled={item.disabled || isBusy}
+                      selected={isSelected}
+                      className={cx(
+                        'ui-command-palette-result group disabled:cursor-not-allowed',
+                        isApplicationCard && 'ui-command-palette-app-card',
+                        item.disabled && 'opacity-55',
                       )}
-                    </div>
+                      title={item.subtitle ?? item.meta ?? item.title}
+                    >
+                      {application ? (
+                        <ApplicationIcon icon={application.icon} title={application.title} className="ui-application-icon--palette" />
+                      ) : (
+                        <PaletteItemIcon section={item.section} />
+                      )}
 
-                    {isBusy && <span className="mt-0.5 shrink-0 text-[10px] text-dim/60 font-mono">…</span>}
-                  </RowButton>
-                );
-              })}
+                      <div className="ui-command-palette-result-copy">
+                        <p className="ui-command-palette-result-title">{item.title}</p>
+                        {item.subtitle && (
+                          <p className="ui-command-palette-result-subtitle" title={item.subtitle}>
+                            {item.subtitle}
+                          </p>
+                        )}
+                      </div>
+
+                      {isBusy && <span className="mt-0.5 shrink-0 text-[10px] text-dim/60 font-mono">…</span>}
+                      {!isApplicationCard && !isBusy ? <span className="ui-command-palette-result-type">{typeLabel}</span> : null}
+                      {!isApplicationCard && isSelected ? <span className="ui-command-palette-result-enter">↵</span> : null}
+                    </RowButton>
+                  );
+                })}
+              </div>
 
               {scope === THREADS_COMMAND_PALETTE_SCOPE &&
               query.trim().length === 0 &&
@@ -989,6 +1002,14 @@ export function CommandPalette() {
                 {emptyStateCopy(scope, query)}
               </PanelMessage>
             )}
+        </div>
+        <div className="ui-command-palette-footer">
+          <span>{visibleCount > 0 ? `${visibleCount} results` : 'No results'}</span>
+          <div className="ui-command-palette-shortcuts">
+            <span>↑↓ navigate</span>
+            <span>↵ open</span>
+            <span>esc close</span>
+          </div>
         </div>
       </div>
     </div>
