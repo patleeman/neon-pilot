@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import React, { act } from 'react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { api } from '../client/api';
 import { OPEN_COMMAND_PALETTE_EVENT } from '../commands/commandPaletteEvents';
 import { setExtensionCommandContext } from '../extensions/commands';
+import type { ApplicationNavigationRegistration, ApplicationRegistration } from '../extensions/extensionRegistryProjection';
 import { CommandPalette } from './CommandPalette';
 
 Object.assign(globalThis, { React, IS_REACT_ACT_ENVIRONMENT: true });
@@ -22,6 +23,13 @@ const conversationMocks = vi.hoisted(() => ({
   },
 }));
 
+const extensionRegistryMocks = vi.hoisted(() => ({
+  state: {
+    applications: [] as Array<Partial<ApplicationRegistration>>,
+    applicationNavigation: [] as Array<Partial<ApplicationNavigationRegistration>>,
+  },
+}));
+
 vi.mock('../hooks/useConversations', () => ({
   useConversations: () => conversationMocks.state,
 }));
@@ -29,6 +37,10 @@ vi.mock('../hooks/useConversations', () => ({
 vi.mock('../store', () => ({
   useAllSessions: () => [],
   useSessionsReady: () => true,
+}));
+
+vi.mock('../extensions/useExtensionRegistry', () => ({
+  useExtensionRegistry: () => extensionRegistryMocks.state,
 }));
 
 function LocationProbe() {
@@ -49,12 +61,17 @@ describe('CommandPalette', () => {
     conversationMocks.state.openSession = vi.fn();
     conversationMocks.state.loading = false;
     conversationMocks.state.refetch = vi.fn();
+    extensionRegistryMocks.state.applications = [];
+    extensionRegistryMocks.state.applicationNavigation = [];
   });
 
   it('updates command availability when command context changes while mounted', async () => {
     vi.spyOn(api, 'extensionCommands').mockResolvedValue([]);
     vi.spyOn(api, 'extensionSearchProviders').mockResolvedValue([]);
     vi.spyOn(api, 'extensionQuickOpen').mockResolvedValue([]);
+    vi.spyOn(api, 'conversationContentSearch').mockResolvedValue({ matches: [] } as Awaited<
+      ReturnType<typeof api.conversationContentSearch>
+    >);
     Element.prototype.scrollIntoView = vi.fn();
     setExtensionCommandContext('composer.canSubmit', false);
 
@@ -133,7 +150,7 @@ describe('CommandPalette', () => {
     fireEvent.click(button!);
 
     expect(await screen.findByText('Command is unavailable right now.')).toBeTruthy();
-    expect(screen.getByRole('dialog', { name: 'Command palette' })).toBeTruthy();
+    expect(screen.getByRole('dialog', { name: 'Launcher' })).toBeTruthy();
     expect(listener).toHaveBeenCalledOnce();
     window.removeEventListener('neon-pilot-extension-command-execute', listener);
   });
@@ -185,7 +202,7 @@ describe('CommandPalette', () => {
     });
 
     expect(await screen.findByText('Toggle Left Sidebar')).toBeTruthy();
-    let dialog = screen.getByRole('dialog', { name: 'Command palette' });
+    let dialog = screen.getByRole('dialog', { name: 'Launcher' });
     expect(dialog.textContent).not.toContain('layout.toggleSidebar');
 
     act(() => {
@@ -195,7 +212,7 @@ describe('CommandPalette', () => {
     });
 
     expect(await screen.findByText('Open Extensions')).toBeTruthy();
-    dialog = screen.getByRole('dialog', { name: 'Command palette' });
+    dialog = screen.getByRole('dialog', { name: 'Launcher' });
     expect(dialog.textContent).toContain('Manage installed extensions.');
     expect(dialog.textContent).not.toContain('system-extension-manager');
     expect(dialog.textContent).not.toContain('system-extension-manager.open');
@@ -431,5 +448,135 @@ describe('CommandPalette', () => {
       expect(screen.queryByText('Loading open threads…')).toBeNull();
       expect(screen.queryByText('Loading archived threads…')).toBeNull();
     });
+  });
+
+  it('renders an anchored Start-style launcher with compact pins, single-line owners, and custom page icons', async () => {
+    vi.spyOn(api, 'extensionCommands').mockResolvedValue([
+      {
+        extensionId: 'system-automations',
+        surfaceId: 'open',
+        title: 'Open Automations',
+        action: 'app.navigate',
+        args: { route: '/automations' },
+      },
+    ]);
+    vi.spyOn(api, 'extensionSearchProviders').mockResolvedValue([]);
+    vi.spyOn(api, 'extensionQuickOpen').mockResolvedValue([]);
+    Element.prototype.scrollIntoView = vi.fn();
+    extensionRegistryMocks.state.applications = [
+      {
+        id: 'agent',
+        extensionId: 'system-agent',
+        title: 'Agent',
+        startRoute: '/conversations/new',
+        icon: 'sparkle',
+        available: true,
+      },
+    ];
+    extensionRegistryMocks.state.applicationNavigation = [
+      {
+        id: 'system-agent:chat',
+        extensionId: 'system-agent',
+        applicationId: 'agent',
+        label: 'Chat',
+        route: '/conversations/new',
+        icon: 'sparkle',
+        slot: 'primary',
+        slotOrder: 0,
+        order: 0,
+      },
+      {
+        id: 'system-automations:nav',
+        extensionId: 'system-automations',
+        applicationId: 'agent',
+        label: 'Automations',
+        route: '/automations',
+        icon: 'automation',
+        slot: 'primary',
+        slotOrder: 0,
+        order: 1,
+      },
+    ];
+    conversationMocks.state.tabs = [
+      {
+        id: 'automation-notes',
+        title: 'Automation migration notes',
+        file: '/tmp/automation-notes.jsonl',
+        timestamp: '2026-06-15T12:00:00.000Z',
+        cwd: '/repo',
+        cwdSlug: 'repo',
+        model: 'openai/gpt-5',
+        messageCount: 4,
+        isRunning: false,
+      },
+    ];
+    const onToggleLauncherPin = vi.fn();
+
+    render(
+      <MemoryRouter initialEntries={['/conversations/new']}>
+        <button type="button">Background action</button>
+        <CommandPalette
+          applicationWorkspace={{
+            pinnedApplicationIds: ['agent'],
+            launcherPins: [
+              {
+                key: 'application:agent',
+                target: { kind: 'application', applicationId: 'agent' },
+                snapshot: { title: 'Agent', icon: 'sparkle' },
+              },
+            ],
+            pinsInitialized: true,
+            openViews: [],
+            activeViewId: null,
+          }}
+          onToggleLauncherPin={onToggleLauncherPin}
+        />
+      </MemoryRouter>,
+    );
+
+    act(() => {
+      window.dispatchEvent(
+        new CustomEvent(OPEN_COMMAND_PALETTE_EVENT, {
+          detail: { scope: 'all', anchorRect: { left: 74, top: 8, width: 112, height: 28 } },
+        }),
+      );
+    });
+
+    const launcher = await screen.findByRole('dialog', { name: 'Launcher' });
+    expect(launcher.getAttribute('style')).toContain('--launcher-left: 74px');
+    expect(launcher.getAttribute('style')).toContain('--launcher-top: 42px');
+    expect(document.querySelector('.ui-command-palette-footer')).toBeNull();
+    expect(document.querySelector('.ui-command-palette-app-grid')).toBeNull();
+    const pinnedAgent = within(screen.getByLabelText('Pinned')).getByTitle('Agent');
+    expect(pinnedAgent).toBeTruthy();
+    pinnedAgent.focus();
+    const pinnedEnter = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
+    pinnedAgent.dispatchEvent(pinnedEnter);
+    expect(pinnedEnter.defaultPrevented).toBe(false);
+
+    const chat = screen.getByText('Chat').closest('.ui-command-palette-result-row');
+    expect(chat).toBeTruthy();
+    expect(chat?.textContent).toContain('Agent');
+    expect(chat?.textContent).not.toContain('Page');
+    expect(chat?.querySelector('[data-icon="sparkle"]')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Pin Chat' }));
+    expect(onToggleLauncherPin).toHaveBeenCalledWith(
+      { kind: 'page', navigationId: 'system-agent:chat' },
+      { title: 'Chat', icon: 'sparkle', applicationTitle: 'Agent' },
+    );
+    expect(screen.getByRole('dialog', { name: 'Launcher' })).toBeTruthy();
+    expect(launcher.textContent).not.toContain('results');
+    expect(launcher.textContent).not.toContain('navigate');
+
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Search launcher' }), { target: { value: 'Automations' } });
+    const firstResult = launcher.querySelector('[data-command-palette-idx="0"]');
+    expect(firstResult?.textContent).toContain('Automations');
+    expect(firstResult?.textContent).not.toContain('Automation migration notes');
+    expect(firstResult?.className).toContain('ui-row-button-selected');
+    await waitFor(() => expect(screen.queryByText('Open Automations')).toBeNull());
+
+    screen.getByRole('button', { name: 'Background action' }).focus();
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Launcher' })).toBeNull());
   });
 });

@@ -765,8 +765,7 @@ System extension CLI commands must also declare a contract: `argsSchema`, `flags
 
 ### Quick-open surfaces (`quickOpen`)
 
-Add a top-level tab to the command palette. Each quick-open contribution registers one extension-owned surface.
-The palette uses `section` as the stable tab/surface id, `title` as the visible tab label, and `provider` as the frontend export that returns items.
+Add extension-owned results to the launcher. The launcher uses `section` as a stable grouping id, `title` as its user-facing label when a scoped search opens that contribution, and `provider` as the frontend export that returns items.
 
 ```json
 {

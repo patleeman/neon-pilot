@@ -1,4 +1,5 @@
 import type { ApplicationNavigationRegistration, ApplicationRegistration } from '../extensions/extensionRegistryProjection';
+import { type LauncherPin, launcherPinKey, type LauncherPinSnapshot, type LauncherPinTarget, normalizeLauncherPins } from './launcherPins';
 
 export interface ApplicationViewState {
   id: string;
@@ -10,6 +11,7 @@ export interface ApplicationViewState {
 
 export interface ApplicationWorkspaceState {
   pinnedApplicationIds: string[];
+  launcherPins?: LauncherPin[];
   pinsInitialized: boolean;
   openViews: ApplicationViewState[];
   activeViewId: string | null;
@@ -17,6 +19,7 @@ export interface ApplicationWorkspaceState {
 
 export const EMPTY_APPLICATION_WORKSPACE: ApplicationWorkspaceState = {
   pinnedApplicationIds: [],
+  launcherPins: [],
   pinsInitialized: false,
   openViews: [],
   activeViewId: null,
@@ -84,6 +87,7 @@ export function normalizeApplicationWorkspace(value: unknown): ApplicationWorksp
   const activeViewId = typeof value.activeViewId === 'string' && openViewIds.has(value.activeViewId) ? value.activeViewId : null;
   return {
     pinnedApplicationIds,
+    launcherPins: normalizeLauncherPins(value.launcherPins),
     pinsInitialized: typeof value.pinsInitialized === 'boolean' ? value.pinsInitialized : pinnedApplicationIds.length > 0,
     openViews,
     activeViewId,
@@ -149,14 +153,39 @@ function resourceViewTitle(applicationTitle: string, route: string): string {
   }
 }
 
-export function toggleApplicationPinned(current: ApplicationWorkspaceState, applicationId: string): ApplicationWorkspaceState {
+export function toggleApplicationPinned(
+  current: ApplicationWorkspaceState,
+  applicationId: string,
+  snapshot: LauncherPinSnapshot = { title: applicationId },
+): ApplicationWorkspaceState {
   const pinned = current.pinnedApplicationIds.includes(applicationId);
+  const target = { kind: 'application', applicationId } as const;
+  const key = launcherPinKey(target);
+  const launcherPins = current.launcherPins ?? [];
   return {
     ...current,
     pinsInitialized: true,
     pinnedApplicationIds: pinned
       ? current.pinnedApplicationIds.filter((id) => id !== applicationId)
       : [...current.pinnedApplicationIds, applicationId],
+    launcherPins: pinned ? launcherPins.filter((pin) => pin.key !== key) : [...launcherPins, { key, target, snapshot }],
+  };
+}
+
+export function toggleLauncherPin(
+  current: ApplicationWorkspaceState,
+  target: LauncherPinTarget,
+  snapshot: LauncherPinSnapshot,
+): ApplicationWorkspaceState {
+  if (target.kind === 'application') {
+    return toggleApplicationPinned(current, target.applicationId, snapshot);
+  }
+  const key = launcherPinKey(target);
+  const launcherPins = current.launcherPins ?? [];
+  const pinned = launcherPins.some((pin) => pin.key === key);
+  return {
+    ...current,
+    launcherPins: pinned ? launcherPins.filter((pin) => pin.key !== key) : [...launcherPins, { key, target, snapshot }],
   };
 }
 
@@ -178,10 +207,32 @@ export function reconcileApplicationWorkspace(
     .filter((application) => application.available && application.defaultPinned)
     .map((application) => application.id);
   const pinnedApplicationIds = current.pinsInitialized ? retainedPins : [...new Set([...retainedPins, ...defaultPins])];
+  const applicationsById = new Map(applications.map((application) => [application.id, application]));
+  const existingApplicationPinsByKey = new Map(
+    (current.launcherPins ?? []).filter((pin) => pin.target.kind === 'application').map((pin) => [pin.key, pin]),
+  );
+  const nonApplicationPins = (current.launcherPins ?? []).filter((pin) => pin.target.kind !== 'application');
+  const applicationPins = pinnedApplicationIds.map((applicationId) => {
+    const application = applicationsById.get(applicationId);
+    const target = { kind: 'application', applicationId } as const;
+    const key = launcherPinKey(target);
+    const existingSnapshot = existingApplicationPinsByKey.get(key)?.snapshot;
+    return {
+      key,
+      target,
+      snapshot: application
+        ? {
+            title: application.title,
+            ...(application.icon ? { icon: application.icon } : {}),
+          }
+        : (existingSnapshot ?? { title: applicationId }),
+    } satisfies LauncherPin;
+  });
   const openViews = current.openViews;
   const openViewIds = new Set(openViews.map((view) => view.id));
   return {
     pinnedApplicationIds,
+    launcherPins: [...applicationPins, ...nonApplicationPins],
     pinsInitialized: current.pinsInitialized,
     openViews,
     activeViewId: current.activeViewId && openViewIds.has(current.activeViewId) ? current.activeViewId : (openViews.at(-1)?.id ?? null),

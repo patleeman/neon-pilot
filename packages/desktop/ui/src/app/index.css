@@ -380,9 +380,9 @@
   }
 
   .ui-overlay-backdrop[data-command-palette='true'] {
-    @apply items-start justify-center px-4 pb-4 pt-[12vh];
-    background: rgb(var(--color-base) / 0.42);
-    backdrop-filter: blur(7px);
+    @apply block p-0;
+    background: transparent;
+    backdrop-filter: none;
   }
 
   .ui-dialog-shell {
@@ -393,21 +393,24 @@
   }
 
   .ui-command-palette-shell {
-    @apply w-[min(680px,calc(100vw-32px))] border-border-default bg-panel;
-    max-height: min(620px, 74vh);
-    border-radius: 8px !important;
+    @apply fixed border-border-default bg-panel;
+    left: var(--launcher-left);
+    top: var(--launcher-top);
+    width: var(--launcher-width) !important;
+    max-height: min(540px, var(--launcher-max-height)) !important;
+    border-radius: 7px !important;
     box-shadow:
-      0 24px 70px rgb(0 0 0 / 0.24),
-      0 2px 10px rgb(0 0 0 / 0.08),
+      0 14px 36px rgb(0 0 0 / 0.22),
+      0 2px 8px rgb(0 0 0 / 0.1),
       0 0 0 1px rgb(var(--color-border-subtle) / 0.72);
   }
 
   .ui-command-palette-header {
-    @apply border-b border-border-subtle bg-panel p-2.5;
+    @apply border-b border-border-subtle bg-panel p-2;
   }
 
   .ui-command-palette-search-row {
-    @apply flex h-11 items-center gap-2 rounded-md border border-border-subtle bg-elevated/60 px-3;
+    @apply flex h-9 items-center gap-2 rounded-md border border-border-subtle bg-elevated/50 px-2.5;
     box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.25);
   }
 
@@ -427,11 +430,11 @@
   }
 
   .ui-search-input.ui-command-palette-input {
-    @apply h-full border-0 bg-transparent px-0 text-[15px] leading-5 shadow-none outline-none;
+    @apply h-full border-0 bg-transparent px-0 text-[13px] leading-5 shadow-none outline-none;
   }
 
   .ui-search-input.ui-command-palette-input-default {
-    @apply text-[15px];
+    @apply text-[13px];
   }
 
   .ui-command-palette-keycap {
@@ -455,28 +458,20 @@
     box-shadow: inset 0 0 0 1px rgb(var(--color-border-subtle) / 0.9);
   }
 
-  .ui-command-palette-shortcuts {
-    @apply flex items-center gap-3 text-[10px] text-dim;
-  }
-
   .ui-command-palette-list {
-    @apply flex-1 overflow-y-auto p-2;
+    @apply flex-1 overflow-y-auto p-1.5;
   }
 
   .ui-command-palette-section {
-    @apply pb-2 last:pb-0;
+    @apply pb-1.5 last:pb-0;
   }
 
   .ui-command-palette-section-header {
-    @apply flex items-center px-2 pb-1 pt-1;
-  }
-
-  .ui-command-palette-app-grid {
-    @apply grid grid-cols-3 gap-1.5;
+    @apply flex items-center px-2 pb-1 pt-1.5;
   }
 
   .ui-row-button.ui-command-palette-result {
-    @apply min-h-10 items-center gap-2.5 rounded-md px-2 py-1.5;
+    @apply min-h-9 items-center gap-2 rounded-md px-2 py-1 pr-10;
   }
 
   .ui-row-button.ui-command-palette-result:hover {
@@ -493,15 +488,6 @@
       0 0 0 2px rgb(var(--color-steel) / 0.18);
   }
 
-  .ui-row-button.ui-command-palette-app-card {
-    @apply min-h-[52px] items-center rounded-md border border-border-subtle bg-surface/45 px-2.5 py-2 shadow-none;
-  }
-
-  .ui-row-button.ui-command-palette-app-card:hover,
-  .ui-row-button.ui-command-palette-app-card.ui-row-button-selected {
-    @apply border-steel/35 bg-steel/10;
-  }
-
   .ui-command-palette-result-copy {
     @apply min-w-0 flex-1 text-left;
   }
@@ -514,58 +500,92 @@
     @apply mt-px line-clamp-1 text-[10.5px] leading-[14px] text-secondary;
   }
 
-  .ui-command-palette-app-card .ui-command-palette-result-subtitle {
-    @apply hidden;
-  }
-
-  .ui-command-palette-result-type {
-    @apply max-w-24 shrink-0 truncate rounded bg-elevated px-1.5 py-0.5 text-[9px] text-dim;
-  }
-
-  .ui-command-palette-result-enter {
-    @apply hidden w-4 shrink-0 text-center text-[11px] text-secondary;
-  }
-
-  .ui-row-button.ui-command-palette-result.ui-row-button-selected .ui-command-palette-result-enter {
-    @apply block;
+  .ui-command-palette-result-owner {
+    @apply max-w-24 shrink-0 truncate text-[10px] text-dim;
   }
 
   .ui-palette-item-icon {
-    @apply flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-elevated text-secondary;
+    @apply flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-elevated text-secondary;
   }
 
   .ui-palette-item-icon svg {
     @apply h-4 w-4;
   }
 
-  .ui-command-palette-footer {
-    @apply flex h-8 shrink-0 items-center justify-between border-t border-border-subtle bg-elevated/35 px-3 text-[10px] text-dim;
+  .ui-command-palette-result-row {
+    @apply relative;
+  }
+
+  .ui-command-palette-pin {
+    @apply absolute right-1 top-1/2 z-10 h-7 w-7 -translate-y-1/2 justify-center p-0 text-dim opacity-0 transition-opacity;
+  }
+
+  .ui-command-palette-pin svg {
+    @apply h-3.5 w-3.5;
+  }
+
+  .ui-command-palette-result-row:hover .ui-command-palette-pin,
+  .ui-command-palette-result-row:focus-within .ui-command-palette-pin {
+    @apply opacity-100;
+  }
+
+  .ui-command-palette-pin.is-pinned {
+    @apply text-dim opacity-60;
+  }
+
+  .ui-command-palette-result-row:hover .ui-command-palette-pin.is-pinned,
+  .ui-command-palette-result-row:focus-within .ui-command-palette-pin.is-pinned {
+    @apply text-steel opacity-100;
+  }
+
+  .ui-launcher-pinned-section {
+    @apply shrink-0 border-b border-border-subtle px-1.5 pb-1.5 pt-0.5;
+  }
+
+  .ui-launcher-pinned-grid {
+    @apply grid grid-cols-6 gap-0.5;
+  }
+
+  .ui-launcher-pinned-item {
+    @apply relative min-w-0 rounded-md;
+  }
+
+  .ui-launcher-pinned-item:hover,
+  .ui-launcher-pinned-item:focus-within {
+    @apply bg-elevated/65;
+  }
+
+  .ui-launcher-pinned-open {
+    @apply flex h-[54px] w-full min-w-0 flex-col items-center justify-center gap-1 rounded-md px-1 text-[10px] text-secondary outline-none focus-visible:ring-1 focus-visible:ring-steel/40 disabled:opacity-45;
+  }
+
+  .ui-launcher-pinned-open > span:last-child {
+    @apply w-full truncate text-center;
+  }
+
+  .ui-launcher-pinned-unpin {
+    @apply absolute right-0.5 top-0.5 z-10 h-5 w-5 justify-center p-0 text-[14px] leading-none text-dim opacity-0;
+  }
+
+  .ui-launcher-pinned-item:hover .ui-launcher-pinned-unpin,
+  .ui-launcher-pinned-item:focus-within .ui-launcher-pinned-unpin {
+    @apply opacity-100;
   }
 
   @media (max-width: 640px) {
     .ui-overlay-backdrop[data-command-palette='true'] {
-      @apply px-2 pt-12;
+      @apply p-0;
     }
 
     .ui-command-palette-shell {
-      @apply w-[calc(100vw-16px)];
-      max-height: calc(100vh - 64px);
+      max-height: var(--launcher-max-height) !important;
     }
+  }
 
-    .ui-command-palette-app-grid {
-      @apply grid-cols-2;
-    }
-
-    .ui-command-palette-result-type {
-      @apply hidden;
-    }
-
-    .ui-command-palette-footer > span:first-child {
-      @apply hidden;
-    }
-
-    .ui-command-palette-footer {
-      @apply justify-end;
+  @media (hover: none) {
+    .ui-command-palette-pin,
+    .ui-launcher-pinned-unpin {
+      @apply opacity-100;
     }
   }
 

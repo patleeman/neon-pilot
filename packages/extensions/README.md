@@ -703,7 +703,7 @@ Enabled extension agent factories are discovered from manifests and appended to 
 
 ## Mentions, quick open, and prompt references
 
-Extensions can add items to composer `@` mentions, command-palette quick open, and hidden prompt-context resolution. Keep these three pieces aligned when they represent the same domain object.
+Extensions can add items to composer `@` mentions, launcher quick open, and hidden prompt-context resolution. Keep these three pieces aligned when they represent the same domain object.
 
 Mention providers run in the frontend and return selectable `@` menu items:
 
@@ -722,7 +722,7 @@ Mention providers run in the frontend and return selectable `@` menu items:
 }
 ```
 
-Quick-open providers also run in the frontend and add extension-owned command palette tabs:
+Quick-open providers also run in the frontend and add extension-owned launcher results:
 
 ```json
 {
@@ -740,7 +740,7 @@ Quick-open providers also run in the frontend and add extension-owned command pa
 }
 ```
 
-The provider export can implement `list()` for empty-query browsing and `search(query, limit)` for content search. Returned items include `title`, optional `subtitle`/`meta`/`keywords`, and an action such as `{ "kind": "navigate", "to": "/ext/agent-board" }` or `{ "kind": "openFile", "fileId": "notes/example.md" }`. Omit item `section` to use the contribution's tab; set it only when deliberately returning items for another quick-open surface.
+The provider export can implement `list()` for empty-query browsing and `search(query, limit)` for content search. Returned items include `title`, optional `subtitle`/`meta`/`keywords`, and an action such as `{ "kind": "navigate", "to": "/ext/agent-board" }` or `{ "kind": "openFile", "fileId": "notes/example.md" }`. Omit item `section` to use the contribution's section; set it only when deliberately returning items for another quick-open surface.
 
 Prompt reference resolvers run in the backend during prompt submission. Use them when an `@` mention should inject hidden context into the agent turn:
 

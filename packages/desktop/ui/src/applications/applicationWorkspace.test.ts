@@ -6,9 +6,11 @@ import {
   EMPTY_APPLICATION_WORKSPACE,
   fallbackApplication,
   focusApplicationRoute,
+  normalizeApplicationWorkspace,
   reconcileApplicationWorkspace,
   resolveApplicationForRoute,
   toggleApplicationPinned,
+  toggleLauncherPin,
 } from './applicationWorkspace';
 
 function application(overrides: Partial<ApplicationRegistration> = {}): ApplicationRegistration {
@@ -136,5 +138,85 @@ describe('application workspace', () => {
 
     const allUnpinned = reconcileApplicationWorkspace({ ...reconciled, pinnedApplicationIds: [], pinsInitialized: true }, [home, agent]);
     expect(allUnpinned.pinnedApplicationIds).toEqual([]);
+  });
+
+  it('keeps ordered page and conversation launcher pins separate from application taskbar pins', () => {
+    const agent = application({ icon: 'sparkle' });
+    const withApplication = reconcileApplicationWorkspace(EMPTY_APPLICATION_WORKSPACE, [agent]);
+    const withPage = toggleLauncherPin(
+      withApplication,
+      { kind: 'page', navigationId: 'system-agent:chat' },
+      { title: 'Chat', icon: 'sparkle', applicationTitle: 'Agent' },
+    );
+    const withConversation = toggleLauncherPin(
+      withPage,
+      { kind: 'conversation', conversationId: 'conv-1' },
+      { title: 'Launcher redesign' },
+    );
+
+    expect(withConversation.pinnedApplicationIds).toEqual([agent.id]);
+    expect(withConversation.launcherPins?.map((pin) => pin.key)).toEqual([
+      `application:${agent.id}`,
+      'page:system-agent:chat',
+      'conversation:conv-1',
+    ]);
+    expect(
+      toggleLauncherPin(withConversation, { kind: 'page', navigationId: 'system-agent:chat' }, { title: 'Chat' }).launcherPins,
+    ).toEqual([withConversation.launcherPins?.[0], withConversation.launcherPins?.[2]]);
+  });
+
+  it('normalizes malformed and duplicate launcher pins without trusting persisted routes', () => {
+    const normalized = normalizeApplicationWorkspace({
+      pinnedApplicationIds: [],
+      pinsInitialized: true,
+      openViews: [],
+      launcherPins: [
+        {
+          target: { kind: 'page', navigationId: 'system-agent:chat' },
+          snapshot: { title: 'Chat', icon: 'sparkle' },
+        },
+        {
+          target: { kind: 'page', navigationId: 'system-agent:chat' },
+          snapshot: { title: 'Duplicate', route: '/do-not-trust' },
+        },
+        { target: { kind: 'page', navigationId: '' }, snapshot: { title: 'Invalid' } },
+      ],
+    });
+
+    expect(normalized.launcherPins).toEqual([
+      {
+        key: 'page:system-agent:chat',
+        target: { kind: 'page', navigationId: 'system-agent:chat' },
+        snapshot: { title: 'Chat', icon: 'sparkle' },
+      },
+    ]);
+    expect(JSON.stringify(normalized.launcherPins)).not.toContain('do-not-trust');
+  });
+
+  it('keeps an unavailable application pin snapshot readable while its extension is missing', () => {
+    const reconciled = reconcileApplicationWorkspace(
+      {
+        pinnedApplicationIds: ['local-models'],
+        launcherPins: [
+          {
+            key: 'application:local-models',
+            target: { kind: 'application', applicationId: 'local-models' },
+            snapshot: { title: 'Local Models', icon: 'model' },
+          },
+        ],
+        pinsInitialized: true,
+        openViews: [],
+        activeViewId: null,
+      },
+      [],
+    );
+
+    expect(reconciled.launcherPins).toEqual([
+      {
+        key: 'application:local-models',
+        target: { kind: 'application', applicationId: 'local-models' },
+        snapshot: { title: 'Local Models', icon: 'model' },
+      },
+    ]);
   });
 });

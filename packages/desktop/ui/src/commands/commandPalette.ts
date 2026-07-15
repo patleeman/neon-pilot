@@ -1,3 +1,4 @@
+import type { LauncherPinTarget } from '../applications/launcherPins';
 import { evaluateCommandEnablement, type ExtensionCommandContext } from '../extensions/commands';
 import { fuzzyScore } from './slashMenu';
 
@@ -12,6 +13,10 @@ export interface CommandPaletteItem<TAction = unknown> {
   section: CommandPaletteSection;
   title: string;
   subtitle?: string;
+  icon?: string;
+  parentLabel?: string;
+  auxiliaryLabel?: string;
+  pinTarget?: LauncherPinTarget;
   meta?: string;
   keywords?: string[];
   order?: number;

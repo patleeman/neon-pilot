@@ -1,7 +1,9 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 import { APPLICATION_ACTIVATE_EVENT } from '../applications/applicationEvents';
+import { type ApplicationWorkspaceState, EMPTY_APPLICATION_WORKSPACE } from '../applications/applicationWorkspace';
+import { launcherPinKey, type LauncherPinSnapshot, type LauncherPinTarget } from '../applications/launcherPins';
 import { api } from '../client/api';
 import {
   ALL_COMMAND_PALETTE_SCOPE,
@@ -45,8 +47,8 @@ import { useExtensionRegistry } from '../extensions/useExtensionRegistry';
 import { useConversations } from '../hooks/useConversations';
 import type { ConversationContentSearchMatch } from '../shared/types';
 import { useAllSessions, useSessionsReady } from '../store';
-import { ApplicationIcon, PaletteItemIcon } from './ApplicationIcon';
-import { cx, Keycap, PanelMessage, RowButton, SearchInput, SectionLabel } from './ui';
+import { PaletteItemIcon } from './ApplicationIcon';
+import { Button, cx, IconButton, Keycap, PanelMessage, RowButton, SearchInput, SectionLabel } from './ui';
 
 type ExtensionQuickOpenProvider = {
   list?: () => Promise<ExtensionQuickOpenItem[]> | ExtensionQuickOpenItem[];
@@ -80,7 +82,52 @@ function emptyStateCopy(scope: CommandPaletteScope, query: string): string {
   return scope === THREADS_COMMAND_PALETTE_SCOPE ? 'No conversations yet.' : 'No items yet.';
 }
 
-export function CommandPalette() {
+function launcherTitleMatchTier(title: string, query: string): number {
+  const normalizedTitle = title.trim().toLocaleLowerCase();
+  const normalizedQuery = query.trim().toLocaleLowerCase();
+  if (!normalizedQuery) return 0;
+  if (normalizedTitle === normalizedQuery) return 3;
+  if (normalizedTitle.startsWith(normalizedQuery)) return 2;
+  if (normalizedTitle.includes(normalizedQuery)) return 1;
+  return 0;
+}
+
+function deduplicateLauncherSearchResults<TAction>(items: CommandPaletteItem<TAction>[]): CommandPaletteItem<TAction>[] {
+  const destinationTitles = new Set(
+    items
+      .filter((item) => item.section === 'applications' || item.section === 'pages')
+      .map((item) => item.title.trim().toLocaleLowerCase()),
+  );
+  const seenResources = new Set<string>();
+
+  return items.filter((item) => {
+    if (item.section === 'commands') {
+      const destinationTitle = item.title
+        .replace(/^open\s+/i, '')
+        .trim()
+        .toLocaleLowerCase();
+      if (destinationTitle !== item.title.trim().toLocaleLowerCase() && destinationTitles.has(destinationTitle)) {
+        return false;
+      }
+    }
+
+    if (item.pinTarget?.kind === 'conversation') {
+      const key = launcherPinKey(item.pinTarget);
+      if (seenResources.has(key)) return false;
+      seenResources.add(key);
+    }
+
+    return true;
+  });
+}
+
+export function CommandPalette({
+  applicationWorkspace = EMPTY_APPLICATION_WORKSPACE,
+  onToggleLauncherPin,
+}: {
+  applicationWorkspace?: ApplicationWorkspaceState;
+  onToggleLauncherPin?: (target: LauncherPinTarget, snapshot: LauncherPinSnapshot) => void;
+} = {}) {
   const navigate = useNavigate();
   const location = useLocation();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -153,6 +200,7 @@ export function CommandPalette() {
       id: `extension-command:${command.extensionId}:${command.surfaceId}`,
       section: 'commands',
       title: command.title,
+      icon: command.icon,
       subtitle: commandSecondaryText(command),
       meta: command.category ? undefined : 'Extension command',
       keywords: [command.surfaceId, command.extensionId, command.category, command.description].filter(
@@ -172,8 +220,8 @@ export function CommandPalette() {
           id: `application:${application.id}`,
           section: 'applications',
           title: application.title,
-          subtitle: application.description,
-          meta: 'Application',
+          icon: application.icon,
+          pinTarget: { kind: 'application' as const, applicationId: application.id },
           keywords: [application.id, application.extensionId],
           order: index,
           action: { kind: 'navigate' as const, to: application.startRoute },
@@ -186,8 +234,9 @@ export function CommandPalette() {
         id: `application-page:${item.id}`,
         section: 'pages',
         title: item.label,
-        subtitle: extensionRegistry.applications.find((application) => application.id === item.applicationId)?.title,
-        meta: 'Page',
+        icon: item.icon,
+        parentLabel: extensionRegistry.applications.find((application) => application.id === item.applicationId)?.title,
+        pinTarget: { kind: 'page' as const, navigationId: item.id },
         keywords: [item.route, item.applicationId, item.slot],
         order: index,
         action: { kind: 'navigate' as const, to: item.route },
@@ -250,7 +299,7 @@ export function CommandPalette() {
     if (query.trim().length > 0) return undefined;
     if (scope === THREADS_COMMAND_PALETTE_SCOPE) return { archived: archivedVisibleLimit };
     if (scope === ALL_COMMAND_PALETTE_SCOPE) {
-      return { applications: 6, pages: 5, open: 5, commands: 4, archived: 0 };
+      return { applications: 6, pages: 5, open: 5, commands: 0, archived: 0 };
     }
     return undefined;
   }, [archivedVisibleLimit, query, scope]);
@@ -264,15 +313,65 @@ export function CommandPalette() {
       }),
     [allItems, emptyQueryLimits, query, quickOpenSectionLabels, scope],
   );
+  const pinnedKeys = useMemo(
+    () => new Set((applicationWorkspace.launcherPins ?? []).map((pin) => pin.key)),
+    [applicationWorkspace.launcherPins],
+  );
   const presentationGroups = useMemo(() => {
     if (scope !== ALL_COMMAND_PALETTE_SCOPE || query.trim().length === 0) return groups;
-    const items = groups
-      .flatMap((group) => group.items)
-      .sort((left, right) => right.score - left.score || (left.order ?? 0) - (right.order ?? 0));
+    const items = deduplicateLauncherSearchResults(
+      groups
+        .flatMap((group) => group.items)
+        .sort(
+          (left, right) =>
+            launcherTitleMatchTier(right.title, query) - launcherTitleMatchTier(left.title, query) ||
+            right.score - left.score ||
+            (left.order ?? 0) - (right.order ?? 0),
+        ),
+    );
     return items.length > 0 ? [{ section: 'results', label: 'Results', total: items.length, items }] : [];
   }, [groups, query, scope]);
-  const visibleItems = useMemo(() => presentationGroups.flatMap((group) => group.items), [presentationGroups]);
-  const preferredCursor = useMemo(() => selectPreferredCommandPaletteCursor(visibleItems, query), [query, visibleItems]);
+  const visiblePresentationGroups = useMemo(() => {
+    if (query.trim().length > 0 || scope !== ALL_COMMAND_PALETTE_SCOPE) return presentationGroups;
+    return presentationGroups
+      .map((group) => ({
+        ...group,
+        items: group.items.filter(
+          (item) => item.pinTarget?.kind === 'application' || !item.pinTarget || !pinnedKeys.has(launcherPinKey(item.pinTarget)),
+        ),
+      }))
+      .filter((group) => group.items.length > 0);
+  }, [pinnedKeys, presentationGroups, query, scope]);
+  const visibleItems = useMemo(() => visiblePresentationGroups.flatMap((group) => group.items), [visiblePresentationGroups]);
+  const duplicateConversationTitles = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const item of visibleItems) {
+      if (item.pinTarget?.kind !== 'conversation') continue;
+      const title = item.title.trim().toLocaleLowerCase();
+      counts.set(title, (counts.get(title) ?? 0) + 1);
+    }
+    return new Set([...counts].filter(([, count]) => count > 1).map(([title]) => title));
+  }, [visibleItems]);
+  const duplicateConversationOrdinals = useMemo(() => {
+    const groups = new Map<string, CommandPaletteItem<CommandPaletteAction>[]>();
+    for (const item of visibleItems) {
+      if (item.pinTarget?.kind !== 'conversation' || !item.auxiliaryLabel) continue;
+      const key = `${item.title.trim().toLocaleLowerCase()}\u0000${item.auxiliaryLabel}`;
+      groups.set(key, [...(groups.get(key) ?? []), item]);
+    }
+    return new Map(
+      [...groups.values()].flatMap((items) => (items.length > 1 ? items.map((item, index) => [item.id, index + 1] as const) : [])),
+    );
+  }, [visibleItems]);
+  const preferredCursor = useMemo(
+    () => (scope === ALL_COMMAND_PALETTE_SCOPE && query.trim().length > 0 ? 0 : selectPreferredCommandPaletteCursor(visibleItems, query)),
+    [query, scope, visibleItems],
+  );
+  const pinnedLauncherItems = useMemo(() => {
+    const liveItems = [...applicationItems, ...applicationPageItems, ...openConversationItems, ...archivedConversationItems];
+    const byKey = new Map(liveItems.flatMap((item) => (item.pinTarget ? [[launcherPinKey(item.pinTarget), item] as const] : [])));
+    return (applicationWorkspace.launcherPins ?? []).map((pin) => ({ pin, item: byKey.get(pin.key) ?? null }));
+  }, [applicationItems, applicationPageItems, applicationWorkspace.launcherPins, archivedConversationItems, openConversationItems]);
 
   const closePalette = useCallback(() => {
     setOpen(false);
@@ -674,6 +773,10 @@ export function CommandPalette() {
       }
 
       if (event.key === 'Enter') {
+        const actionable = event.target instanceof HTMLElement ? event.target.closest('button, a[href], [role="button"]') : null;
+        if (actionable && shellRef.current?.contains(actionable)) {
+          return;
+        }
         event.preventDefault();
         const active = visibleItems[cursor];
         if (active) {
@@ -721,6 +824,18 @@ export function CommandPalette() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [activateItem, closePalette, cursor, open, visibleItems]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    function handleFocusIn(event: FocusEvent) {
+      const shell = shellRef.current;
+      if (shell && event.target instanceof Node && !shell.contains(event.target)) closePalette();
+    }
+
+    document.addEventListener('focusin', handleFocusIn, true);
+    return () => document.removeEventListener('focusin', handleFocusIn, true);
+  }, [closePalette, open]);
 
   useEffect(() => {
     if (!open) return;
@@ -785,7 +900,7 @@ export function CommandPalette() {
     quickOpenScopeActive,
     quickOpenSearchLoading,
   ]);
-  const showSectionHeaders = presentationGroups.length > 1 || query.trim().length === 0;
+  const showSectionHeaders = visiblePresentationGroups.length > 1 || query.trim().length === 0;
   const displayedLoadingSections = scope === ALL_COMMAND_PALETTE_SCOPE && visibleCount > 0 ? [] : loadingSections;
   const labelForSection = useCallback(
     (section: CommandPaletteSection) => quickOpenSectionLabels[section] ?? COMMAND_PALETTE_SECTION_LABELS[section] ?? section,
@@ -798,6 +913,27 @@ export function CommandPalette() {
   }
 
   let runningIndex = -1;
+  const viewportWidth = typeof window === 'undefined' ? 1280 : window.innerWidth;
+  const viewportHeight = typeof window === 'undefined' ? 800 : window.innerHeight;
+  const launcherWidth = Math.min(500, viewportWidth - 16);
+  const launcherLeft = Math.max(8, Math.min(anchorRect?.left ?? 64, viewportWidth - launcherWidth - 8));
+  const launcherTop = Math.max(38, Math.min((anchorRect?.top ?? 32) + (anchorRect?.height ?? 0) + 6, viewportHeight - 96));
+  const launcherStyle = {
+    '--launcher-left': `${launcherLeft}px`,
+    '--launcher-top': `${launcherTop}px`,
+    '--launcher-width': `${launcherWidth}px`,
+    '--launcher-max-height': `${Math.max(240, viewportHeight - launcherTop - 8)}px`,
+    overscrollBehavior: 'contain',
+  } as CSSProperties;
+
+  const togglePin = (item: CommandPaletteItem<CommandPaletteAction>) => {
+    if (!item.pinTarget || !onToggleLauncherPin) return;
+    onToggleLauncherPin(item.pinTarget, {
+      title: item.title,
+      ...(item.icon ? { icon: item.icon } : {}),
+      ...(item.parentLabel ? { applicationTitle: item.parentLabel } : {}),
+    });
+  };
 
   return (
     <div
@@ -809,14 +945,7 @@ export function CommandPalette() {
         }
       }}
     >
-      <div
-        ref={shellRef}
-        role="dialog"
-        aria-modal="true"
-        aria-label="Command palette"
-        className="ui-dialog-shell ui-command-palette-shell"
-        style={{ overscrollBehavior: 'contain' }}
-      >
+      <div ref={shellRef} role="dialog" aria-label="Launcher" className="ui-dialog-shell ui-command-palette-shell" style={launcherStyle}>
         <div className="ui-command-palette-header">
           <div className="ui-command-palette-search-row">
             <span className="ui-command-palette-search-icon" aria-hidden="true">
@@ -835,7 +964,7 @@ export function CommandPalette() {
                 setArchivedVisibleLimit(THREADS_EMPTY_QUERY_PAGE_SIZE);
               }}
               placeholder={searchPlaceholder}
-              aria-label="Search command palette"
+              aria-label="Search launcher"
               className="ui-command-palette-input ui-command-palette-input-default"
             />
             <Keycap className="ui-command-palette-keycap">{macPlatform ? '⌘K' : 'Ctrl+K'}</Keycap>
@@ -847,6 +976,49 @@ export function CommandPalette() {
             </PanelMessage>
           )}
         </div>
+
+        {query.trim().length === 0 && scope === ALL_COMMAND_PALETTE_SCOPE && pinnedLauncherItems.length > 0 ? (
+          <section className="ui-launcher-pinned-section" aria-label="Pinned">
+            <div className="ui-command-palette-section-header">
+              <SectionLabel>Pinned</SectionLabel>
+            </div>
+            <div className="ui-launcher-pinned-grid">
+              {pinnedLauncherItems.map(({ pin, item }) => {
+                const title = item?.title ?? pin.snapshot.title;
+                const icon = item?.icon ?? pin.snapshot.icon;
+                return (
+                  <div key={pin.key} className={cx('ui-launcher-pinned-item group', !item && 'is-unavailable')}>
+                    <Button
+                      variant="ghost"
+                      className="ui-launcher-pinned-open"
+                      disabled={!item}
+                      onClick={() => {
+                        if (item) void activateItem(item);
+                      }}
+                      title={item ? title : `${title} is unavailable`}
+                    >
+                      <PaletteItemIcon section={item?.section ?? pin.target.kind} icon={icon} />
+                      <span>{title}</span>
+                    </Button>
+                    {onToggleLauncherPin ? (
+                      <IconButton
+                        compact
+                        size="sm"
+                        className="ui-launcher-pinned-unpin"
+                        aria-label={`Unpin ${title}`}
+                        title={`Unpin ${title}`}
+                        data-launcher-secondary-action="true"
+                        onClick={() => onToggleLauncherPin(pin.target, pin.snapshot)}
+                      >
+                        ×
+                      </IconButton>
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        ) : null}
 
         <div
           ref={listRef}
@@ -866,75 +1038,89 @@ export function CommandPalette() {
             setArchivedVisibleLimit((current) => current + THREADS_EMPTY_QUERY_PAGE_SIZE);
           }}
         >
-          {presentationGroups.map((group) => (
-            <section
-              key={group.section}
-              className={cx(
-                'ui-command-palette-section',
-                group.section === 'applications' && query.trim().length === 0 && 'is-applications',
-              )}
-            >
+          {visiblePresentationGroups.map((group) => (
+            <section key={group.section} className="ui-command-palette-section">
               {showSectionHeaders && (
                 <div className="ui-command-palette-section-header">
                   <SectionLabel>{group.label}</SectionLabel>
                 </div>
               )}
 
-              <div className={cx(group.section === 'applications' && query.trim().length === 0 && 'ui-command-palette-app-grid')}>
+              <div>
                 {group.items.map((item) => {
                   runningIndex += 1;
                   const itemIndex = runningIndex;
                   const isSelected = itemIndex === cursor;
                   const isBusy = busyItemId === item.id;
-                  const isApplicationCard = item.section === 'applications' && query.trim().length === 0;
-                  const application = item.id.startsWith('application:')
-                    ? extensionRegistry.applications.find((candidate) => candidate.id === item.id.slice('application:'.length))
-                    : undefined;
-                  const typeLabel =
-                    item.section === 'applications'
-                      ? 'Application'
-                      : item.section === 'pages'
-                        ? 'Page'
-                        : item.section === 'open' || item.section === 'archived'
-                          ? 'Thread'
-                          : item.meta || 'Action';
+                  const isPinned = item.pinTarget ? pinnedKeys.has(launcherPinKey(item.pinTarget)) : false;
+                  const normalizedTitleWithoutOpen = item.title
+                    .replace(/^open\s+/i, '')
+                    .trim()
+                    .toLocaleLowerCase();
+                  const normalizedSubtitle = item.subtitle?.trim().toLocaleLowerCase();
+                  const showSubtitle =
+                    !['applications', 'pages', 'open', 'archived'].includes(item.section) &&
+                    Boolean(normalizedSubtitle) &&
+                    normalizedSubtitle !== item.title.trim().toLocaleLowerCase() &&
+                    normalizedSubtitle !== normalizedTitleWithoutOpen;
+                  const titleCollision =
+                    item.pinTarget?.kind === 'conversation' && duplicateConversationTitles.has(item.title.trim().toLocaleLowerCase());
+                  const collisionOrdinal = duplicateConversationOrdinals.get(item.id);
+                  const trailingLabel = item.parentLabel
+                    ? titleCollision && item.auxiliaryLabel
+                      ? `${item.auxiliaryLabel}${collisionOrdinal ? ` · ${collisionOrdinal}` : ''}`
+                      : item.parentLabel
+                    : item.section === 'commands'
+                      ? item.meta
+                      : undefined;
 
                   return (
-                    <RowButton
-                      key={item.id}
-                      data-command-palette-idx={itemIndex}
-                      onMouseEnter={() => setCursor(itemIndex)}
-                      onClick={() => {
-                        void activateItem(item);
-                      }}
-                      disabled={item.disabled || isBusy}
-                      selected={isSelected}
-                      className={cx(
-                        'ui-command-palette-result group disabled:cursor-not-allowed',
-                        isApplicationCard && 'ui-command-palette-app-card',
-                        item.disabled && 'opacity-55',
-                      )}
-                      title={item.subtitle ?? item.meta ?? item.title}
-                    >
-                      {application ? (
-                        <ApplicationIcon icon={application.icon} title={application.title} className="ui-application-icon--palette" />
-                      ) : (
-                        <PaletteItemIcon section={item.section} />
-                      )}
+                    <div key={item.id} className="ui-command-palette-result-row">
+                      <RowButton
+                        data-command-palette-idx={itemIndex}
+                        onMouseEnter={() => setCursor(itemIndex)}
+                        onClick={() => {
+                          void activateItem(item);
+                        }}
+                        disabled={item.disabled || isBusy}
+                        selected={isSelected}
+                        className={cx('ui-command-palette-result group disabled:cursor-not-allowed', item.disabled && 'opacity-55')}
+                        title={item.subtitle ?? item.meta ?? item.title}
+                      >
+                        <PaletteItemIcon section={item.section} icon={item.icon} />
 
-                      <div className="ui-command-palette-result-copy">
-                        <p className="ui-command-palette-result-title">{item.title}</p>
-                        {item.subtitle && (
-                          <p className="ui-command-palette-result-subtitle" title={item.subtitle}>
-                            {item.subtitle}
-                          </p>
-                        )}
-                      </div>
+                        <div className="ui-command-palette-result-copy">
+                          <p className="ui-command-palette-result-title">{item.title}</p>
+                          {showSubtitle && (
+                            <p className="ui-command-palette-result-subtitle" title={item.subtitle}>
+                              {item.subtitle}
+                            </p>
+                          )}
+                        </div>
 
-                      {isBusy && <span className="mt-0.5 shrink-0 text-[10px] text-dim/60 font-mono">…</span>}
-                      {!isApplicationCard && !isBusy ? <span className="ui-command-palette-result-type">{typeLabel}</span> : null}
-                      {!isApplicationCard && isSelected ? <span className="ui-command-palette-result-enter">↵</span> : null}
-                    </RowButton>
+                        {isBusy && <span className="mt-0.5 shrink-0 text-[10px] text-dim/60 font-mono">…</span>}
+                        {!isBusy && trailingLabel ? <span className="ui-command-palette-result-owner">{trailingLabel}</span> : null}
+                      </RowButton>
+                      {!isBusy && item.pinTarget && onToggleLauncherPin ? (
+                        <IconButton
+                          compact
+                          size="sm"
+                          className={cx('ui-command-palette-pin', isPinned && 'is-pinned')}
+                          aria-label={`${isPinned ? 'Unpin' : 'Pin'} ${item.title}`}
+                          title={`${isPinned ? 'Unpin' : 'Pin'} ${item.title}`}
+                          data-launcher-secondary-action="true"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            togglePin(item);
+                          }}
+                        >
+                          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+                            <path d="m7 3 6 0-.6 5 2.1 2.2H5.5L7.6 8z" />
+                            <path d="M10 10.2V17" />
+                          </svg>
+                        </IconButton>
+                      ) : null}
+                    </div>
                   );
                 })}
               </div>
@@ -1002,14 +1188,6 @@ export function CommandPalette() {
                 {emptyStateCopy(scope, query)}
               </PanelMessage>
             )}
-        </div>
-        <div className="ui-command-palette-footer">
-          <span>{visibleCount > 0 ? `${visibleCount} results` : 'No results'}</span>
-          <div className="ui-command-palette-shortcuts">
-            <span>↑↓ navigate</span>
-            <span>↵ open</span>
-            <span>esc close</span>
-          </div>
         </div>
       </div>
     </div>

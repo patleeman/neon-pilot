@@ -11,8 +11,10 @@ import {
   reconcileApplicationWorkspace,
   resolveApplicationForRoute,
   toggleApplicationPinned,
+  toggleLauncherPin,
   writeStoredApplicationWorkspace,
 } from '../applications/applicationWorkspace';
+import type { LauncherPinSnapshot, LauncherPinTarget } from '../applications/launcherPins';
 import { api } from '../client/api';
 import { OPEN_COMMAND_PALETTE_EVENT, type OpenCommandPaletteDetail } from '../commands/commandPaletteEvents';
 import { DESKTOP_SHORTCUT_EVENT } from '../commands/desktopShortcutEvents';
@@ -1944,9 +1946,24 @@ export function Layout() {
     [navigate],
   );
 
-  const togglePinnedApplication = useCallback((applicationId: string) => {
+  const togglePinnedApplication = useCallback(
+    (applicationId: string) => {
+      const application = registryApplications.find((candidate) => candidate.id === applicationId);
+      setApplicationWorkspace((current) => {
+        const next = toggleApplicationPinned(current, applicationId, {
+          title: application?.title ?? applicationId,
+          ...(application?.icon ? { icon: application.icon } : {}),
+        });
+        writeStoredApplicationWorkspace(next);
+        return next;
+      });
+    },
+    [registryApplications],
+  );
+
+  const togglePinnedLauncherItem = useCallback((target: LauncherPinTarget, snapshot: LauncherPinSnapshot) => {
     setApplicationWorkspace((current) => {
-      const next = toggleApplicationPinned(current, applicationId);
+      const next = toggleLauncherPin(current, target, snapshot);
       writeStoredApplicationWorkspace(next);
       return next;
     });
@@ -3841,7 +3858,7 @@ export function Layout() {
       </Suspense>
       {commandPaletteMounted ? (
         <Suspense fallback={null}>
-          <CommandPalette />
+          <CommandPalette applicationWorkspace={applicationWorkspace} onToggleLauncherPin={togglePinnedLauncherItem} />
         </Suspense>
       ) : null}
     </NotificationProvider>

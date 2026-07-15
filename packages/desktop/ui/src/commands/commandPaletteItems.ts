@@ -44,6 +44,15 @@ export function workspaceDisplayLabel(cwd: string | undefined, cwdSlug?: string 
   return slug || undefined;
 }
 
+function launcherActivityLabel(timestamp: string): string {
+  return new Intl.DateTimeFormat(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  }).format(new Date(timestamp));
+}
+
 export function buildConversationItems(
   section: 'open' | 'archived',
   sessions: ScopedSessionMeta[],
@@ -81,6 +90,9 @@ export function buildConversationItems(
       id: `${section}:${session.id}`,
       section,
       title: session.title,
+      parentLabel: 'Agent',
+      auxiliaryLabel: launcherActivityLabel(timestamp),
+      pinTarget: { kind: 'conversation', conversationId: session.id },
       subtitle: workspaceDisplayLabel(session.cwd, session.cwdSlug),
       meta: metaParts.join(' · '),
       keywords: [session.id, session.file, session.cwd, session.model, session.cwdSlug],
@@ -141,6 +153,9 @@ export function buildConversationContentSearchItems(
       id: `conversation-search:${result.conversationId}:${result.blockId}`,
       section: result.isLive ? ('open' as const) : ('archived' as const),
       title: result.title,
+      parentLabel: 'Agent',
+      auxiliaryLabel: result.lastActivityAt ? launcherActivityLabel(result.lastActivityAt) : undefined,
+      pinTarget: { kind: 'conversation' as const, conversationId: result.conversationId },
       subtitle: workspaceDisplayLabel(result.cwd),
       meta: excerpt(result.snippet, 160),
       keywords: [query, result.conversationId, result.cwd, result.snippet, result.blockId],
