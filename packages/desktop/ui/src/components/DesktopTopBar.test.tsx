@@ -19,8 +19,7 @@ function renderTopBar(
         applicationWorkspace={{ pinnedApplicationIds: [], pinsInitialized: false, openViews: [], activeViewId: null }}
         activeApplicationId={null}
         onActivateApplication={() => {}}
-        onToggleApplicationPinned={() => {}}
-        onCloseApplicationView={() => {}}
+        onCloseApplication={() => {}}
         {...overrides}
       />
     </MemoryRouter>,
@@ -176,8 +175,26 @@ describe('DesktopTopBar', () => {
 
     expect(html).toContain('Open Neon Pilot');
     expect(html.indexOf('Go back')).toBeLessThan(html.indexOf('Go forward'));
+    expect(html.indexOf('Go forward')).toBeLessThan(html.indexOf('Open Neon Pilot'));
     expect(html).not.toContain('Hide sidebar');
     expect(html).not.toContain('Hide right sidebar');
+  });
+
+  it('places the environment badge in the trailing controls before extension chrome', () => {
+    const html = renderTopBar(
+      {
+        isElectron: true,
+        activeHostId: 'local',
+        activeHostLabel: 'Local',
+        activeHostKind: 'local',
+        activeHostSummary: 'Local runtime is healthy.',
+        launchMode: 'testing',
+        launchLabel: 'Testing',
+      },
+      { trailingExtra: <span>Trailing marker</span> },
+    );
+
+    expect(html.indexOf('>Testing<')).toBeLessThan(html.indexOf('Trailing marker'));
   });
 
   it('keeps the top bar chrome draggable except for interactive controls', () => {

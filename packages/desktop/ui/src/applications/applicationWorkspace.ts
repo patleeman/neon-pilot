@@ -198,18 +198,89 @@ export function closeApplicationView(current: ApplicationWorkspaceState, viewId:
   };
 }
 
+export function closeApplicationViews(current: ApplicationWorkspaceState, applicationId: string): ApplicationWorkspaceState {
+  const closingViewIds = new Set(current.openViews.filter((view) => view.applicationId === applicationId).map((view) => view.id));
+  if (closingViewIds.size === 0) return current;
+
+  const openViews = current.openViews.filter((view) => !closingViewIds.has(view.id));
+  return {
+    ...current,
+    openViews,
+    activeViewId: current.activeViewId && closingViewIds.has(current.activeViewId) ? (openViews.at(-1)?.id ?? null) : current.activeViewId,
+  };
+}
+
 export function reconcileApplicationWorkspace(
   current: ApplicationWorkspaceState,
   applications: readonly ApplicationRegistration[],
 ): ApplicationWorkspaceState {
-  const retainedPins = current.pinnedApplicationIds;
+  const applicationsById = new Map(applications.map((application) => [application.id, application]));
+  const migratedTargetsByApplicationId = new Map<string, Set<string>>();
+  const resolveMigratedViewApplicationId = (applicationId: string, route: string): string => {
+    if (applicationsById.has(applicationId)) return applicationId;
+    const extensionId = applicationId.split(':')[0];
+    const pathname = routePathname(route);
+    const candidates = applications
+      .filter(
+        (application) => application.available && application.instancePolicy === 'singleton' && application.extensionId === extensionId,
+      )
+      .map((application) => ({
+        application,
+        matchLength: Math.max(
+          -1,
+          ...(application.routes ?? [application.startRoute])
+            .filter((candidateRoute) => routeMatchesPrefix(pathname, candidateRoute))
+            .map((candidateRoute) => candidateRoute.length),
+        ),
+      }))
+      .filter((candidate) => candidate.matchLength >= 0)
+      .sort((left, right) => right.matchLength - left.matchLength);
+    if (!candidates[0] || candidates[1]?.matchLength === candidates[0].matchLength) return applicationId;
+    const migratedId = candidates[0].application.id;
+    const targets = migratedTargetsByApplicationId.get(applicationId) ?? new Set<string>();
+    targets.add(migratedId);
+    migratedTargetsByApplicationId.set(applicationId, targets);
+    return migratedId;
+  };
+  const resolveMigratedPinApplicationId = (applicationId: string): string => {
+    if (applicationsById.has(applicationId)) return applicationId;
+    const migratedTargets = migratedTargetsByApplicationId.get(applicationId);
+    if (migratedTargets?.size === 1) return [...migratedTargets][0]!;
+    const extensionId = applicationId.split(':')[0];
+    const candidates = applications.filter(
+      (application) => application.available && application.instancePolicy === 'singleton' && application.extensionId === extensionId,
+    );
+    return candidates.length === 1 ? candidates[0]!.id : applicationId;
+  };
+  const migratedViewIds = new Map<string, string>();
+  const migratedViews = current.openViews.map((view) => {
+    const applicationId = resolveMigratedViewApplicationId(view.applicationId, view.route);
+    if (applicationId === view.applicationId) return view;
+    const application = applicationsById.get(applicationId)!;
+    migratedViewIds.set(view.id, applicationId);
+    return {
+      ...view,
+      id: applicationId,
+      applicationId,
+      title: application.title,
+    };
+  });
+  const retainedPins = current.pinnedApplicationIds.map((applicationId) => resolveMigratedPinApplicationId(applicationId));
   const defaultPins = applications
     .filter((application) => application.available && application.defaultPinned)
     .map((application) => application.id);
-  const pinnedApplicationIds = current.pinsInitialized ? retainedPins : [...new Set([...retainedPins, ...defaultPins])];
-  const applicationsById = new Map(applications.map((application) => [application.id, application]));
+  const pinnedApplicationIds = [...new Set(current.pinsInitialized ? retainedPins : [...retainedPins, ...defaultPins])];
   const existingApplicationPinsByKey = new Map(
-    (current.launcherPins ?? []).filter((pin) => pin.target.kind === 'application').map((pin) => [pin.key, pin]),
+    (current.launcherPins ?? [])
+      .filter(
+        (pin): pin is LauncherPin & { target: Extract<LauncherPinTarget, { kind: 'application' }> } => pin.target.kind === 'application',
+      )
+      .map((pin) => {
+        const applicationId = resolveMigratedPinApplicationId(pin.target.applicationId);
+        const target = { kind: 'application', applicationId } as const;
+        const key = launcherPinKey(target);
+        return [key, { ...pin, key, target }] as const;
+      }),
   );
   const nonApplicationPins = (current.launcherPins ?? []).filter((pin) => pin.target.kind !== 'application');
   const applicationPins = pinnedApplicationIds.map((applicationId) => {
@@ -228,27 +299,46 @@ export function reconcileApplicationWorkspace(
         : (existingSnapshot ?? { title: applicationId }),
     } satisfies LauncherPin;
   });
-  const openViews = current.openViews;
+  const deduplicatedViews = new Map<string, ApplicationViewState>();
+  for (const view of migratedViews) {
+    const existing = deduplicatedViews.get(view.id);
+    if (!existing || Date.parse(view.lastActiveAt) >= Date.parse(existing.lastActiveAt)) {
+      deduplicatedViews.set(view.id, view);
+    }
+  }
+  const openViews = [...deduplicatedViews.values()];
   const openViewIds = new Set(openViews.map((view) => view.id));
+  const migratedActiveViewId = current.activeViewId ? (migratedViewIds.get(current.activeViewId) ?? current.activeViewId) : null;
   return {
     pinnedApplicationIds,
     launcherPins: [...applicationPins, ...nonApplicationPins],
     pinsInitialized: current.pinsInitialized,
     openViews,
-    activeViewId: current.activeViewId && openViewIds.has(current.activeViewId) ? current.activeViewId : (openViews.at(-1)?.id ?? null),
+    activeViewId: migratedActiveViewId && openViewIds.has(migratedActiveViewId) ? migratedActiveViewId : (openViews.at(-1)?.id ?? null),
   };
+}
+
+function routePathname(route: string): string {
+  try {
+    return new URL(route, 'https://neon-pilot.local').pathname;
+  } catch {
+    return route.split(/[?#]/, 1)[0] ?? route;
+  }
 }
 
 export function fallbackApplication(
   workspace: ApplicationWorkspaceState,
   applications: readonly ApplicationRegistration[],
+  excludedApplicationId?: string,
 ): ApplicationRegistration | null {
   const availableById = new Map(
-    applications.filter((application) => application.available).map((application) => [application.id, application]),
+    applications
+      .filter((application) => application.available && application.id !== excludedApplicationId)
+      .map((application) => [application.id, application]),
   );
   for (const id of workspace.pinnedApplicationIds) {
     const application = availableById.get(id);
     if (application) return application;
   }
-  return applications.find((application) => application.available) ?? null;
+  return applications.find((application) => application.available && application.id !== excludedApplicationId) ?? null;
 }

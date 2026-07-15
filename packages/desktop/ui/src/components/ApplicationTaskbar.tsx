@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 
-import type { ApplicationViewState, ApplicationWorkspaceState } from '../applications/applicationWorkspace';
+import type { ApplicationWorkspaceState } from '../applications/applicationWorkspace';
 import type { ApplicationRegistration } from '../extensions/extensionRegistryProjection';
 import { ApplicationIcon } from './ApplicationIcon';
-import { MenuItem, MenuShell, ToolbarButton } from './ui';
+import { IconButton, ToolbarButton } from './ui';
 
 export function applicationTaskbarOrder(
   applications: readonly ApplicationRegistration[],
@@ -27,11 +27,7 @@ export function applicationTaskbarOrder(
       navigationSlots: [],
     });
   }
-  const openApplicationIds = workspace.openViews
-    .slice()
-    .sort((left, right) => Date.parse(right.lastActiveAt) - Date.parse(left.lastActiveAt))
-    .map((view) => view.applicationId);
-  const orderedIds = [...new Set([...workspace.pinnedApplicationIds.filter((id) => byId.has(id)), ...openApplicationIds])];
+  const orderedIds = [...new Set(workspace.openViews.map((view) => view.applicationId))];
   return orderedIds.map((id) => byId.get(id)).filter((application): application is ApplicationRegistration => Boolean(application));
 }
 
@@ -40,207 +36,71 @@ export function ApplicationTaskbar({
   workspace,
   activeApplicationId,
   onActivate,
-  onActivateView,
-  onTogglePinned,
-  onCloseView,
+  onCloseApplication,
 }: {
   applications: readonly ApplicationRegistration[];
   workspace: ApplicationWorkspaceState;
   activeApplicationId: string | null;
   onActivate: (application: ApplicationRegistration) => void;
-  onActivateView: (view: ApplicationViewState) => void;
-  onTogglePinned: (applicationId: string) => void;
-  onCloseView: (viewId: string) => void;
+  onCloseApplication: (applicationId: string) => void;
 }) {
-  const rootRef = useRef<HTMLDivElement | null>(null);
-  const hoverTimerRef = useRef<number | null>(null);
-  const [visibleCount, setVisibleCount] = useState(4);
-  const [menuApplicationId, setMenuApplicationId] = useState<string | null>(null);
-  const [hoverApplicationId, setHoverApplicationId] = useState<string | null>(null);
-  const [overflowOpen, setOverflowOpen] = useState(false);
   const orderedApplications = useMemo(() => applicationTaskbarOrder(applications, workspace), [applications, workspace]);
+  const taskbarRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    const node = rootRef.current;
-    if (!node || typeof ResizeObserver === 'undefined') return;
-    const observer = new ResizeObserver(([entry]) => {
-      const width = entry?.contentRect.width ?? node.clientWidth;
-      setVisibleCount(Math.max(1, Math.min(12, Math.floor((width - 34) / 42))));
-    });
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, []);
-
-  useEffect(() => {
-    function closeMenus(event: MouseEvent) {
-      if (rootRef.current?.contains(event.target as Node)) return;
-      setMenuApplicationId(null);
-      setOverflowOpen(false);
-    }
-    window.addEventListener('mousedown', closeMenus);
-    return () => {
-      window.removeEventListener('mousedown', closeMenus);
-      if (hoverTimerRef.current !== null) window.clearTimeout(hoverTimerRef.current);
+    const taskbar = taskbarRef.current;
+    if (!taskbar || !activeApplicationId) return;
+    const revealActiveApplication = () => {
+      const activeEntry = taskbar.querySelector<HTMLElement>('[data-active="true"]');
+      if (activeEntry) taskbar.scrollLeft = activeEntry.offsetLeft;
     };
-  }, []);
-
-  const visible = orderedApplications.slice(0, visibleCount);
-  const overflow = orderedApplications.slice(visibleCount);
-
-  function closeMenus() {
-    setMenuApplicationId(null);
-    setHoverApplicationId(null);
-    setOverflowOpen(false);
-  }
-
-  function renderApplicationManagement(application: ApplicationRegistration, views: ApplicationViewState[], pinned: boolean) {
-    return (
-      <>
-        {views.map((view) => (
-          <div className="ui-application-taskbar__view-row" key={view.id}>
-            <MenuItem
-              className="min-w-0 flex-1"
-              onClick={() => {
-                closeMenus();
-                onActivateView(view);
-              }}
-            >
-              <span className="min-w-0 flex-1 truncate">{view.title}</span>
-            </MenuItem>
-            <ToolbarButton
-              type="button"
-              className="ui-application-taskbar__close"
-              aria-label={`Close ${view.title}`}
-              onClick={() => {
-                closeMenus();
-                onCloseView(view.id);
-              }}
-            >
-              ×
-            </ToolbarButton>
-          </div>
-        ))}
-        <MenuItem
-          onClick={() => {
-            closeMenus();
-            onTogglePinned(application.id);
-          }}
-        >
-          {pinned ? 'Unpin application' : 'Pin application'}
-        </MenuItem>
-        {!application.available ? (
-          <MenuItem
-            onClick={() => {
-              closeMenus();
-              onCloseView(views[0]?.id ?? application.id);
-            }}
-          >
-            Dismiss unavailable view
-          </MenuItem>
-        ) : null}
-      </>
-    );
-  }
-
-  function renderApplication(application: ApplicationRegistration) {
-    const views = workspace.openViews.filter((view) => view.applicationId === application.id);
-    const active = activeApplicationId === application.id;
-    const pinned = workspace.pinnedApplicationIds.includes(application.id);
-    const supportsViewPreview = application.instancePolicy === 'multiple' || views.length > 1 || !application.available;
-    const menuOpen = menuApplicationId === application.id || hoverApplicationId === application.id;
-    return (
-      <div
-        className="relative min-w-0"
-        key={application.id}
-        onMouseEnter={() => {
-          if (!supportsViewPreview) return;
-          if (hoverTimerRef.current !== null) window.clearTimeout(hoverTimerRef.current);
-          hoverTimerRef.current = window.setTimeout(() => setHoverApplicationId(application.id), 300);
-        }}
-        onMouseLeave={() => {
-          if (hoverTimerRef.current !== null) window.clearTimeout(hoverTimerRef.current);
-          hoverTimerRef.current = null;
-          setHoverApplicationId((current) => (current === application.id ? null : current));
-        }}
-      >
-        <ToolbarButton
-          type="button"
-          className="ui-application-taskbar__item"
-          data-application-id={application.id}
-          aria-pressed={active}
-          aria-expanded={menuOpen}
-          aria-label={`${application.title}${views.length > 0 ? `, ${views.length} open` : ''}`}
-          onClick={() => {
-            if (active && supportsViewPreview) {
-              setMenuApplicationId((current) => (current === application.id ? null : application.id));
-              return;
-            }
-            onActivate(application);
-          }}
-          onContextMenu={(event) => {
-            event.preventDefault();
-            setMenuApplicationId(application.id);
-          }}
-        >
-          <ApplicationIcon icon={application.icon} title={application.title} />
-          <span className="ui-application-taskbar__label">{application.title}</span>
-          {views.length > 1 ? <span className="ui-application-taskbar__count">{views.length}</span> : null}
-        </ToolbarButton>
-        {menuOpen ? (
-          <MenuShell className="ui-application-taskbar__menu" aria-label={`${application.title} application menu`}>
-            {renderApplicationManagement(application, views, pinned)}
-          </MenuShell>
-        ) : null}
-      </div>
-    );
-  }
+    revealActiveApplication();
+    const handleResize = () => window.requestAnimationFrame(revealActiveApplication);
+    window.addEventListener('resize', handleResize);
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(handleResize);
+    observer?.observe(taskbar);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      observer?.disconnect();
+    };
+  }, [activeApplicationId, orderedApplications.length]);
 
   return (
-    <div ref={rootRef} className="ui-application-taskbar" aria-label="Applications">
-      {visible.map(renderApplication)}
-      {overflow.length > 0 ? (
-        <div className="relative">
-          <ToolbarButton
-            type="button"
-            className="ui-application-taskbar__overflow"
-            aria-label={`${overflow.length} more applications`}
-            aria-expanded={overflowOpen}
-            onClick={() => setOverflowOpen((open) => !open)}
-          >
-            •••
-          </ToolbarButton>
-          {overflowOpen ? (
-            <MenuShell className="ui-application-taskbar__overflow-menu" aria-label="More applications">
-              {overflow.map((application) => (
-                <div key={application.id}>
-                  <MenuItem
-                    onClick={() => {
-                      closeMenus();
-                      onActivate(application);
-                    }}
-                  >
-                    <ApplicationIcon icon={application.icon} title={application.title} className="ui-application-icon--menu" />
-                    <span className="min-w-0 flex-1 truncate">{application.title}</span>
-                    {workspace.openViews.some((view) => view.applicationId === application.id) ? (
-                      <span className="text-dim">Open</span>
-                    ) : null}
-                  </MenuItem>
-                  <MenuItem onClick={() => setMenuApplicationId((current) => (current === application.id ? null : application.id))}>
-                    {application.title} views and actions
-                  </MenuItem>
-                  {menuApplicationId === application.id
-                    ? renderApplicationManagement(
-                        application,
-                        workspace.openViews.filter((view) => view.applicationId === application.id),
-                        workspace.pinnedApplicationIds.includes(application.id),
-                      )
-                    : null}
-                </div>
-              ))}
-            </MenuShell>
-          ) : null}
-        </div>
-      ) : null}
+    <div ref={taskbarRef} className="ui-application-taskbar" aria-label="Open applications">
+      {orderedApplications.map((application) => {
+        const views = workspace.openViews.filter((view) => view.applicationId === application.id);
+        const active = activeApplicationId === application.id;
+        return (
+          <div className="ui-application-taskbar__entry group" data-active={active} key={application.id}>
+            <ToolbarButton
+              type="button"
+              className="ui-application-taskbar__item"
+              data-application-id={application.id}
+              aria-pressed={active}
+              aria-label={views.length > 1 ? `${application.title}, ${views.length} open` : application.title}
+              onClick={() => onActivate(application)}
+            >
+              <ApplicationIcon icon={application.icon} title={application.title} />
+              <span className="ui-application-taskbar__label">{application.title}</span>
+              {views.length > 1 ? (
+                <span className="ui-application-taskbar__count" aria-hidden="true">
+                  {views.length}
+                </span>
+              ) : null}
+            </ToolbarButton>
+            <IconButton
+              compact
+              size="sm"
+              className="ui-application-taskbar__close"
+              aria-label={`Close ${application.title}`}
+              title={`Close ${application.title}`}
+              onClick={() => onCloseApplication(application.id)}
+            >
+              ×
+            </IconButton>
+          </div>
+        );
+      })}
     </div>
   );
 }

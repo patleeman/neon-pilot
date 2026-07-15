@@ -22,90 +22,94 @@ function application(id: string, title: string): ApplicationRegistration {
   };
 }
 
+function workspace(open: ApplicationRegistration[], activeViewId: string | null = open.at(-1)?.id ?? null): ApplicationWorkspaceState {
+  return {
+    pinnedApplicationIds: [],
+    pinsInitialized: true,
+    activeViewId,
+    openViews: open.map((item) => ({
+      id: item.id,
+      applicationId: item.id,
+      route: item.startRoute,
+      title: item.title,
+      lastActiveAt: '2026-01-01T00:00:00.000Z',
+    })),
+  };
+}
+
 describe('ApplicationTaskbar', () => {
   const home = application('system-home:home', 'Home');
   const agent = application('system-agent:agent', 'Agent');
+  const system = application('system-settings:system', 'System');
 
-  it('keeps pinned applications stable before recency-ordered unpinned work', () => {
-    const workspace: ApplicationWorkspaceState = {
-      pinnedApplicationIds: [home.id, agent.id],
-      pinsInitialized: true,
-      activeViewId: agent.id,
-      openViews: [
-        { id: home.id, applicationId: home.id, route: '/home', title: 'Home', lastActiveAt: '2026-01-01T00:00:00.000Z' },
-        { id: agent.id, applicationId: agent.id, route: '/conversations/new', title: 'Agent', lastActiveAt: '2026-01-02T00:00:00.000Z' },
-      ],
-    };
-    expect(applicationTaskbarOrder([home, agent], workspace).map((item) => item.id)).toEqual([home.id, agent.id]);
+  it('shows only open applications in stable workspace order', () => {
+    const state = { ...workspace([home, agent]), pinnedApplicationIds: [home.id, agent.id, system.id] };
+    expect(applicationTaskbarOrder([system, agent, home], state).map((item) => item.id)).toEqual([home.id, agent.id]);
   });
 
-  it('activates an application and exposes pinning through its context menu', () => {
+  it('keeps every open application label visible and marks the active application', () => {
+    render(
+      <ApplicationTaskbar
+        applications={[home, agent, system]}
+        workspace={workspace([home, agent, system], agent.id)}
+        activeApplicationId={agent.id}
+        onActivate={() => undefined}
+        onCloseApplication={() => undefined}
+      />,
+    );
+
+    expect(screen.getByRole('button', { name: 'Home' }).getAttribute('aria-pressed')).toBe('false');
+    expect(screen.getByRole('button', { name: 'Agent' }).getAttribute('aria-pressed')).toBe('true');
+    expect(screen.getByRole('button', { name: 'System' }).getAttribute('aria-pressed')).toBe('false');
+  });
+
+  it('activates from the labeled tab and closes the whole application from its direct control', () => {
     const activate = vi.fn();
-    const togglePinned = vi.fn();
+    const close = vi.fn();
     render(
       <ApplicationTaskbar
         applications={[home, agent]}
-        workspace={{ pinnedApplicationIds: [home.id, agent.id], pinsInitialized: true, openViews: [], activeViewId: null }}
-        activeApplicationId={null}
+        workspace={workspace([home, agent], home.id)}
+        activeApplicationId={home.id}
         onActivate={activate}
-        onActivateView={() => undefined}
-        onTogglePinned={togglePinned}
-        onCloseView={() => undefined}
+        onCloseApplication={close}
       />,
     );
 
-    const agentButton = screen.getByRole('button', { name: 'Agent' });
-    fireEvent.click(agentButton);
+    fireEvent.click(screen.getByRole('button', { name: 'Agent' }));
     expect(activate).toHaveBeenCalledWith(agent);
-
-    fireEvent.contextMenu(agentButton);
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Unpin application' }));
-    expect(togglePinned).toHaveBeenCalledWith(agent.id);
+    fireEvent.click(screen.getByRole('button', { name: 'Close Agent' }));
+    expect(close).toHaveBeenCalledWith(agent.id);
+    expect(activate).toHaveBeenCalledTimes(1);
   });
 
-  it('activates the exact selected view when a singleton application has resource views', () => {
-    const runner = application('models:runner', 'Models');
-    const activateView = vi.fn();
-    const secondView = {
-      id: 'models:runner:/models/two',
-      applicationId: runner.id,
-      route: '/models/two',
-      title: 'Models · two',
+  it('shows a count for multiple views without introducing a view dropdown', () => {
+    const state = workspace([agent], agent.id);
+    state.openViews.push({
+      id: `${agent.id}:second`,
+      applicationId: agent.id,
+      route: '/evaluations/two',
+      title: 'Agent · two',
       lastActiveAt: '2026-01-02T00:00:00.000Z',
-    };
+    });
     render(
       <ApplicationTaskbar
-        applications={[runner]}
-        workspace={{
-          pinnedApplicationIds: [runner.id],
-          pinsInitialized: true,
-          activeViewId: runner.id,
-          openViews: [
-            {
-              id: 'models:runner:/models/one',
-              applicationId: runner.id,
-              route: '/models/one',
-              title: 'Models · one',
-              lastActiveAt: '2026-01-01T00:00:00.000Z',
-            },
-            secondView,
-          ],
-        }}
-        activeApplicationId={runner.id}
+        applications={[agent]}
+        workspace={state}
+        activeApplicationId={agent.id}
         onActivate={() => undefined}
-        onActivateView={activateView}
-        onTogglePinned={() => undefined}
-        onCloseView={() => undefined}
+        onCloseApplication={() => undefined}
       />,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: /Models, 2 open/ }));
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Models · two' }));
-    expect(activateView).toHaveBeenCalledWith(secondView);
+    expect(screen.getByRole('button', { name: 'Agent, 2 open' })).not.toBeNull();
+    expect(screen.getByText('2').getAttribute('aria-hidden')).toBe('true');
+    expect(screen.queryByRole('menu')).toBeNull();
   });
 
-  it('keeps a missing application visible as an unavailable recovery item', () => {
-    const workspace: ApplicationWorkspaceState = {
+  it('keeps a missing application readable and directly dismissible', () => {
+    const close = vi.fn();
+    const state: ApplicationWorkspaceState = {
       pinnedApplicationIds: [],
       pinsInitialized: true,
       activeViewId: 'missing:app',
@@ -119,51 +123,18 @@ describe('ApplicationTaskbar', () => {
         },
       ],
     };
-    expect(applicationTaskbarOrder([], workspace)).toEqual([
-      expect.objectContaining({ id: 'missing:app', title: 'Missing App', available: false }),
-    ]);
-  });
-
-  it('keeps view activation and pin management available in overflow', () => {
-    const applications = ['Home', 'Agent', 'System', 'Models', 'Reports'].map((title, index) =>
-      application(`fixture-${index}:${title.toLowerCase()}`, title),
-    );
-    const reports = applications[4]!;
-    const reportsView = {
-      id: `${reports.id}:quarterly`,
-      applicationId: reports.id,
-      route: '/reports/quarterly',
-      title: 'Reports · quarterly',
-      lastActiveAt: '2026-01-01T00:00:00.000Z',
-    };
-    const activateView = vi.fn();
-    const togglePinned = vi.fn();
     render(
       <ApplicationTaskbar
-        applications={applications}
-        workspace={{
-          pinnedApplicationIds: applications.map((item) => item.id),
-          pinsInitialized: true,
-          activeViewId: reportsView.id,
-          openViews: [reportsView],
-        }}
-        activeApplicationId={reports.id}
+        applications={[]}
+        workspace={state}
+        activeApplicationId="missing:app"
         onActivate={() => undefined}
-        onActivateView={activateView}
-        onTogglePinned={togglePinned}
-        onCloseView={() => undefined}
+        onCloseApplication={close}
       />,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: '1 more applications' }));
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Reports views and actions' }));
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Reports · quarterly' }));
-    expect(activateView).toHaveBeenCalledWith(reportsView);
-    expect(screen.queryByRole('menu', { name: 'More applications' })).toBeNull();
-
-    fireEvent.click(screen.getByRole('button', { name: '1 more applications' }));
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Reports views and actions' }));
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Unpin application' }));
-    expect(togglePinned).toHaveBeenCalledWith(reports.id);
+    expect(screen.getByRole('button', { name: 'Missing App' })).not.toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Close Missing App' }));
+    expect(close).toHaveBeenCalledWith('missing:app');
   });
 });

@@ -25,7 +25,7 @@
   }
 
   .ui-desktop-top-bar__leading {
-    @apply relative z-10 flex min-w-0 items-center gap-1.5 justify-self-start overflow-hidden;
+    @apply relative z-10 flex min-w-0 items-center gap-1.5 justify-self-start;
   }
 
   .ui-desktop-top-bar__traffic-light-gap {
@@ -82,7 +82,12 @@
   }
 
   .ui-application-taskbar {
-    @apply flex h-full min-w-0 items-center gap-1 overflow-visible;
+    @apply flex h-full min-w-0 items-center gap-1 overflow-x-auto overflow-y-hidden;
+    scrollbar-width: none;
+  }
+
+  .ui-application-taskbar::-webkit-scrollbar {
+    display: none;
   }
 
   .ui-application-taskbar button,
@@ -90,15 +95,23 @@
     -webkit-app-region: no-drag;
   }
 
-  .ui-toolbar-button.ui-application-taskbar__item {
-    @apply relative h-7 min-h-0 w-7 min-w-7 rounded-md border-0 bg-transparent px-0 text-[11px] text-secondary shadow-none hover:border-0 hover:bg-elevated/70 hover:text-primary;
+  .ui-application-taskbar__entry {
+    @apply flex h-7 min-w-[5.5rem] max-w-44 shrink-0 items-center rounded-md border border-transparent bg-transparent pl-0.5 transition-colors hover:bg-elevated/55 focus-within:bg-elevated/55;
   }
 
-  .ui-toolbar-button.ui-application-taskbar__item[aria-pressed='true'] {
-    @apply w-auto max-w-36 bg-surface px-1.5 text-primary;
+  .ui-application-taskbar__entry[data-active='true'] {
+    @apply border-border-subtle bg-surface text-primary;
     box-shadow:
       inset 0 0 0 1px rgb(var(--color-border-subtle) / 0.92),
       0 1px 2px rgb(0 0 0 / 0.05);
+  }
+
+  .ui-toolbar-button.ui-application-taskbar__item {
+    @apply relative h-6 min-h-0 min-w-0 flex-1 justify-start gap-1 rounded-sm border-0 bg-transparent px-1 text-[11px] text-secondary shadow-none hover:border-0 hover:bg-transparent hover:text-primary;
+  }
+
+  .ui-toolbar-button.ui-application-taskbar__item[aria-pressed='true'] {
+    @apply text-primary;
   }
 
   .ui-application-icon {
@@ -114,7 +127,7 @@
   }
 
   .ui-toolbar-button.ui-application-taskbar__item[aria-pressed='true'] .ui-application-icon {
-    @apply bg-elevated text-primary;
+    @apply text-primary;
   }
 
   .ui-application-icon--menu {
@@ -130,36 +143,19 @@
   }
 
   .ui-application-taskbar__label {
-    @apply hidden min-w-0 truncate pr-0.5;
-  }
-
-  .ui-toolbar-button.ui-application-taskbar__item[aria-pressed='true'] .ui-application-taskbar__label {
-    @apply block;
+    @apply block min-w-0 flex-1 truncate text-left;
   }
 
   .ui-application-taskbar__count {
     @apply absolute -right-1 -top-1 flex h-3.5 min-w-3.5 shrink-0 items-center justify-center rounded-full bg-secondary px-0.5 font-mono text-[8px] text-base;
   }
 
-  .ui-toolbar-button.ui-application-taskbar__overflow {
-    @apply h-7 min-h-0 min-w-7 rounded-md border-0 bg-transparent px-1 text-[10px] text-secondary shadow-none hover:border-0 hover:bg-elevated hover:text-primary;
+  .ui-icon-button.ui-application-taskbar__close {
+    @apply mr-0.5 h-5 min-h-5 w-5 min-w-5 shrink-0 justify-center rounded-sm border-0 bg-transparent p-0 text-[13px] text-secondary opacity-60 shadow-none hover:border-0 hover:bg-elevated hover:text-primary hover:opacity-100 group-focus-within:opacity-100;
   }
 
-  .ui-menu-shell.ui-application-taskbar__menu,
-  .ui-menu-shell.ui-application-taskbar__overflow-menu {
-    @apply absolute bottom-auto left-0 right-auto top-8 z-[140] mb-0 w-60;
-  }
-
-  .ui-menu-shell.ui-application-taskbar__overflow-menu {
-    @apply left-auto right-0;
-  }
-
-  .ui-application-taskbar__close {
-    @apply -mr-1 flex h-5 w-5 items-center justify-center rounded-sm text-dim hover:bg-surface hover:text-primary;
-  }
-
-  .ui-application-taskbar__view-row {
-    @apply flex items-center gap-0.5;
+  .ui-application-taskbar__entry[data-active='true'] .ui-application-taskbar__close {
+    @apply opacity-85;
   }
 
   .ui-desktop-top-bar__trailing {
@@ -203,8 +199,28 @@
       width: 42px;
     }
 
-    .ui-desktop-top-bar__trailing > :not(:last-child) {
+    .ui-application-taskbar__entry[data-active='true'] {
+      order: -1;
+    }
+
+    .ui-desktop-top-bar__trailing > :not(.ui-desktop-top-bar__mode-badge):not(:last-child) {
       display: none;
+    }
+  }
+
+  @media (max-width: 400px) {
+    .ui-desktop-top-bar__launcher .ui-kbd {
+      display: none;
+    }
+
+    .ui-desktop-top-bar__mode-badge {
+      @apply min-w-5 px-1;
+      font-size: 0 !important;
+    }
+
+    .ui-desktop-top-bar__mode-badge::after {
+      content: attr(data-compact-label);
+      font-size: 9px;
     }
   }
 

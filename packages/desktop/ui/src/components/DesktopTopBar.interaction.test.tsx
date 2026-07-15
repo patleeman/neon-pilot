@@ -22,8 +22,7 @@ function renderTopBar() {
         applicationWorkspace={{ pinnedApplicationIds: [], pinsInitialized: false, openViews: [], activeViewId: null }}
         activeApplicationId={null}
         onActivateApplication={() => {}}
-        onToggleApplicationPinned={() => {}}
-        onCloseApplicationView={() => {}}
+        onCloseApplication={() => {}}
       />
     </MemoryRouter>,
   );
@@ -122,8 +121,7 @@ describe('DesktopTopBar interactions', () => {
           applicationWorkspace={{ pinnedApplicationIds: [], pinsInitialized: false, openViews: [], activeViewId: null }}
           activeApplicationId={null}
           onActivateApplication={() => {}}
-          onToggleApplicationPinned={() => {}}
-          onCloseApplicationView={() => {}}
+          onCloseApplication={() => {}}
         />
       </MemoryRouter>,
     );

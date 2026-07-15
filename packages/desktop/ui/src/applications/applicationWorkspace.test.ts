@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
 import type { ApplicationNavigationRegistration, ApplicationRegistration } from '../extensions/extensionRegistryProjection';
+import type { ApplicationWorkspaceState } from './applicationWorkspace';
 import {
   closeApplicationView,
+  closeApplicationViews,
   EMPTY_APPLICATION_WORKSPACE,
   fallbackApplication,
   focusApplicationRoute,
@@ -120,6 +122,131 @@ describe('application workspace', () => {
     const closed = closeApplicationView(pinned, agent.id);
     expect(closed.openViews).toEqual([]);
     expect(closed.pinnedApplicationIds).toEqual([agent.id]);
+  });
+
+  it('closes every view owned by an application and activates the most recent remaining view', () => {
+    const agent = application();
+    const system = application({ id: 'system-settings:system', extensionId: 'system-settings', title: 'System' });
+    const withAgent = focusApplicationRoute(EMPTY_APPLICATION_WORKSPACE, agent, '/evaluations/one', undefined, 'resource');
+    const withSystem = focusApplicationRoute(withAgent, system, '/settings');
+    const withSecondAgentView = focusApplicationRoute(withSystem, agent, '/evaluations/two', undefined, 'resource');
+
+    const closed = closeApplicationViews(withSecondAgentView, agent.id);
+
+    expect(closed.openViews).toEqual([expect.objectContaining({ applicationId: system.id })]);
+    expect(closed.activeViewId).toBe(system.id);
+  });
+
+  it('migrates a stale singleton view to the extension’s sole live application for the route', () => {
+    const system = application({
+      id: 'system-settings:system',
+      extensionId: 'system-settings',
+      localId: 'system',
+      title: 'System',
+      startRoute: '/settings',
+      routes: ['/settings', '/extensions'],
+    });
+    const stale: ApplicationWorkspaceState = {
+      pinnedApplicationIds: ['system-settings:default'],
+      launcherPins: [
+        {
+          key: 'application:system-settings:default',
+          target: { kind: 'application', applicationId: 'system-settings:default' },
+          snapshot: { title: 'Settings' },
+        },
+      ],
+      pinsInitialized: true,
+      activeViewId: 'system-settings:default',
+      openViews: [
+        {
+          id: 'system-settings:default',
+          applicationId: 'system-settings:default',
+          route: '/settings',
+          title: 'Settings',
+          lastActiveAt: '2026-01-01T00:00:00.000Z',
+        },
+        {
+          id: system.id,
+          applicationId: system.id,
+          route: '/extensions',
+          title: 'System',
+          lastActiveAt: '2026-01-02T00:00:00.000Z',
+        },
+      ],
+    };
+
+    const reconciled = reconcileApplicationWorkspace(stale, [system]);
+
+    expect(reconciled.openViews).toEqual([
+      expect.objectContaining({ id: system.id, applicationId: system.id, title: 'System', route: '/extensions' }),
+    ]);
+    expect(reconciled.activeViewId).toBe(system.id);
+    expect(reconciled.pinnedApplicationIds).toEqual([system.id]);
+    expect(reconciled.launcherPins).toEqual([
+      expect.objectContaining({
+        key: `application:${system.id}`,
+        target: { kind: 'application', applicationId: system.id },
+        snapshot: { title: 'System' },
+      }),
+    ]);
+  });
+
+  it('selects another available application instead of reopening an explicitly excluded closed app', () => {
+    const home = application({ id: 'system-home:home', title: 'Home', startRoute: '/home' });
+    const agent = application();
+    const closed = closeApplicationViews(focusApplicationRoute(EMPTY_APPLICATION_WORKSPACE, home, '/home'), home.id);
+
+    expect(fallbackApplication(closed, [home, agent], home.id)?.id).toBe(agent.id);
+    expect(fallbackApplication(closed, [home], home.id)).toBeNull();
+  });
+
+  it('migrates legacy views independently to their most specific live route owners', () => {
+    const alpha = application({
+      id: 'fixture:alpha',
+      extensionId: 'fixture',
+      localId: 'alpha',
+      title: 'Alpha',
+      startRoute: '/workspace',
+      routes: ['/workspace'],
+    });
+    const beta = application({
+      id: 'fixture:beta',
+      extensionId: 'fixture',
+      localId: 'beta',
+      title: 'Beta',
+      startRoute: '/workspace/beta',
+      routes: ['/workspace/beta'],
+    });
+    const legacy: ApplicationWorkspaceState = {
+      pinnedApplicationIds: ['fixture:default'],
+      pinsInitialized: true,
+      activeViewId: 'legacy-beta',
+      openViews: [
+        {
+          id: 'legacy-alpha',
+          applicationId: 'fixture:default',
+          route: '/workspace/alpha',
+          title: 'Legacy · alpha',
+          lastActiveAt: '2026-01-01T00:00:00.000Z',
+        },
+        {
+          id: 'legacy-beta',
+          applicationId: 'fixture:default',
+          route: '/workspace/beta/item',
+          title: 'Legacy · beta',
+          lastActiveAt: '2026-01-02T00:00:00.000Z',
+        },
+      ],
+    };
+
+    const reconciled = reconcileApplicationWorkspace(legacy, [alpha, beta]);
+
+    expect(reconciled.openViews).toEqual([
+      expect.objectContaining({ id: alpha.id, applicationId: alpha.id, route: '/workspace/alpha' }),
+      expect.objectContaining({ id: beta.id, applicationId: beta.id, route: '/workspace/beta/item' }),
+    ]);
+    expect(reconciled.activeViewId).toBe(beta.id);
+    expect(reconciled.pinnedApplicationIds).toEqual(['fixture:default']);
   });
 
   it('uses default pins only before a user pin selection exists and falls back to the first pin', () => {

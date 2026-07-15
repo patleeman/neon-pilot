@@ -1,7 +1,7 @@
 import { type CSSProperties, useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 
-import type { ApplicationViewState, ApplicationWorkspaceState } from '../applications/applicationWorkspace';
+import type { ApplicationWorkspaceState } from '../applications/applicationWorkspace';
 import { ALL_COMMAND_PALETTE_SCOPE } from '../commands/commandPalette';
 import { COMMAND_PALETTE_STATE_EVENT, type CommandPaletteStateDetail, OPEN_COMMAND_PALETTE_EVENT } from '../commands/commandPaletteEvents';
 import { getDesktopBridge, isDesktopShell } from '../desktop/desktopBridge';
@@ -71,9 +71,7 @@ export function DesktopTopBar({
   applicationWorkspace,
   activeApplicationId,
   onActivateApplication,
-  onActivateApplicationView,
-  onToggleApplicationPinned,
-  onCloseApplicationView,
+  onCloseApplication,
   trailingExtra,
 }: {
   environment: DesktopEnvironmentState | null;
@@ -81,9 +79,7 @@ export function DesktopTopBar({
   applicationWorkspace: ApplicationWorkspaceState;
   activeApplicationId: string | null;
   onActivateApplication: (application: ApplicationRegistration) => void;
-  onActivateApplicationView: (view: ApplicationViewState) => void;
-  onToggleApplicationPinned: (applicationId: string) => void;
-  onCloseApplicationView: (viewId: string) => void;
+  onCloseApplication: (applicationId: string) => void;
   trailingExtra?: React.ReactNode;
 }) {
   const location = useLocation();
@@ -280,16 +276,6 @@ export function DesktopTopBar({
         <div className="ui-desktop-top-bar__traffic-light-gap" aria-hidden="true" style={dragStyle} />
         <div className="ui-desktop-top-bar__controls" style={noDragStyle}>
           <ToolbarButton
-            ref={launcherRef}
-            className="ui-desktop-top-bar__launcher"
-            onClick={openLauncher}
-            aria-label="Open Neon Pilot"
-            aria-expanded={paletteOpen}
-          >
-            <span>NeonPilot</span>
-            <Keycap>⌘K</Keycap>
-          </ToolbarButton>
-          <ToolbarButton
             className="ui-desktop-top-bar__icon-button"
             onClick={() => {
               void handleBack();
@@ -311,12 +297,17 @@ export function DesktopTopBar({
           >
             →
           </ToolbarButton>
+          <ToolbarButton
+            ref={launcherRef}
+            className="ui-desktop-top-bar__launcher"
+            onClick={openLauncher}
+            aria-label="Open Neon Pilot"
+            aria-expanded={paletteOpen}
+          >
+            <span>NeonPilot</span>
+            <Keycap>⌘K</Keycap>
+          </ToolbarButton>
         </div>
-        {environmentBadgeLabel ? (
-          <Pill tone="muted" className="ui-desktop-top-bar__mode-badge" title={environmentBadgeTitle}>
-            {environmentBadgeLabel}
-          </Pill>
-        ) : null}
       </div>
       <div className="ui-desktop-top-bar__center" style={dragStyle}>
         <ApplicationTaskbar
@@ -324,12 +315,20 @@ export function DesktopTopBar({
           workspace={applicationWorkspace}
           activeApplicationId={activeApplicationId}
           onActivate={onActivateApplication}
-          onActivateView={onActivateApplicationView}
-          onTogglePinned={onToggleApplicationPinned}
-          onCloseView={onCloseApplicationView}
+          onCloseApplication={onCloseApplication}
         />
       </div>
       <div className="ui-desktop-top-bar__trailing" style={noDragStyle}>
+        {environmentBadgeLabel ? (
+          <Pill
+            tone="muted"
+            className="ui-desktop-top-bar__mode-badge"
+            title={environmentBadgeTitle}
+            data-compact-label={environmentBadgeLabel === 'Testing' ? 'T' : environmentBadgeLabel}
+          >
+            {environmentBadgeLabel}
+          </Pill>
+        ) : null}
         {topBarElements.map((element) => (
           <TopBarElementHost key={`${element.extensionId}:${element.id}`} registration={element} />
         ))}

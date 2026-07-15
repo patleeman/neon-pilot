@@ -153,6 +153,66 @@ describe('ExtensionPage', () => {
     expect(screen.queryByTestId('surface-host')).toBeNull();
   });
 
+  it('renders a live native surface instead of a placeholder for a legacy stored application id', () => {
+    window.localStorage.setItem(
+      'neon-pilot:application-workspace:v1',
+      JSON.stringify({
+        pinnedApplicationIds: [],
+        pinsInitialized: true,
+        activeViewId: 'system-settings:default',
+        openViews: [
+          {
+            id: 'system-settings:default',
+            applicationId: 'system-settings:default',
+            route: '/settings',
+            title: 'Settings',
+            lastActiveAt: '2026-01-01T00:00:00.000Z',
+          },
+        ],
+      }),
+    );
+    vi.mocked(useExtensionRegistry).mockReturnValue({
+      loading: false,
+      error: null,
+      applications: [
+        {
+          id: 'system-settings:system',
+          extensionId: 'system-settings',
+          title: 'System',
+          startRoute: '/settings',
+          routes: ['/settings'],
+          instancePolicy: 'singleton',
+          available: true,
+          navigationSlots: [],
+        },
+      ],
+      applicationNavigation: [],
+      surfaces: [
+        {
+          extensionId: 'system-settings',
+          id: 'settings-page',
+          title: 'Settings',
+          location: 'main',
+          route: '/settings',
+          component: 'SettingsPage',
+          packageType: 'system',
+          frontend: { entry: 'dist/frontend.js' },
+        },
+      ],
+      routes: [],
+      extensions: [],
+    } as never);
+
+    render(
+      <MemoryRouter initialEntries={['/settings']}>
+        <ExtensionPage />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByTestId('surface-host').getAttribute('data-surface-id')).toBe('settings-page');
+    expect(screen.queryByText(/can’t open/)).toBeNull();
+  });
+
   it('keeps registry loading visually quiet while preserving status semantics', () => {
     vi.mocked(useExtensionRegistry).mockReturnValue({
       loading: true,

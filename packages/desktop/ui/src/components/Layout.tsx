@@ -4,13 +4,12 @@ import { Link, Outlet, useLocation, useNavigate, useSearchParams } from 'react-r
 import { useAppEvents } from '../app/contexts';
 import { APPLICATION_ACTIVATE_EVENT, type ApplicationActivateDetail } from '../applications/applicationEvents';
 import {
-  closeApplicationView,
+  closeApplicationViews,
   fallbackApplication,
   focusApplicationRoute,
   readStoredApplicationWorkspace,
   reconcileApplicationWorkspace,
   resolveApplicationForRoute,
-  toggleApplicationPinned,
   toggleLauncherPin,
   writeStoredApplicationWorkspace,
 } from '../applications/applicationWorkspace';
@@ -1939,28 +1938,6 @@ export function Layout() {
     return () => window.removeEventListener(APPLICATION_ACTIVATE_EVENT, handleApplicationActivate);
   }, [activateApplication, registryApplications]);
 
-  const activateApplicationView = useCallback(
-    (view: { route: string }) => {
-      navigate(view.route);
-    },
-    [navigate],
-  );
-
-  const togglePinnedApplication = useCallback(
-    (applicationId: string) => {
-      const application = registryApplications.find((candidate) => candidate.id === applicationId);
-      setApplicationWorkspace((current) => {
-        const next = toggleApplicationPinned(current, applicationId, {
-          title: application?.title ?? applicationId,
-          ...(application?.icon ? { icon: application.icon } : {}),
-        });
-        writeStoredApplicationWorkspace(next);
-        return next;
-      });
-    },
-    [registryApplications],
-  );
-
   const togglePinnedLauncherItem = useCallback((target: LauncherPinTarget, snapshot: LauncherPinSnapshot) => {
     setApplicationWorkspace((current) => {
       const next = toggleLauncherPin(current, target, snapshot);
@@ -1969,15 +1946,18 @@ export function Layout() {
     });
   }, []);
 
-  const dismissApplicationView = useCallback(
-    (viewId: string) => {
+  const dismissApplication = useCallback(
+    (applicationId: string) => {
       setApplicationWorkspace((current) => {
-        const dismissedActiveView = current.activeViewId === viewId;
-        const next = closeApplicationView(current, viewId);
+        const dismissedActiveApplication = current.openViews.some(
+          (view) => view.applicationId === applicationId && view.id === current.activeViewId,
+        );
+        const next = closeApplicationViews(current, applicationId);
         writeStoredApplicationWorkspace(next);
-        if (dismissedActiveView) {
+        if (dismissedActiveApplication) {
           const nextActiveView = next.openViews.find((view) => view.id === next.activeViewId);
-          const fallback = fallbackApplication(next, registryApplications);
+          const fallback =
+            fallbackApplication(next, registryApplications, applicationId) ?? fallbackApplication(next, registryApplications);
           const nextRoute = nextActiveView?.route ?? fallback?.startRoute;
           if (nextRoute) window.setTimeout(() => navigate(nextRoute), 0);
         }
@@ -3698,9 +3678,7 @@ export function Layout() {
             applicationWorkspace={applicationWorkspace}
             activeApplicationId={activeApplication?.id ?? null}
             onActivateApplication={activateApplication}
-            onActivateApplicationView={activateApplicationView}
-            onToggleApplicationPinned={togglePinnedApplication}
-            onCloseApplicationView={dismissApplicationView}
+            onCloseApplication={dismissApplication}
             trailingExtra={
               <>
                 <SetupReadinessButton

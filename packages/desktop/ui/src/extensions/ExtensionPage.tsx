@@ -99,12 +99,12 @@ export function ExtensionPage() {
             (item) => item.applicationId === application.id && routeMatches(item.route, location.pathname),
           )),
     );
-    if (declared) return declared;
+    if (declared) return { ...declared, explicitlyUnavailable: true };
     const storedView = readStoredApplicationWorkspace().openViews.find((view) =>
       routeMatches(routePathname(view.route), location.pathname),
     );
     if (!storedView || (registry.applications ?? []).some((application) => application.id === storedView.applicationId)) return null;
-    return { title: storedView.title.split(' · ')[0] ?? 'Application' };
+    return { title: storedView.title.split(' · ')[0] ?? 'Application', explicitlyUnavailable: false };
   }, [location.pathname, registry.applicationNavigation, registry.applications]);
 
   useEffect(() => {
@@ -121,6 +121,18 @@ export function ExtensionPage() {
     return <ErrorState message={`Extensions unavailable: ${registry.error}`} />;
   }
 
+  if (nativeSurface && !unavailableApplication?.explicitlyUnavailable) {
+    return (
+      <NativeExtensionSurfaceHost
+        key={extensionSurfaceRouteKey(nativeSurface, location.pathname, location.search, location.hash)}
+        surface={nativeSurface}
+        pathname={location.pathname}
+        search={location.search}
+        hash={location.hash}
+      />
+    );
+  }
+
   if (unavailableApplication) {
     return (
       <CenteredMessage
@@ -132,18 +144,6 @@ export function ExtensionPage() {
             Open Home
           </ButtonLink>
         }
-      />
-    );
-  }
-
-  if (nativeSurface) {
-    return (
-      <NativeExtensionSurfaceHost
-        key={extensionSurfaceRouteKey(nativeSurface, location.pathname, location.search, location.hash)}
-        surface={nativeSurface}
-        pathname={location.pathname}
-        search={location.search}
-        hash={location.hash}
       />
     );
   }
