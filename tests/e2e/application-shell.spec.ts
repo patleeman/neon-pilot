@@ -29,6 +29,9 @@ test('application taskbar, launcher, app navigation, overflow, and persistence w
     await expect(page.locator('[data-application-id="system-home:home"]')).toHaveAttribute('aria-pressed', 'true');
     await expect(page.locator('[data-application-id="system-agent:agent"]')).toBeVisible();
     await expect(page.locator('[data-application-id="system-settings:system"]')).toBeVisible();
+    const topBarCenter = page.locator('.ui-desktop-top-bar__center');
+    await expect(topBarCenter).toHaveCSS('-webkit-app-region', 'drag');
+    await expect(page.locator('[data-application-id="system-home:home"]')).toHaveCSS('-webkit-app-region', 'no-drag');
     await expectCleanViewport(page);
     await capture(page, testInfo, 'application-shell-home');
 

@@ -318,7 +318,7 @@ export function DesktopTopBar({
           </Pill>
         ) : null}
       </div>
-      <div className="ui-desktop-top-bar__center" style={noDragStyle}>
+      <div className="ui-desktop-top-bar__center" style={dragStyle}>
         <ApplicationTaskbar
           applications={applications}
           workspace={applicationWorkspace}

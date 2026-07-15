@@ -193,6 +193,7 @@ describe('DesktopTopBar', () => {
 
     expect(html).toContain('class="ui-desktop-top-bar" style="-webkit-app-region:drag"');
     expect(html).toContain('class="ui-desktop-top-bar__controls" style="-webkit-app-region:no-drag"');
+    expect(html).toContain('class="ui-desktop-top-bar__center" style="-webkit-app-region:drag"');
     expect(html).toContain('ui-desktop-top-bar__launcher');
     expect(html).not.toContain('ui-desktop-top-bar__brand');
     expect(html).not.toContain('ui-desktop-top-bar__brand-label');
