@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { COMMAND_PALETTE_STATE_EVENT, OPEN_COMMAND_PALETTE_EVENT } from '../commands/commandPaletteEvents.js';
 import { APP_NAVIGATION_COMMAND_EVENT, DesktopTopBar } from './DesktopTopBar.js';
 
-function renderTopBar() {
+function renderTopBar(overrides: Partial<React.ComponentProps<typeof DesktopTopBar>> = {}) {
   render(
     <MemoryRouter>
       <DesktopTopBar
@@ -23,6 +23,7 @@ function renderTopBar() {
         activeApplicationId={null}
         onActivateApplication={() => {}}
         onCloseApplication={() => {}}
+        {...overrides}
       />
     </MemoryRouter>,
   );
@@ -66,6 +67,15 @@ describe('DesktopTopBar interactions', () => {
     expect(openEvents.at(-1)).toMatchObject({ scope: 'all' });
 
     window.removeEventListener(OPEN_COMMAND_PALETTE_EVENT, listener);
+  });
+
+  it('opens Home from the dedicated navigation button', () => {
+    const onOpenHome = vi.fn();
+    renderTopBar({ onOpenHome });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open Home' }));
+
+    expect(onOpenHome).toHaveBeenCalledTimes(1);
   });
 
   it('normalizes scoped shortcut opens into the unified launcher', async () => {

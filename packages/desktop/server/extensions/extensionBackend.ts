@@ -409,7 +409,13 @@ export type ExtensionBackendServerContext = Pick<ServerRouteContext, 'getRuntime
   Partial<
     Pick<
       ServerRouteContext,
-      'buildLiveSessionResourceOptions' | 'getRepoRoot' | 'getSettingsFile' | 'materializeWebRuntimeConfig' | 'getAuthFile' | 'getStateRoot'
+      | 'buildLiveSessionResourceOptions'
+      | 'buildLiveSessionResourceOptionsAsync'
+      | 'getRepoRoot'
+      | 'getSettingsFile'
+      | 'materializeWebRuntimeConfig'
+      | 'getAuthFile'
+      | 'getStateRoot'
     >
   >;
 
@@ -873,11 +879,24 @@ function workerLiveSessionResourceOptions(serverContext?: ExtensionBackendServer
   };
 }
 
+async function workerLiveSessionResourceOptionsAsync(serverContext?: ExtensionBackendServerContext): Promise<Record<string, unknown>> {
+  if (!serverContext?.buildLiveSessionResourceOptionsAsync) return workerLiveSessionResourceOptions(serverContext);
+  const options = await serverContext.buildLiveSessionResourceOptionsAsync(serverContext.getRuntimeScope());
+  return {
+    additionalExtensionPaths: options.additionalExtensionPaths,
+    additionalSkillPaths: options.additionalSkillPaths,
+    additionalPromptTemplatePaths: options.additionalPromptTemplatePaths,
+    additionalThemePaths: options.additionalThemePaths,
+    ...(options.systemPromptSupplement ? { systemPromptSupplement: options.systemPromptSupplement } : {}),
+  };
+}
+
 function workerBackendContextOptions(
   serverContext?: ExtensionBackendServerContext,
   toolContext?: ExtensionBackendContext['toolContext'],
   agentToolContext?: unknown,
   updateHandleId?: string,
+  liveSessionResourceOptions: Record<string, unknown> = workerLiveSessionResourceOptions(serverContext),
 ) {
   const stateRoot = serverContext?.getStateRoot?.() ?? getStateRoot();
   const runtimeDir = getPiAgentRuntimeDir(stateRoot);
@@ -889,7 +908,7 @@ function workerBackendContextOptions(
     runtimeSettingsFilePath: resolveRuntimeSettingsFilePath(runtimeDir, serverContext),
     authFile: serverContext?.getAuthFile?.(),
     stateRoot,
-    liveSessionResourceOptions: workerLiveSessionResourceOptions(serverContext),
+    liveSessionResourceOptions,
     toolContext: workerBackendToolContext(toolContext, updateHandleId),
     ...(agentToolContext ? { agentToolContext } : {}),
   };
@@ -905,6 +924,7 @@ async function runExtensionBackendActionInWorker(
   toolContext?: ExtensionBackendContext['toolContext'],
   agentToolContext?: unknown,
   signal?: AbortSignal,
+  resourceOptionsMode: 'assembled' | 'minimal' = 'assembled',
 ): Promise<unknown> {
   const runner = getWorkerImportBackendRunner();
   const loadTarget = resolveInstalledExtensionBackendLoadTarget(extensionId);
@@ -917,6 +937,10 @@ async function runExtensionBackendActionInWorker(
   }
   const updateHandleId = registerExtensionToolUpdateHandle(toolContext?.onUpdate);
   try {
+    const liveSessionResourceOptions =
+      resourceOptionsMode === 'minimal'
+        ? workerLiveSessionResourceOptions(serverContext)
+        : await workerLiveSessionResourceOptionsAsync(serverContext);
     return await runner.runWorkerExport(
       extensionId,
       loadTarget,
@@ -924,7 +948,7 @@ async function runExtensionBackendActionInWorker(
       extensionBackendOperation('action', `action ${actionId}`, { target: actionId }),
       [input],
       {
-        context: workerBackendContextOptions(serverContext, toolContext, agentToolContext, updateHandleId),
+        context: workerBackendContextOptions(serverContext, toolContext, agentToolContext, updateHandleId, liveSessionResourceOptions),
         ...(timeoutMs ? { timeoutMs } : {}),
         ...(signal ? { signal } : {}),
       },
@@ -1158,6 +1182,7 @@ export async function invokeExtensionAction(
   toolContext?: ExtensionBackendContext['toolContext'],
   agentToolContext?: unknown,
   signal?: AbortSignal,
+  resourceOptionsMode: 'assembled' | 'minimal' = 'assembled',
 ): Promise<ExtensionActionInvokeResult> {
   const started = Date.now();
   let actionHandlerStarted = false;
@@ -1197,6 +1222,7 @@ export async function invokeExtensionAction(
       toolContext ?? toolContextFromAgentToolContext(agentToolContext),
       agentToolContext,
       signal,
+      resourceOptionsMode,
     );
     recordActionTelemetry({ extensionId, actionId, ok: true, durationMs: Date.now() - started, at: new Date().toISOString() });
     return { ok: true, result };

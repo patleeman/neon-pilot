@@ -479,11 +479,11 @@
   }
 
   .ui-command-palette-section {
-    @apply pb-1.5 last:pb-0;
+    @apply p-0;
   }
 
   .ui-command-palette-section-header {
-    @apply flex items-center px-2 pb-1 pt-1.5;
+    @apply flex items-center px-2 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-dim;
   }
 
   .ui-row-button.ui-command-palette-result {
@@ -555,37 +555,7 @@
   }
 
   .ui-launcher-pinned-section {
-    @apply shrink-0 border-b border-border-subtle px-1.5 pb-1.5 pt-0.5;
-  }
-
-  .ui-launcher-pinned-grid {
-    @apply grid grid-cols-6 gap-0.5;
-  }
-
-  .ui-launcher-pinned-item {
-    @apply relative min-w-0 rounded-md;
-  }
-
-  .ui-launcher-pinned-item:hover,
-  .ui-launcher-pinned-item:focus-within {
-    @apply bg-elevated/65;
-  }
-
-  .ui-launcher-pinned-open {
-    @apply flex h-[54px] w-full min-w-0 flex-col items-center justify-center gap-1 rounded-md px-1 text-[10px] text-secondary outline-none focus-visible:ring-1 focus-visible:ring-steel/40 disabled:opacity-45;
-  }
-
-  .ui-launcher-pinned-open > span:last-child {
-    @apply w-full truncate text-center;
-  }
-
-  .ui-launcher-pinned-unpin {
-    @apply absolute right-0.5 top-0.5 z-10 h-5 w-5 justify-center p-0 text-[14px] leading-none text-dim opacity-0;
-  }
-
-  .ui-launcher-pinned-item:hover .ui-launcher-pinned-unpin,
-  .ui-launcher-pinned-item:focus-within .ui-launcher-pinned-unpin {
-    @apply opacity-100;
+    @apply shrink-0 border-b border-border-subtle p-1.5;
   }
 
   @media (max-width: 640px) {
@@ -599,8 +569,7 @@
   }
 
   @media (hover: none) {
-    .ui-command-palette-pin,
-    .ui-launcher-pinned-unpin {
+    .ui-command-palette-pin {
       @apply opacity-100;
     }
   }
@@ -882,13 +851,58 @@
     @apply pt-0;
   }
 
-  .ui-conversation-setup-empty .ui-empty-state {
-    align-items: stretch;
-  }
-
   .ui-workbench-new-tab-grid .ui-action-tile {
     min-height: 3.5rem;
     padding: 0.75rem;
+  }
+
+  .ui-home-launcher-shell {
+    @apply px-5 py-6;
+  }
+
+  .ui-home-launcher {
+    @apply mx-auto flex w-full max-w-[42rem] flex-col gap-5;
+    padding-top: clamp(1.5rem, 8vh, 4.5rem);
+  }
+
+  .ui-search-input.ui-home-launcher-search {
+    @apply h-10 rounded-lg bg-surface px-3 text-[13px];
+  }
+
+  .ui-home-launcher-section {
+    @apply space-y-2;
+  }
+
+  .ui-home-launcher-title {
+    @apply px-2 text-[11px] font-medium text-dim;
+  }
+
+  .ui-home-launcher-grid {
+    @apply grid grid-cols-1 gap-1 sm:grid-cols-2;
+  }
+
+  .ui-action-tile.ui-home-launcher-tile {
+    @apply min-h-[3.25rem] gap-2.5 rounded-md border-transparent bg-transparent px-2 py-1.5 text-secondary;
+  }
+
+  .ui-action-tile.ui-home-launcher-tile:hover {
+    @apply border-border-subtle bg-elevated/55;
+  }
+
+  .ui-home-launcher-tile .ui-action-tile-icon {
+    @apply w-8;
+  }
+
+  .ui-application-icon.ui-home-launcher-icon {
+    @apply h-8 w-8 rounded-md bg-elevated text-secondary;
+  }
+
+  .ui-application-icon.ui-home-launcher-icon svg {
+    @apply h-[17px] w-[17px];
+  }
+
+  .ui-home-launcher-empty {
+    @apply px-2 py-5 text-[12px] text-dim;
   }
 
   .ui-section-count {

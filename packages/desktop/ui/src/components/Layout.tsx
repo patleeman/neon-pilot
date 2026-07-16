@@ -68,6 +68,8 @@ import { useAllSessions } from '../store';
 import { useRouteTelemetry } from '../telemetry/appTelemetry';
 import { APP_LAYOUT_MODE_CHANGED_EVENT, type AppLayoutMode, readAppLayoutMode, writeAppLayoutMode } from '../ui-state/appLayoutMode';
 import { clampPanelWidth, getRailInitialWidth, getRailLayoutPrefs, getRailMaxWidth } from '../ui-state/layoutSizing';
+
+const HOME_APPLICATION_ID = 'system-home:home';
 import {
   WORKBENCH_CHAT_CLOSE_EVENT,
   WORKBENCH_CHAT_OPEN_EVENT,
@@ -1874,7 +1876,7 @@ export function Layout() {
   );
   useEffect(() => {
     if (extensionRegistry.loading || location.pathname !== '/home') return;
-    const home = registryApplications.find((application) => application.id === 'system-home:home');
+    const home = registryApplications.find((application) => application.id === HOME_APPLICATION_ID);
     if (!home || home.available) return;
     const fallback = fallbackApplication(applicationWorkspace, registryApplications);
     if (fallback && fallback.id !== home.id) navigate(fallback.startRoute, { replace: true });
@@ -1895,16 +1897,17 @@ export function Layout() {
   useEffect(() => {
     if (extensionRegistry.loading || registryApplications.length === 0) return;
     setApplicationWorkspace((current) => {
-      const reconciled = reconcileApplicationWorkspace(current, registryApplications);
-      const next = activeApplication
-        ? focusApplicationRoute(
-            reconciled,
-            activeApplication,
-            `${location.pathname}${location.search}${location.hash}`,
-            undefined,
-            activeApplicationViewPolicy,
-          )
-        : reconciled;
+      const reconciled = closeApplicationViews(reconcileApplicationWorkspace(current, registryApplications), HOME_APPLICATION_ID);
+      const next =
+        activeApplication && activeApplication.id !== HOME_APPLICATION_ID
+          ? focusApplicationRoute(
+              reconciled,
+              activeApplication,
+              `${location.pathname}${location.search}${location.hash}`,
+              undefined,
+              activeApplicationViewPolicy,
+            )
+          : reconciled;
       writeStoredApplicationWorkspace(next);
       return next;
     });
@@ -1927,6 +1930,13 @@ export function Layout() {
     },
     [applicationWorkspace.openViews, navigate],
   );
+  const homeApplication = useMemo(
+    () => registryApplications.find((application) => application.id === HOME_APPLICATION_ID && application.available),
+    [registryApplications],
+  );
+  const openHome = useCallback(() => {
+    if (homeApplication) activateApplication(homeApplication);
+  }, [activateApplication, homeApplication]);
 
   useEffect(() => {
     function handleApplicationActivate(event: Event) {
@@ -3677,6 +3687,7 @@ export function Layout() {
             applications={registryApplications}
             applicationWorkspace={applicationWorkspace}
             activeApplicationId={activeApplication?.id ?? null}
+            onOpenHome={homeApplication ? openHome : undefined}
             onActivateApplication={activateApplication}
             onCloseApplication={dismissApplication}
             trailingExtra={

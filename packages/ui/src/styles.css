@@ -1544,6 +1544,8 @@ body {
 
 .ui-task-list-item-label {
   overflow: hidden;
+  font-size: 0.75rem;
+  line-height: 1rem;
   text-overflow: ellipsis;
   white-space: nowrap;
 }

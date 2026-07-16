@@ -1,9 +1,10 @@
 import { HOST_VIEW_COMPONENT_DEFINITIONS, type HostViewComponentDefinition } from '@neon-pilot/extensions/host-view-components';
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 
+import { ApplicationIcon } from '../components/ApplicationIcon';
 import { Sidebar } from '../components/Sidebar';
-import { ActionTile, AppPageIntro, AppPageLayout } from '../components/ui';
+import { ActionTile, AppPageLayout, SearchInput } from '../components/ui';
 import { readConversationIdFromPathname, resolveConversationIndexRedirect } from '../conversation/conversationRoutes';
 import {
   hasDraftConversationAttachments,
@@ -79,37 +80,54 @@ function ConversationPageHost({ context, hostProps }: ExtensionHostViewComponent
 function ApplicationHomeHost() {
   const navigate = useNavigate();
   const { applications } = useExtensionRegistry();
-  const availableApplications = applications.filter((application) => application.available && application.id !== 'system-home:home');
+  const [query, setQuery] = useState('');
+  const availableApplications = useMemo(() => {
+    const normalizedQuery = query.trim().toLocaleLowerCase();
+    return applications
+      .filter((application) => application.available && application.id !== 'system-home:home')
+      .filter(
+        (application) =>
+          !normalizedQuery ||
+          application.title.toLocaleLowerCase().includes(normalizedQuery) ||
+          application.description?.toLocaleLowerCase().includes(normalizedQuery),
+      )
+      .sort((left, right) => (left.order ?? 0) - (right.order ?? 0) || left.title.localeCompare(right.title));
+  }, [applications, query]);
+
   return (
-    <AppPageLayout>
-      <div className="max-w-3xl space-y-8">
-        <AppPageIntro
-          eyebrow="Neon Pilot"
-          title="Home"
-          summary="Open an application below, or press Command K from anywhere to find applications, pages, conversations, and actions."
+    <AppPageLayout shellClassName="ui-home-launcher-shell">
+      <main className="ui-home-launcher" aria-labelledby="home-applications-title">
+        <SearchInput
+          autoFocus
+          aria-label="Search applications"
+          className="ui-home-launcher-search"
+          placeholder="Search applications"
+          value={query}
+          onChange={(event) => setQuery(event.currentTarget.value)}
         />
-        <section className="space-y-3" aria-labelledby="home-applications-title">
-          <h2 id="home-applications-title" className="text-[12px] font-semibold text-primary">
+        <section className="ui-home-launcher-section" aria-labelledby="home-applications-title">
+          <h1 id="home-applications-title" className="ui-home-launcher-title">
             Applications
-          </h2>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            {availableApplications.map((application) => (
-              <ActionTile
-                key={application.id}
-                label={application.title}
-                description={application.description}
-                meta="Open"
-                onClick={() => navigate(application.startRoute)}
-                icon={
-                  <span className="ui-application-taskbar__glyph" aria-hidden="true">
-                    {application.title.slice(0, 1).toUpperCase()}
-                  </span>
-                }
-              />
-            ))}
-          </div>
+          </h1>
+          {availableApplications.length > 0 ? (
+            <div className="ui-home-launcher-grid">
+              {availableApplications.map((application) => (
+                <ActionTile
+                  key={application.id}
+                  className="ui-home-launcher-tile"
+                  label={application.title}
+                  onClick={() => navigate(application.startRoute)}
+                  icon={<ApplicationIcon className="ui-home-launcher-icon" icon={application.icon} title={application.title} />}
+                />
+              ))}
+            </div>
+          ) : (
+            <p className="ui-home-launcher-empty" role="status">
+              No applications found.
+            </p>
+          )}
         </section>
-      </div>
+      </main>
     </AppPageLayout>
   );
 }

@@ -1,5 +1,5 @@
 import { useEffect, useMemo } from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 
 import { readStoredApplicationWorkspace } from '../applications/applicationWorkspace';
 import { addNotification } from '../components/notifications/notificationStore';
@@ -8,7 +8,6 @@ import { NativeExtensionSurfaceHost } from './NativeExtensionSurfaceHost';
 import { isNativeExtensionPageSurface, type NativeExtensionViewSummary } from './types';
 import { type ExtensionRegistryEntry, useExtensionRegistry } from './useExtensionRegistry';
 
-const STALE_EXTENSION_ROUTES = new Set(['/gateways']);
 const CRITICAL_SYSTEM_EXTENSION_PAGES: NativeExtensionViewSummary[] = [
   {
     id: 'extensions-page',
@@ -68,8 +67,8 @@ function findMainViewRoute(
   return matches.sort((left, right) => compareRouteMatch(left, right, pathname))[0];
 }
 
-function extensionSurfaceRouteKey(surface: NativeExtensionViewSummary, pathname: string, search: string, hash: string): string {
-  return `${surface.extensionId}:${surface.id}:${surface.route ?? ''}:${pathname}${search}${hash}`;
+function extensionSurfaceKey(surface: NativeExtensionViewSummary): string {
+  return `${surface.extensionId}:${surface.id}:${surface.route ?? ''}`;
 }
 
 export function ExtensionPage() {
@@ -89,7 +88,20 @@ export function ExtensionPage() {
       CRITICAL_SYSTEM_EXTENSION_PAGES.find((candidate) => routeMatches(candidate.route ?? '', location.pathname))
     );
   }, [location.pathname, registry.applications, registry.extensions, registry.surfaces]);
-  const staleExtensionRoute = STALE_EXTENSION_ROUTES.has(location.pathname);
+  const registeredExtensionRoute = useMemo(
+    () =>
+      (registry.applicationNavigation ?? []).some((item) => routeMatches(item.route, location.pathname)) ||
+      (registry.routes ?? []).some((item) => routeMatches(item.route, location.pathname)) ||
+      (registry.extensions ?? []).some(
+        (extension) =>
+          extension.enabled &&
+          ((extension.contributes?.views ?? []).some(
+            (view) => view.location === 'main' && typeof view.route === 'string' && routeMatches(view.route, location.pathname),
+          ) ||
+            (extension.contributes?.nav ?? []).some((item) => routeMatches(item.route, location.pathname))),
+      ),
+    [location.pathname, registry.applicationNavigation, registry.extensions, registry.routes],
+  );
   const unavailableApplication = useMemo(() => {
     const declared = (registry.applications ?? []).find(
       (application) =>
@@ -117,6 +129,10 @@ export function ExtensionPage() {
     return <QuietExtensionPageLoading />;
   }
 
+  if (registeredExtensionRoute && !nativeSurface) {
+    return <QuietExtensionPageLoading />;
+  }
+
   if (registry.error && !nativeSurface) {
     return <ErrorState message={`Extensions unavailable: ${registry.error}`} />;
   }
@@ -124,7 +140,7 @@ export function ExtensionPage() {
   if (nativeSurface && !unavailableApplication?.explicitlyUnavailable) {
     return (
       <NativeExtensionSurfaceHost
-        key={extensionSurfaceRouteKey(nativeSurface, location.pathname, location.search, location.hash)}
+        key={extensionSurfaceKey(nativeSurface)}
         surface={nativeSurface}
         pathname={location.pathname}
         search={location.search}
@@ -146,10 +162,6 @@ export function ExtensionPage() {
         }
       />
     );
-  }
-
-  if (staleExtensionRoute) {
-    return <Navigate to="/conversations/new" replace />;
   }
 
   return (

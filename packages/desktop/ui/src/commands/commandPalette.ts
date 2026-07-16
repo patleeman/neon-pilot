@@ -399,7 +399,8 @@ export function searchCommandPaletteItems<TAction>(
     scope: CommandPaletteScope;
     scopeSections?: CommandPaletteSection[];
     sectionLabels?: Partial<Record<CommandPaletteSection, string>>;
-    emptyQueryLimits?: Partial<Record<CommandPaletteSection, number>>;
+    /** Set a section to null to show its complete inventory for an empty query. */
+    emptyQueryLimits?: Partial<Record<CommandPaletteSection, number | null>>;
   },
 ): CommandPaletteSectionResult<TAction>[] {
   const query = options.query.trim();
@@ -423,7 +424,9 @@ export function searchCommandPaletteItems<TAction>(
       return [];
     }
 
-    const emptyQueryLimit = readEmptyQueryLimit(section, options.emptyQueryLimits?.[section]);
+    const configuredEmptyQueryLimit = options.emptyQueryLimits?.[section];
+    const emptyQueryLimit =
+      configuredEmptyQueryLimit === null ? Number.POSITIVE_INFINITY : readEmptyQueryLimit(section, configuredEmptyQueryLimit);
     const limited = emptyQuery ? rankedItems.slice(0, emptyQueryLimit) : rankedItems.slice(0, MAX_QUERY_RESULTS_PER_SECTION);
 
     return [

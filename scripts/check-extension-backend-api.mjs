@@ -123,19 +123,13 @@ function collectStaticExportSpecifiers(filePath) {
 }
 
 function collectLocalBackendApiStaticSpecifiers(filePath) {
-  return [
-    ...collectImportSpecifiers(filePath, { staticOnly: true }),
-    ...collectStaticExportSpecifiers(filePath),
-  ]
+  return [...collectImportSpecifiers(filePath, { staticOnly: true }), ...collectStaticExportSpecifiers(filePath)]
     .filter((specifier) => specifier.startsWith('./'))
     .sort();
 }
 
 function collectParentStaticSpecifiers(filePath) {
-  return [
-    ...collectImportSpecifiers(filePath, { staticOnly: true }),
-    ...collectStaticExportSpecifiers(filePath),
-  ]
+  return [...collectImportSpecifiers(filePath, { staticOnly: true }), ...collectStaticExportSpecifiers(filePath)]
     .filter((specifier) => specifier.startsWith('../'))
     .sort();
 }
@@ -268,8 +262,7 @@ for (const fileName of readdirSync(hostBackendApiRoot)) {
     failures,
     `backendApi/${fileName} statically imports or re-exports local backend API siblings (${disallowedLocalStaticSpecifiers.join(', ')}); use only ${[...allowedBackendApiLocalStaticSpecifiers].sort().join(' or ')} helper seams, or add public barrel exports from backendApi/index.ts`,
   );
-  const parentStaticSpecifiers =
-    fileName === 'index.ts' || fileName.endsWith('.test.ts') ? [] : collectParentStaticSpecifiers(filePath);
+  const parentStaticSpecifiers = fileName === 'index.ts' || fileName.endsWith('.test.ts') ? [] : collectParentStaticSpecifiers(filePath);
   assert(
     parentStaticSpecifiers.length === 0,
     failures,
@@ -330,7 +323,8 @@ for (const fileName of readdirSync(hostBackendApiRoot)) {
   );
 }
 assert(
-  buildScript.includes('packages/desktop/server/extensions/backendApi/${args.path.split'),
+  buildScript.includes('packages/desktop/server/extensions/backendApi/${args.path.split') ||
+    buildScript.includes('packages/desktop/server/extensions/backendApi/${subpath}.ts'),
   failures,
   'extension-build.mjs backend subpath resolver no longer points at host backendApi modules',
 );

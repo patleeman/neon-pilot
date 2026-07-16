@@ -50,6 +50,14 @@ function getDefaultExtensionBackendWorkerUrl(): URL {
   if (configured) return configured;
 
   const candidates = [
+    ...(typeof process.resourcesPath === 'string'
+      ? [
+          pathToFileURL(join(process.resourcesPath, 'app.asar.unpacked/server/dist/extensions/extensionBackendWorker.js')),
+          pathToFileURL(join(process.resourcesPath, 'app/server/dist/extensions/extensionBackendWorker.js')),
+          pathToFileURL(join(process.resourcesPath, 'server/dist/extensions/extensionBackendWorker.js')),
+          pathToFileURL(join(process.resourcesPath, 'app.asar/server/dist/extensions/extensionBackendWorker.js')),
+        ]
+      : []),
     pathToFileURL(join(process.cwd(), 'server/dist/extensions/extensionBackendWorker.js')),
     pathToFileURL(join(process.cwd(), 'packages/desktop/server/dist/extensions/extensionBackendWorker.js')),
     new URL('./extensionBackendWorker.js', import.meta.url),

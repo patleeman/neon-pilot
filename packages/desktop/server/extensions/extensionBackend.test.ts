@@ -3168,6 +3168,59 @@ describe('extension backend action invocation', () => {
     expect(backendRunner.runExport).not.toHaveBeenCalled();
   });
 
+  it('runs prompt-assembly provider actions with minimal resources instead of recursively assembling them', async () => {
+    const workerRunner = {
+      loadModule: vi.fn(async () => ({})),
+      clearModule: vi.fn(),
+      hasExport: vi.fn(async () => true),
+      loadAgentFactory: vi.fn(),
+      runExport: vi.fn(),
+      runWorkerExport: vi.fn(async () => ({ layers: [{ id: 'authoring' }] })),
+      run: vi.fn(),
+    };
+    setWorkerImportBackendRunnerForTests(workerRunner);
+    const buildLiveSessionResourceOptionsAsync = vi.fn(async () => {
+      throw new Error('assembled resources must not be requested by a prompt provider');
+    });
+    const buildLiveSessionResourceOptions = vi.fn(() => ({
+      additionalExtensionPaths: ['/extensions'],
+      additionalSkillPaths: ['/skills'],
+      additionalPromptTemplatePaths: ['/prompts'],
+      additionalThemePaths: ['/themes'],
+    }));
+
+    await expect(
+      invokeExtensionAction(
+        'system-extension-manager',
+        'provideExtensionAuthoringInstructions',
+        {},
+        {
+          getRuntimeScope: () => 'shared',
+          buildLiveSessionResourceOptions,
+          buildLiveSessionResourceOptionsAsync,
+        },
+        undefined,
+        undefined,
+        undefined,
+        'minimal',
+      ),
+    ).resolves.toEqual({ ok: true, result: { layers: [{ id: 'authoring' }] } });
+    expect(buildLiveSessionResourceOptions).toHaveBeenCalledTimes(1);
+    expect(buildLiveSessionResourceOptionsAsync).not.toHaveBeenCalled();
+    expect(workerRunner.runWorkerExport).toHaveBeenCalledWith(
+      'system-extension-manager',
+      expect.anything(),
+      'provideExtensionAuthoringInstructions',
+      expect.anything(),
+      [{}],
+      expect.objectContaining({
+        context: expect.objectContaining({
+          liveSessionResourceOptions: expect.objectContaining({ additionalSkillPaths: ['/skills'] }),
+        }),
+      }),
+    );
+  });
+
   it('runs worker-safe knowledge read actions through the worker runner', async () => {
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-backend-'));
     process.env.NEON_PILOT_STATE_ROOT = stateRoot;

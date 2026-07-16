@@ -37,6 +37,7 @@ describe('providerRuntime', () => {
       extensionId: 'ext',
       actionId: 'getItems',
       input: { cwd: '/repo' },
+      resourceOptionsMode: 'minimal',
       signal: expect.any(AbortSignal),
     });
 
@@ -77,6 +78,7 @@ describe('providerRuntime', () => {
       extensionId: 'ext',
       actionId: 'getItems',
       input: {},
+      resourceOptionsMode: 'minimal',
       signal: expect.objectContaining({ aborted: true }),
     });
     vi.useRealTimers();

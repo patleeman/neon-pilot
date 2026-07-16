@@ -107,6 +107,7 @@ describe('live session loader cache', () => {
       agentDir: '/agent-runtime',
       progressiveDisclosure: true,
       noSkills: true,
+      systemPromptSupplement: 'Read the bundled extension authoring skill before creating applications.',
       additionalSkillPaths: [],
       skillDiscoveryPaths: ['/skills/ds4/SKILL.md', '/skills/repo/SKILL.md'],
     });
@@ -125,7 +126,11 @@ describe('live session loader cache', () => {
     expect(options.systemPrompt).toContain('DS4 mode');
     expect(options.systemPrompt).toContain('ds4 help');
     expect(options.systemPrompt).toContain('ds4 skills search <query>');
-    expect(options.systemPrompt).not.toContain('/skills/ds4/SKILL.md');
+    expect(options.systemPrompt).toContain('Available skills (pointer only');
+    expect(options.systemPrompt).toContain('- ds4: /skills/ds4/SKILL.md');
+    expect(options.systemPrompt).toContain('- repo: /skills/repo/SKILL.md');
+    expect(options.systemPrompt).toContain('ds4 skills get <id>');
+    expect(options.systemPrompt).toContain('Read the bundled extension authoring skill before creating applications.');
     expect(options.appendSystemPromptOverride).toBeUndefined();
     expect(options.agentsFilesOverride).toBeUndefined();
     expect(options.systemPrompt).toContain('- Global user agent preferences: /agent-runtime/AGENTS.md (pointer only; read if relevant)');

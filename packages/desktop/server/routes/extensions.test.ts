@@ -2,7 +2,8 @@ import { execFileSync } from 'node:child_process';
 import { EventEmitter } from 'node:events';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -74,6 +75,7 @@ afterEach(() => {
   setDefaultExtensionBackendWorkerUrl(undefined);
   delete process.env.NEON_PILOT_STATE_ROOT;
   delete process.env.NEON_PILOT_DESKTOP_DEV_BUNDLE;
+  delete process.env.NEON_PILOT_REPO_ROOT;
   if (originalResourcesPathDescriptor) {
     Object.defineProperty(process, 'resourcesPath', originalResourcesPathDescriptor);
   } else {
@@ -1191,7 +1193,9 @@ describe('registerExtensionRoutes', () => {
     expect(statusRes.json).toHaveBeenCalledWith({ enabled: true, healthy: true });
   });
 
-  it('rejects runtime extension builds', async () => {
+  it('builds runtime user extensions with the packaged authoring runtime', async () => {
+    process.env.NEON_PILOT_DESKTOP_DEV_BUNDLE = '1';
+    process.env.NEON_PILOT_REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../../..');
     const stateRoot = mkdtempSync(join(tmpdir(), 'pa-ext-route-'));
     process.env.NEON_PILOT_STATE_ROOT = stateRoot;
     const extensionRoot = join(stateRoot, 'extensions', 'agent-board');
@@ -1214,10 +1218,10 @@ describe('registerExtensionRoutes', () => {
     const res = createResponse();
     await harness.postHandler('/api/extensions/:id/build')({ params: { id: 'agent-board' } }, res);
 
-    expect(res.status).toHaveBeenCalledWith(400);
-    expect(res.json).toHaveBeenCalledWith({
-      error: expect.stringContaining('The app no longer builds extensions at runtime.'),
-    });
+    expect(res.status).not.toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ ok: true, extensionId: 'agent-board' }));
+    expect(existsSync(join(extensionRoot, 'dist', 'frontend.js'))).toBe(true);
+    expect(existsSync(join(extensionRoot, 'dist', 'backend.mjs'))).toBe(true);
   });
 
   it('reloads prebuilt runtime extension backends without rebuilding in packaged desktop mode', async () => {

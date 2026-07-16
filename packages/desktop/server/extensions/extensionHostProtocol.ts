@@ -282,6 +282,7 @@ export interface ExtensionHostInvokeActionRequest {
   toolContext?: ExtensionHostToolContext;
   toolContextSnapshot?: ExtensionHostToolContextSnapshot;
   agentToolContext?: unknown;
+  resourceOptionsMode?: 'assembled' | 'minimal';
   signal?: AbortSignal;
 }
 

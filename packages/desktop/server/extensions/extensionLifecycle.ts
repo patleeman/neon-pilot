@@ -1,7 +1,8 @@
-import { execFileSync } from 'node:child_process';
+import { execFile, execFileSync } from 'node:child_process';
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { basename, join, resolve, sep } from 'node:path';
+import { basename, dirname, join, resolve, sep } from 'node:path';
+import { promisify } from 'node:util';
 
 import { getStateRoot } from '@neon-pilot/core';
 
@@ -22,8 +23,18 @@ export interface CreateRuntimeExtensionInput {
   template?: unknown;
 }
 
-type RuntimeExtensionTemplate = 'main-page' | 'route-sidebar' | 'route-right-sidebar' | 'route-shell' | 'right-rail' | 'workbench-detail';
+type RuntimeExtensionTemplate =
+  | 'capability'
+  | 'page'
+  | 'application'
+  | 'main-page'
+  | 'route-sidebar'
+  | 'route-right-sidebar'
+  | 'route-shell'
+  | 'right-rail'
+  | 'workbench-detail';
 type RuntimeExtensionDeleteWarning = { operation: string; message: string };
+const execFileAsync = promisify(execFile);
 
 function normalizeExtensionId(value: unknown): string {
   if (typeof value !== 'string') {
@@ -51,6 +62,9 @@ function normalizeOptionalString(value: unknown): string | undefined {
 function normalizeExtensionTemplate(value: unknown): RuntimeExtensionTemplate {
   if (value === undefined || value === null || value === '') return 'main-page';
   if (
+    value === 'capability' ||
+    value === 'page' ||
+    value === 'application' ||
     value === 'main-page' ||
     value === 'route-sidebar' ||
     value === 'route-right-sidebar' ||
@@ -60,7 +74,7 @@ function normalizeExtensionTemplate(value: unknown): RuntimeExtensionTemplate {
   )
     return value;
   throw new Error(
-    'Extension template must be main-page, route-sidebar, route-right-sidebar, route-shell, right-rail, or workbench-detail.',
+    'Extension template must be capability, page, application, main-page, route-sidebar, route-right-sidebar, route-shell, right-rail, or workbench-detail.',
   );
 }
 
@@ -89,11 +103,64 @@ function createSafeTimestamp(): string {
 }
 
 function starterHelpText(): string {
-  return 'Edit <code>src/frontend.tsx</code>, run <code>pnpm run extension:build -- &lt;extension-dir&gt;</code> from the neon-pilot repo, then reload extensions.';
+  return 'Edit <code>src/frontend.tsx</code>, then run <code>neon-pilot extensions build &lt;extension-id&gt;</code>, validate, and reload the extension.';
 }
 
 function createStarterFrontend(name: string, template: RuntimeExtensionTemplate): string {
   const nameLiteral = JSON.stringify(name);
+
+  if (template === 'application') {
+    return `import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
+import { AppPageIntro, AppPageLayout, AppPageSection, EmptyState, ToolbarButton } from '@neon-pilot/extensions/ui';
+
+const APPLICATION_NAME = ${nameLiteral};
+
+export function OverviewPage({ pa }: ExtensionSurfaceProps) {
+  return (
+    <AppPageLayout>
+      <AppPageIntro title={APPLICATION_NAME} />
+      <AppPageSection title="Overview">
+        <p style={{ maxWidth: '42rem', fontSize: '13px', lineHeight: 1.5, color: 'rgb(var(--color-secondary))' }}>
+          This is the application's starting page. Replace it with the primary workflow and keep application navigation in the owned sidebar.
+        </p>
+        <ToolbarButton style={{ marginTop: '1rem' }} type="button" onClick={() => pa.ui.toast(APPLICATION_NAME + ' is wired up.')}>
+          Test application
+        </ToolbarButton>
+      </AppPageSection>
+    </AppPageLayout>
+  );
+}
+
+export function ItemsPage() {
+  return (
+    <AppPageLayout>
+      <AppPageIntro title="Items" />
+      <EmptyState title="No items yet" body="Keep the working layout visible as real data and actions are added." />
+    </AppPageLayout>
+  );
+}
+`;
+  }
+
+  if (template === 'page') {
+    return `import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
+import { AppPageIntro, AppPageLayout, EmptyState, ToolbarButton } from '@neon-pilot/extensions/ui';
+
+const APPLICATION_NAME = ${nameLiteral};
+
+export function ExtensionPage({ pa }: ExtensionSurfaceProps) {
+  return (
+    <AppPageLayout>
+      <AppPageIntro title={APPLICATION_NAME} />
+      <EmptyState title="Ready" body="Replace this state with the page's primary workflow." />
+      <ToolbarButton style={{ marginTop: '1rem' }} type="button" onClick={() => pa.ui.toast(APPLICATION_NAME + ' is wired up.')}>
+        Test page
+      </ToolbarButton>
+    </AppPageLayout>
+  );
+}
+`;
+  }
 
   if (template === 'right-rail') {
     return `import type { ExtensionSurfaceProps } from '@neon-pilot/extensions';
@@ -108,7 +175,7 @@ export function ExtensionPanel({ pa }: ExtensionSurfaceProps) {
       <ContextRailHeader eyebrow="Right sidebar" title={EXTENSION_NAME} />
       <ContextRailBody>
         <ContextRailSection title="Getting started">
-          <p className="text-[12px] leading-5 text-secondary">${starterHelpText()}</p>
+          <p style={{ fontSize: '12px', lineHeight: 1.5, color: 'rgb(var(--color-secondary))' }}>${starterHelpText()}</p>
           <ToolbarButton type="button" onClick={() => pa.ui.toast(EXTENSION_NAME + ' is wired up.')}>
             Test toast
           </ToolbarButton>
@@ -144,9 +211,9 @@ export function ExtensionPage({ pa }: ExtensionSurfaceProps) {
   return (
     <AppPageLayout>
       <AppPageIntro title={EXTENSION_NAME} />
-      <div className="max-w-2xl text-[13px] leading-6 text-secondary">
+      <div style={{ maxWidth: '42rem', fontSize: '13px', lineHeight: 1.5, color: 'rgb(var(--color-secondary))' }}>
         <p>${starterHelpText()}</p>
-        <ToolbarButton className="mt-4" type="button" onClick={() => pa.ui.toast(EXTENSION_NAME + ' is wired up.')}>
+        <ToolbarButton style={{ marginTop: '1rem' }} type="button" onClick={() => pa.ui.toast(EXTENSION_NAME + ' is wired up.')}>
           Test toast
         </ToolbarButton>
       </div>
@@ -172,7 +239,7 @@ export function ExtensionContextRail({ pa }: ExtensionSurfaceProps) {
       <ContextRailHeader eyebrow="Context" title={resource?.label ?? EXTENSION_NAME} subtitle={resource?.source} />
       <ContextRailBody>
         <ContextRailSection title="Details">
-          <p className="text-[12px] leading-5 text-secondary">Use this right sidebar for selected-object details, metadata, logs, previews, or secondary actions.</p>
+          <p style={{ fontSize: '12px', lineHeight: 1.5, color: 'rgb(var(--color-secondary))' }}>Use this right sidebar for selected-object details, metadata, logs, previews, or secondary actions.</p>
         </ContextRailSection>
       </ContextRailBody>
     </ContextRail>
@@ -211,9 +278,9 @@ export function ExtensionPage({ pa }: ExtensionSurfaceProps) {
   return (
     <AppPageLayout>
       <AppPageIntro title={EXTENSION_NAME} />
-      <div className="max-w-2xl text-[13px] leading-6 text-secondary">
+      <div style={{ maxWidth: '42rem', fontSize: '13px', lineHeight: 1.5, color: 'rgb(var(--color-secondary))' }}>
         <p>{activeItem.label} is selected in the route-owned left sidebar. ${starterHelpText()}</p>
-        <ToolbarButton className="mt-4" type="button" onClick={() => pa.ui.toast(EXTENSION_NAME + ' is wired up.')}>
+        <ToolbarButton style={{ marginTop: '1rem' }} type="button" onClick={() => pa.ui.toast(EXTENSION_NAME + ' is wired up.')}>
           Test toast
         </ToolbarButton>
       </div>
@@ -280,10 +347,10 @@ export function ExtensionPage({ pa }: ExtensionSurfaceProps) {
   return (
     <AppPageLayout>
       <AppPageIntro title={EXTENSION_NAME} />
-      <div className="max-w-2xl text-[13px] leading-6 text-secondary">
+      <div style={{ maxWidth: '42rem', fontSize: '13px', lineHeight: 1.5, color: 'rgb(var(--color-secondary))' }}>
         <p>{label} is selected in the route-owned left sidebar. The right sidebar shows contextual detail for the same selection.</p>
-        <p className="mt-3">${starterHelpText()}</p>
-        <ToolbarButton className="mt-4" type="button" onClick={() => pa.ui.toast(EXTENSION_NAME + ' is wired up.')}>
+        <p style={{ marginTop: '0.75rem' }}>${starterHelpText()}</p>
+        <ToolbarButton style={{ marginTop: '1rem' }} type="button" onClick={() => pa.ui.toast(EXTENSION_NAME + ' is wired up.')}>
           Test toast
         </ToolbarButton>
       </div>
@@ -337,7 +404,7 @@ export function ExtensionContextRail({ pa }: ExtensionSurfaceProps) {
       <ContextRailHeader eyebrow="Context" title={resource?.label ?? 'Select an item'} subtitle={resource?.source} />
       <ContextRailBody>
         <ContextRailSection title="Details">
-          <p className="text-[12px] leading-5 text-secondary">Use this right sidebar for metadata, logs, previews, validation, or secondary actions for the selected item.</p>
+          <p style={{ fontSize: '12px', lineHeight: 1.5, color: 'rgb(var(--color-secondary))' }}>Use this right sidebar for metadata, logs, previews, validation, or secondary actions for the selected item.</p>
         </ContextRailSection>
       </ContextRailBody>
     </ContextRail>
@@ -359,7 +426,7 @@ export function ExtensionRail({ pa }: ExtensionSurfaceProps) {
       <ContextRailHeader eyebrow="Right sidebar" title={EXTENSION_NAME} />
       <ContextRailBody>
         <ContextRailSection title="Detail driver">
-          <p className="text-[12px] leading-5 text-secondary">Select something here; render the large view in the paired workbench detail surface.</p>
+          <p style={{ fontSize: '12px', lineHeight: 1.5, color: 'rgb(var(--color-secondary))' }}>Select something here; render the large view in the paired workbench detail surface.</p>
           <ToolbarButton type="button" onClick={() => pa.ui.toast(EXTENSION_NAME + ' sidebar action')}>
             Test toast
           </ToolbarButton>
@@ -371,12 +438,12 @@ export function ExtensionRail({ pa }: ExtensionSurfaceProps) {
 
 export function ExtensionWorkbench({ pa }: ExtensionSurfaceProps) {
   return (
-    <main className="flex h-full items-center justify-center px-8 text-center">
-      <div className="max-w-md">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-accent">Workbench detail</p>
-        <h1 className="mt-2 text-[28px] font-semibold tracking-[-0.03em] text-primary">{EXTENSION_NAME}</h1>
-        <p className="mt-2 text-[13px] leading-6 text-secondary">${starterHelpText()}</p>
-        <ToolbarButton className="mt-6" type="button" onClick={() => pa.ui.toast(EXTENSION_NAME + ' detail action')}>
+    <main style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center', padding: '0 2rem', textAlign: 'center' }}>
+      <div style={{ maxWidth: '28rem' }}>
+        <p style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'rgb(var(--color-accent))' }}>Workbench detail</p>
+        <h1 style={{ marginTop: '0.5rem', fontSize: '28px', fontWeight: 600, letterSpacing: '-0.03em', color: 'rgb(var(--color-primary))' }}>{EXTENSION_NAME}</h1>
+        <p style={{ marginTop: '0.5rem', fontSize: '13px', lineHeight: 1.5, color: 'rgb(var(--color-secondary))' }}>${starterHelpText()}</p>
+        <ToolbarButton style={{ marginTop: '1.5rem' }} type="button" onClick={() => pa.ui.toast(EXTENSION_NAME + ' detail action')}>
           Test toast
         </ToolbarButton>
       </div>
@@ -395,9 +462,9 @@ export function ExtensionPage({ pa }: ExtensionSurfaceProps) {
   return (
     <AppPageLayout>
       <AppPageIntro title={EXTENSION_NAME} />
-      <div className="max-w-2xl text-[13px] leading-6 text-secondary">
+      <div style={{ maxWidth: '42rem', fontSize: '13px', lineHeight: 1.5, color: 'rgb(var(--color-secondary))' }}>
         <p>${starterHelpText()}</p>
-        <ToolbarButton className="mt-4" type="button" onClick={() => pa.ui.toast(EXTENSION_NAME + ' is wired up.')}>
+        <ToolbarButton style={{ marginTop: '1rem' }} type="button" onClick={() => pa.ui.toast(EXTENSION_NAME + ' is wired up.')}>
           Test toast
         </ToolbarButton>
       </div>
@@ -489,84 +556,201 @@ export function createRuntimeExtension(input: CreateRuntimeExtensionInput, state
     name,
     packageType: 'user',
     ...(description ? { description } : {}),
-    frontend: { entry: 'dist/frontend.js', styles: [] },
+    ...(template === 'capability' ? {} : { frontend: { entry: 'dist/frontend.js', styles: [] } }),
     backend: { entry: 'dist/backend.mjs', actions: [{ id: 'ping', handler: 'ping', title: 'Ping', worker: { enabled: true } }] },
     contributes:
-      template === 'right-rail'
+      template === 'capability'
         ? {
-            views: [{ id: 'panel', title: name, location: 'rightRail', scope: 'conversation', component: 'ExtensionPanel', icon: 'app' }],
+            commands: [{ id: 'ping', title: `Test ${name}`, action: 'ping' }],
           }
-        : template === 'route-sidebar'
+        : template === 'application'
           ? {
-              views: [
-                { id: 'page', title: name, location: 'main', route: `/ext/${id}`, component: 'ExtensionPage' },
-                { id: 'sidebar', title: `${name} navigation`, location: 'sidebar', component: 'ExtensionSidebar', icon: 'app' },
+              applications: [
+                {
+                  id: 'app',
+                  title: name,
+                  ...(description ? { description } : {}),
+                  icon: 'app',
+                  startRoute: `/ext/${id}`,
+                  sidebarView: 'application-sidebar',
+                  instancePolicy: 'singleton',
+                  defaultPinned: false,
+                  navigationSlots: [
+                    { id: 'primary', order: 0 },
+                    { id: 'workspace', label: 'Workspace', order: 10 },
+                  ],
+                },
               ],
-              nav: [{ id: 'nav', label: name, route: `/ext/${id}`, icon: 'app', sidebarView: 'sidebar' }],
+              views: [
+                {
+                  id: 'overview',
+                  title: 'Overview',
+                  location: 'main',
+                  route: `/ext/${id}`,
+                  applicationId: `${id}:app`,
+                  openPolicy: 'internal',
+                  component: 'OverviewPage',
+                },
+                {
+                  id: 'items',
+                  title: 'Items',
+                  location: 'main',
+                  route: `/ext/${id}/items`,
+                  applicationId: `${id}:app`,
+                  openPolicy: 'internal',
+                  component: 'ItemsPage',
+                },
+                {
+                  id: 'application-sidebar',
+                  title: `${name} navigation`,
+                  location: 'sidebar',
+                  component: {
+                    host: 'application.sidebar',
+                    props: { applicationId: `${id}:app`, showConversations: false },
+                  },
+                },
+              ],
+              nav: [
+                {
+                  id: 'overview',
+                  label: 'Overview',
+                  route: `/ext/${id}`,
+                  icon: 'app',
+                  pageType: 'dashboard',
+                  applicationId: `${id}:app`,
+                  slot: 'primary',
+                  order: 0,
+                },
+                {
+                  id: 'items',
+                  label: 'Items',
+                  route: `/ext/${id}/items`,
+                  icon: 'database',
+                  pageType: 'table',
+                  applicationId: `${id}:app`,
+                  slot: 'workspace',
+                  order: 10,
+                },
+              ],
+              commands: [{ id: 'open', title: `Open ${name}`, action: 'app.navigate', args: { to: `/ext/${id}` } }],
             }
-          : template === 'route-right-sidebar'
+          : template === 'page'
             ? {
-                views: [
-                  { id: 'page', title: name, location: 'main', route: `/ext/${id}`, component: 'ExtensionPage' },
+                applications: [
                   {
-                    id: 'context',
-                    title: `${name} context`,
-                    location: 'rightRail',
-                    placement: 'primary',
-                    component: 'ExtensionContextRail',
+                    id: 'app',
+                    title: name,
+                    ...(description ? { description } : {}),
                     icon: 'app',
+                    startRoute: `/ext/${id}`,
+                    instancePolicy: 'singleton',
+                    defaultPinned: false,
+                    navigationSlots: [{ id: 'primary', order: 0 }],
                   },
                 ],
-                nav: [{ id: 'nav', label: name, route: `/ext/${id}`, icon: 'app', rightSidebarView: 'context' }],
+                views: [
+                  {
+                    id: 'page',
+                    title: name,
+                    location: 'main',
+                    route: `/ext/${id}`,
+                    applicationId: `${id}:app`,
+                    openPolicy: 'internal',
+                    component: 'ExtensionPage',
+                  },
+                ],
+                nav: [
+                  {
+                    id: 'page',
+                    label: name,
+                    route: `/ext/${id}`,
+                    icon: 'app',
+                    pageType: 'dashboard',
+                    applicationId: `${id}:app`,
+                    slot: 'primary',
+                  },
+                ],
+                commands: [{ id: 'open', title: `Open ${name}`, action: 'app.navigate', args: { to: `/ext/${id}` } }],
               }
-            : template === 'route-shell'
+            : template === 'right-rail'
               ? {
                   views: [
-                    { id: 'page', title: name, location: 'main', route: `/ext/${id}`, component: 'ExtensionPage' },
-                    { id: 'sidebar', title: `${name} navigation`, location: 'sidebar', component: 'ExtensionSidebar', icon: 'app' },
-                    {
-                      id: 'context',
-                      title: `${name} context`,
-                      location: 'rightRail',
-                      placement: 'primary',
-                      component: 'ExtensionContextRail',
-                      icon: 'app',
-                    },
-                  ],
-                  nav: [
-                    {
-                      id: 'nav',
-                      label: name,
-                      route: `/ext/${id}`,
-                      icon: 'app',
-                      sidebarView: 'sidebar',
-                      rightSidebarView: 'context',
-                    },
+                    { id: 'panel', title: name, location: 'rightRail', scope: 'conversation', component: 'ExtensionPanel', icon: 'app' },
                   ],
                 }
-              : template === 'workbench-detail'
+              : template === 'route-sidebar'
                 ? {
                     views: [
-                      {
-                        id: 'rail',
-                        title: name,
-                        location: 'rightRail',
-                        scope: 'conversation',
-                        component: 'ExtensionRail',
-                        icon: 'app',
-                        detailView: 'detail',
-                      },
-                      { id: 'detail', title: `${name} detail`, location: 'workbench', component: 'ExtensionWorkbench' },
+                      { id: 'page', title: name, location: 'main', route: `/ext/${id}`, component: 'ExtensionPage' },
+                      { id: 'sidebar', title: `${name} navigation`, location: 'sidebar', component: 'ExtensionSidebar', icon: 'app' },
                     ],
+                    nav: [{ id: 'nav', label: name, route: `/ext/${id}`, icon: 'app', sidebarView: 'sidebar' }],
                   }
-                : {
-                    views: [{ id: 'page', title: name, location: 'main', route: `/ext/${id}`, component: 'ExtensionPage' }],
-                    nav: [{ id: 'nav', label: name, route: `/ext/${id}`, icon: 'app' }],
-                  },
+                : template === 'route-right-sidebar'
+                  ? {
+                      views: [
+                        { id: 'page', title: name, location: 'main', route: `/ext/${id}`, component: 'ExtensionPage' },
+                        {
+                          id: 'context',
+                          title: `${name} context`,
+                          location: 'rightRail',
+                          placement: 'primary',
+                          component: 'ExtensionContextRail',
+                          icon: 'app',
+                        },
+                      ],
+                      nav: [{ id: 'nav', label: name, route: `/ext/${id}`, icon: 'app', rightSidebarView: 'context' }],
+                    }
+                  : template === 'route-shell'
+                    ? {
+                        views: [
+                          { id: 'page', title: name, location: 'main', route: `/ext/${id}`, component: 'ExtensionPage' },
+                          { id: 'sidebar', title: `${name} navigation`, location: 'sidebar', component: 'ExtensionSidebar', icon: 'app' },
+                          {
+                            id: 'context',
+                            title: `${name} context`,
+                            location: 'rightRail',
+                            placement: 'primary',
+                            component: 'ExtensionContextRail',
+                            icon: 'app',
+                          },
+                        ],
+                        nav: [
+                          {
+                            id: 'nav',
+                            label: name,
+                            route: `/ext/${id}`,
+                            icon: 'app',
+                            sidebarView: 'sidebar',
+                            rightSidebarView: 'context',
+                          },
+                        ],
+                      }
+                    : template === 'workbench-detail'
+                      ? {
+                          views: [
+                            {
+                              id: 'rail',
+                              title: name,
+                              location: 'rightRail',
+                              scope: 'conversation',
+                              component: 'ExtensionRail',
+                              icon: 'app',
+                              detailView: 'detail',
+                            },
+                            { id: 'detail', title: `${name} detail`, location: 'workbench', component: 'ExtensionWorkbench' },
+                          ],
+                        }
+                      : {
+                          views: [{ id: 'page', title: name, location: 'main', route: `/ext/${id}`, component: 'ExtensionPage' }],
+                          nav: [{ id: 'nav', label: name, route: `/ext/${id}`, icon: 'app' }],
+                        },
     permissions: [],
   });
   writeFileSync(join(extensionRoot, 'extension.json'), `${JSON.stringify(manifest, null, 2)}\n`);
-  writeFileSync(join(extensionRoot, 'src', 'frontend.tsx'), createStarterFrontend(name, template));
+  if (template !== 'capability') {
+    writeFileSync(join(extensionRoot, 'src', 'frontend.tsx'), createStarterFrontend(name, template));
+  }
   writeFileSync(join(extensionRoot, 'src', 'backend.ts'), createStarterBackend());
   writeFileSync(join(extensionRoot, 'README.md'), createStarterReadme(name));
   writeFileSync(
@@ -597,6 +781,25 @@ export function snapshotRuntimeExtension(extensionId: string, stateRoot: string 
   return { ok: true as const, extensionId, snapshotPath };
 }
 
+export function resolveExtensionBuilderScript(
+  resourcesPath: string | undefined = process.resourcesPath,
+  cwd: string = process.cwd(),
+): string | null {
+  const packagedCandidates = resourcesPath ? [resolve(resourcesPath, 'extension-authoring/scripts/extension-build.mjs')] : [];
+  const developmentEnabled = Boolean(process.env.NEON_PILOT_REPO_ROOT || process.env.NEON_PILOT_DESKTOP_DEV_BUNDLE === '1');
+  const developmentCandidates = developmentEnabled
+    ? [
+        ...(process.env.NEON_PILOT_REPO_ROOT
+          ? [resolve(process.env.NEON_PILOT_REPO_ROOT, 'dist/extension-authoring/scripts/extension-build.mjs')]
+          : []),
+        resolve(cwd, 'dist/extension-authoring/scripts/extension-build.mjs'),
+        resolve(cwd, 'scripts/extension-build.mjs'),
+      ]
+    : [];
+  const candidates = [...packagedCandidates, ...developmentCandidates];
+  return candidates.find((candidate) => existsSync(candidate)) ?? null;
+}
+
 export async function buildRuntimeExtension(extensionId: string) {
   const entry = findExtensionEntry(extensionId);
   if (!entry) {
@@ -609,10 +812,37 @@ export async function buildRuntimeExtension(extensionId: string) {
     throw new Error('Only native extension manifest schemaVersion 2 can be validated/reloaded.');
   }
 
-  throw new Error(
-    `The app no longer builds extensions at runtime. Build "${extensionId}" outside the app with ` +
-      '`pnpm run extension:build -- <extension-dir>` or `neon-pilot-extension build <extension-dir>`, then validate/reload it.',
-  );
+  if (entry.manifest.packageType === 'system') {
+    throw new Error('Bundled system extensions cannot be rebuilt at runtime.');
+  }
+  const builderScript = resolveExtensionBuilderScript();
+  if (!builderScript) {
+    throw new Error('The packaged extension authoring runtime is unavailable. Reinstall or update Neon Pilot, then try again.');
+  }
+
+  try {
+    const result = await execFileAsync(process.execPath, [builderScript, entry.packageRoot], {
+      cwd: dirname(builderScript),
+      env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' },
+      timeout: 120_000,
+      maxBuffer: 10 * 1024 * 1024,
+    });
+    invalidateExtensionRegistryReadCaches();
+    return {
+      ok: true as const,
+      extensionId,
+      packageRoot: entry.packageRoot,
+      stdout: typeof result?.stdout === 'string' ? result.stdout.trim() : '',
+      stderr: typeof result?.stderr === 'string' ? result.stderr.trim() : '',
+    };
+  } catch (error) {
+    const detail = error as Error & { stdout?: string; stderr?: string; killed?: boolean };
+    const output = [detail.stderr, detail.stdout, detail.message]
+      .filter((value) => typeof value === 'string' && value.trim())
+      .join('\n')
+      .trim();
+    throw new Error(`Extension build failed for "${extensionId}".${output ? `\n${output}` : ''}`);
+  }
 }
 
 export function exportRuntimeExtension(extensionId: string, stateRoot: string = getStateRoot()) {

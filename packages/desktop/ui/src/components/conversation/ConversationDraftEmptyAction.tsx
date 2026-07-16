@@ -154,7 +154,7 @@ export function ConversationDraftEmptyAction({
   }
 
   return (
-    <div className="mt-4 w-full space-y-3">
+    <div className="w-full space-y-3">
       <div className="flex items-center justify-start gap-2">
         {hasDraftCwd ? <FolderIcon className="text-accent" /> : <ChatBubbleIcon className="text-accent" />}
         <SectionLabel tone="muted">{hasDraftCwd ? 'Workspace' : 'Chat'}</SectionLabel>

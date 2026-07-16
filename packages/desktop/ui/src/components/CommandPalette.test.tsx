@@ -340,9 +340,7 @@ describe('CommandPalette', () => {
 
     expect(await screen.findByText('Settings migration notes')).toBeTruthy();
     expect(await screen.findByText('Open Composer Settings')).toBeTruthy();
-    expect(screen.getByDisplayValue('settings').getAttribute('placeholder')).toBe(
-      'Search applications, pages, conversations, and actions…',
-    );
+    expect(screen.getByDisplayValue('settings').getAttribute('placeholder')).toBe('Search Neon Pilot');
   });
 
   it('activates the highest scoring thread result on Enter even when it is archived', async () => {
@@ -450,7 +448,50 @@ describe('CommandPalette', () => {
     });
   });
 
-  it('renders an anchored Start-style launcher with compact pins, single-line owners, and custom page icons', async () => {
+  it('shows every application and page in the empty launcher inventory', async () => {
+    vi.spyOn(api, 'extensionCommands').mockResolvedValue([]);
+    vi.spyOn(api, 'extensionSearchProviders').mockResolvedValue([]);
+    vi.spyOn(api, 'extensionQuickOpen').mockResolvedValue([]);
+    Element.prototype.scrollIntoView = vi.fn();
+    extensionRegistryMocks.state.applications = Array.from({ length: 8 }, (_, index) => ({
+      id: `application-${index + 1}`,
+      extensionId: `extension-${index + 1}`,
+      title: `Application ${index + 1}`,
+      startRoute: `/application-${index + 1}`,
+      icon: 'sparkle',
+      available: true,
+    }));
+    extensionRegistryMocks.state.applicationNavigation = Array.from({ length: 8 }, (_, index) => ({
+      id: `extension-${index + 1}:page`,
+      extensionId: `extension-${index + 1}`,
+      applicationId: `application-${index + 1}`,
+      label: `Page ${index + 1}`,
+      route: `/application-${index + 1}/page`,
+      icon: 'sparkle',
+      slot: 'primary',
+      slotOrder: 0,
+      order: index,
+    }));
+
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <CommandPalette />
+      </MemoryRouter>,
+    );
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent(OPEN_COMMAND_PALETTE_EVENT, { detail: { scope: 'all' } }));
+    });
+
+    const launcher = await screen.findByRole('dialog', { name: 'Launcher' });
+    const inventory = within(launcher.querySelector('.ui-command-palette-list') as HTMLElement);
+    expect(inventory.getByRole('heading', { name: 'Applications' })).toBeTruthy();
+    expect(inventory.getByRole('button', { name: /^Application 8$/ })).toBeTruthy();
+    expect(inventory.getByRole('heading', { name: 'Application 8 pages' })).toBeTruthy();
+    expect(inventory.getByText('Page 8')).toBeTruthy();
+  });
+
+  it('renders an anchored Start-style launcher with pinned rows, section labels, and custom page icons', async () => {
     vi.spyOn(api, 'extensionCommands').mockResolvedValue([
       {
         extensionId: 'system-automations',
@@ -547,8 +588,16 @@ describe('CommandPalette', () => {
     expect(launcher.getAttribute('style')).toContain('--launcher-top: 42px');
     expect(document.querySelector('.ui-command-palette-footer')).toBeNull();
     expect(document.querySelector('.ui-command-palette-app-grid')).toBeNull();
-    const pinnedAgent = within(screen.getByLabelText('Pinned')).getByTitle('Agent');
+    const pinnedSection = within(screen.getByLabelText('Pinned'));
+    const pinnedAgent = pinnedSection.getByRole('button', { name: 'Agent' });
     expect(pinnedAgent).toBeTruthy();
+    expect(pinnedSection.getByText('Agent')).toBeTruthy();
+    expect(pinnedSection.getByRole('button', { name: 'Unpin Agent' }).querySelector('svg')).toBeTruthy();
+    expect(pinnedSection.getByRole('heading', { name: 'Pinned' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Applications' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Agent pages' })).toBeTruthy();
+    const inventory = within(launcher.querySelector('.ui-command-palette-list') as HTMLElement);
+    expect(inventory.getByRole('button', { name: /^Agent$/ })).toBeTruthy();
     pinnedAgent.focus();
     const pinnedEnter = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
     pinnedAgent.dispatchEvent(pinnedEnter);
@@ -556,7 +605,7 @@ describe('CommandPalette', () => {
 
     const chat = screen.getByText('Chat').closest('.ui-command-palette-result-row');
     expect(chat).toBeTruthy();
-    expect(chat?.textContent).toContain('Agent');
+    expect(chat?.textContent).not.toContain('Agent');
     expect(chat?.textContent).not.toContain('Page');
     expect(chat?.querySelector('[data-icon="sparkle"]')).toBeTruthy();
 

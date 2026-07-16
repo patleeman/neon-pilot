@@ -18,8 +18,8 @@
         "order": 10,
         "navigationSlots": [
           { "id": "primary", "order": 0 },
-          { "id": "work", "label": "Work", "order": 10 },
-          { "id": "tools", "label": "Tools", "order": 20 }
+          { "id": "work", "order": 10 },
+          { "id": "tools", "order": 20 }
         ]
       }
     ],

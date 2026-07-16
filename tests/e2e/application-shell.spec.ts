@@ -24,31 +24,36 @@ test('open application tabs, launcher navigation, close controls, and persistenc
     await page.evaluate(() => localStorage.removeItem('neon-pilot:application-workspace:v1'));
     await page.reload();
     await expectPathname(page, '/home');
-    await expect(page.getByRole('heading', { name: 'Home' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Applications' })).toBeVisible();
+    const homeSearch = page.getByRole('searchbox', { name: 'Search applications' });
+    await expect(homeSearch).toBeFocused();
+    await expect(page.getByRole('button', { name: 'Agent', exact: true })).toBeVisible();
+    await homeSearch.fill('system');
+    await expect(page.getByRole('button', { name: 'System', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Agent', exact: true })).toHaveCount(0);
+    await homeSearch.fill('');
     await expect(page.locator('.ui-application-taskbar')).toBeVisible();
-    await expect(page.locator('[data-application-id="system-home:home"]')).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('[data-application-id="system-home:home"]')).toHaveCount(0);
     await expect(page.locator('[data-application-id="system-agent:agent"]')).toHaveCount(0);
     await expect(page.locator('[data-application-id="system-settings:system"]')).toHaveCount(0);
     const topBarCenter = page.locator('.ui-desktop-top-bar__center');
     await expect(topBarCenter).toHaveCSS('-webkit-app-region', 'drag');
-    await expect(page.locator('[data-application-id="system-home:home"]')).toHaveCSS('-webkit-app-region', 'no-drag');
     await expectCleanViewport(page);
     await capture(page, testInfo, 'application-shell-home');
 
-    await page.getByRole('button', { name: 'Close Home' }).click();
+    await page.getByRole('button', { name: 'Agent', exact: true }).click();
     await expectPathname(page, '/conversations/new');
     await expect(page.locator('[data-application-id="system-home:home"]')).toHaveCount(0);
     await expect(page.locator('[data-application-id="system-agent:agent"]')).toHaveAttribute('aria-pressed', 'true');
-    await page.getByRole('button', { name: 'Open Neon Pilot' }).click();
-    await page.getByRole('dialog', { name: 'Launcher' }).getByLabel('Pinned').getByRole('button', { name: 'Home', exact: true }).click();
+    await page.getByRole('button', { name: 'Open Home' }).click();
     await expectPathname(page, '/home');
+    await expect(page.locator('[data-application-id="system-home:home"]')).toHaveCount(0);
+    await expect(page.locator('[data-application-id="system-agent:agent"]')).toHaveAttribute('aria-pressed', 'false');
 
     await page.getByRole('button', { name: 'Open Neon Pilot' }).click();
     const launcher = page.getByRole('dialog', { name: 'Launcher' });
     await expect(launcher).toBeVisible();
-    await expect(launcher.getByText('Pinned', { exact: true })).toBeVisible();
-    await expect(launcher.locator('.ui-launcher-pinned-grid')).toBeVisible();
-    await expect(launcher.getByLabel('Pinned').getByRole('button', { name: 'Agent', exact: true })).toBeVisible();
+    await expect(launcher.getByRole('button', { name: 'Agent', exact: true }).first()).toBeVisible();
     await capture(page, testInfo, 'application-shell-launcher-applications');
     await launcher.getByLabel('Search launcher').fill('evaluations');
     await expect(launcher.getByText('Evaluations', { exact: true })).toBeVisible();
@@ -83,9 +88,10 @@ test('open application tabs, launcher navigation, close controls, and persistenc
     await capture(page, testInfo, 'application-shell-agent');
 
     await page.setViewportSize({ width: 360, height: 720 });
-    await expect(page.getByRole('button', { name: 'Home', exact: true })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Agent', exact: true })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'System', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Open Home' })).toBeVisible();
+    await expect(page.locator('[data-application-id="system-home:home"]')).toHaveCount(0);
+    await expect(page.locator('[data-application-id="system-agent:agent"]')).toBeVisible();
+    await expect(page.locator('[data-application-id="system-settings:system"]')).toBeVisible();
     await expect(page.getByRole('button', { name: /more applications/ })).toHaveCount(0);
     await expectCleanViewport(page);
     await capture(page, testInfo, 'application-shell-narrow-taskbar');
@@ -114,7 +120,7 @@ test('disabled applications retain a recovery view and Home disablement falls ba
   });
   try {
     const page = testApp.page;
-    await expect(page.getByRole('heading', { name: 'Home' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Applications' })).toBeVisible();
     await apiJson(page, '/api/extensions/system-home', { method: 'PATCH', body: { enabled: false } });
     await page.reload();
     await expectPathname(page, '/conversations/new');

@@ -4,9 +4,7 @@ import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { copyFileSync, cpSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
-
-import { build } from 'esbuild';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const HOST_RUNTIME_EXTERNAL_IMPORT_RE = /^(process|@xenova\/transformers|better-sqlite3|esbuild)(\/.*)?$/;
 const FORBIDDEN_BACKEND_IMPORTS = new Set([
@@ -17,8 +15,43 @@ const FORBIDDEN_BACKEND_IMPORTS = new Set([
   'worker_threads',
   'node:worker_threads',
 ]);
+const PUBLIC_BACKEND_SUBPATHS = new Set([
+  'agent',
+  'artifacts',
+  'audio',
+  'automations',
+  'browser',
+  'checkpoints',
+  'cli',
+  'compaction',
+  'conversations',
+  'documents',
+  'events',
+  'extensions',
+  'gateways',
+  'images',
+  'knowledge',
+  'mcp',
+  'modelGateway',
+  'promptAssembly',
+  'runs',
+  'runtime',
+  'settings',
+  'skills',
+  'telemetry',
+  'terminal',
+  'tools',
+  'transcription',
+  'videos',
+  'webContent',
+]);
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const packagedVendorRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../vendor');
+const packagedEsbuildModule = join(packagedVendorRoot, 'esbuild/lib/main.js');
+const packagedEsbuildBinary = join(packagedVendorRoot, `esbuild-bin-darwin-${process.arch}`);
+if (existsSync(packagedEsbuildBinary)) process.env.ESBUILD_BINARY_PATH = packagedEsbuildBinary;
+const { build } = existsSync(packagedEsbuildModule) ? await import(pathToFileURL(packagedEsbuildModule).href) : await import('esbuild');
 const args = process.argv.slice(2).filter((arg) => arg !== '--');
 const emitSourceMaps = args.includes('--sourcemap');
 const packageArg = args.find((arg) => arg !== '--sourcemap');
@@ -160,6 +193,11 @@ function readCargoPackageName(cargoToml) {
 function buildNativeSidecarIfPresent() {
   const cargoToml = join(packageRoot, 'sidecar', 'Cargo.toml');
   if (!existsSync(cargoToml)) return;
+  if (existsSync(join(repoRoot, 'authoring-sdk'))) {
+    throw new Error(
+      'Native sidecars cannot be built from the installed app. Build and audit sidecars in a trusted development environment.',
+    );
+  }
   const packageName = readCargoPackageName(cargoToml);
   if (!packageName) throw new Error(`Unable to read sidecar package name from ${cargoToml}`);
 
@@ -229,10 +267,11 @@ async function buildStandaloneWebappIfPresent(buildOutputs) {
 }
 
 function toBuildOutputPath(manifestRelativePath) {
-  const normalized = manifestRelativePath.replace(/^\.\//, '');
-  if (normalized === 'dist') return tempDistPath;
-  if (normalized.startsWith('dist/')) return join(tempDistPath, normalized.slice('dist/'.length));
-  return join(packageRoot, normalized);
+  const normalized = manifestRelativePath.replaceAll('\\', '/').replace(/^\.\//, '');
+  if (!normalized || normalized.startsWith('/') || normalized.split('/').includes('..') || !normalized.startsWith('dist/')) {
+    throw new Error(`Extension build entry must be a relative path under dist/: ${manifestRelativePath}`);
+  }
+  return join(tempDistPath, normalized.slice('dist/'.length));
 }
 
 function commitTempDist() {
@@ -377,12 +416,18 @@ function createFrontendExtensionSdkPlugin() {
     '@neon-pilot/extensions/workbench-files': 'workbench-files.ts',
     '@neon-pilot/extensions/workbench-runs': 'workbench-runs.ts',
     '@neon-pilot/extensions/workbench-transcript': 'workbench-transcript.ts',
+    '@neon-pilot/extensions/excalidraw': 'excalidraw.ts',
+    '@neon-pilot/extensions/composer': 'composer.ts',
+  };
+  const packageSourceFiles = {
+    '@neon-pilot/extensions/excalidraw': join(repoRoot, 'packages/extensions/src/excalidraw.ts'),
+    '@neon-pilot/extensions/composer': join(repoRoot, 'packages/extensions/src/composer.ts'),
   };
   return {
     name: 'neon-pilot-frontend-extension-sdk',
     setup(buildContext) {
       buildContext.onResolve({ filter: /^@neon-pilot\/ui$/ }, () => ({
-        path: join(repoRoot, 'packages/ui/src/index.ts'),
+        path: firstExistingPath([join(repoRoot, 'authoring-sdk/frontend/ui.js'), join(repoRoot, 'packages/ui/src/index.ts')]),
       }));
       buildContext.onResolve({ filter: /^\.\/systemExtensionModules$/ }, (args) => {
         if (!args.importer.includes('/packages/desktop/ui/src/extensions/')) return;
@@ -395,11 +440,14 @@ function createFrontendExtensionSdkPlugin() {
       buildContext.onResolve(
         {
           filter:
-            /^@neon-pilot\/extensions\/(host|ui|workbench|host-view-components|workbench-artifacts|workbench-browser|workbench-diffs|workbench-files|workbench-runs|workbench-transcript|data|settings)$/,
+            /^@neon-pilot\/extensions\/(host|ui|workbench|host-view-components|workbench-artifacts|workbench-browser|workbench-diffs|workbench-files|workbench-runs|workbench-transcript|data|settings|excalidraw|composer)$/,
         },
         (args) => {
           const moduleFile = moduleFiles[args.path];
-          const resolved = moduleFile ? join(repoRoot, 'packages/desktop/ui/src/extensions', moduleFile) : null;
+          const generatedFile = moduleFile ? join(repoRoot, 'authoring-sdk/frontend', moduleFile.replace(/\.ts$/u, '.js')) : null;
+          const sourceFile =
+            packageSourceFiles[args.path] ?? (moduleFile ? join(repoRoot, 'packages/desktop/ui/src/extensions', moduleFile) : null);
+          const resolved = firstExistingPath([generatedFile, sourceFile]);
           if (!resolved || !existsSync(resolved)) {
             return { errors: [{ text: `Could not resolve ${args.path} for frontend extension build.` }] };
           }
@@ -435,13 +483,28 @@ function createExtensionBackendApiPlugin() {
     name: 'neon-pilot-extension-backend-api',
     setup(buildContext) {
       buildContext.onResolve({ filter: /^@neon-pilot\/extensions\/backend$/ }, () => ({
-        path: join(repoRoot, 'packages/desktop/server/extensions/backendApi/index.ts'),
+        path: firstExistingPath([
+          join(repoRoot, 'authoring-sdk/backend/index.js'),
+          join(repoRoot, 'packages/desktop/server/extensions/backendApi/index.ts'),
+        ]),
       }));
-      buildContext.onResolve({ filter: /^@neon-pilot\/extensions\/backend\/(.+)$/ }, (args) => ({
-        path: join(repoRoot, `packages/desktop/server/extensions/backendApi/${args.path.split('/').pop()}.ts`),
-      }));
+      buildContext.onResolve({ filter: /^@neon-pilot\/extensions\/backend\/(.+)$/ }, (args) => {
+        const subpath = args.path.slice('@neon-pilot/extensions/backend/'.length);
+        if (!PUBLIC_BACKEND_SUBPATHS.has(subpath)) {
+          return { errors: [{ text: `${args.path} is not a public extension backend API.` }] };
+        }
+        return {
+          path: firstExistingPath([
+            join(repoRoot, `authoring-sdk/backend/${subpath}.js`),
+            join(repoRoot, `packages/desktop/server/extensions/backendApi/${subpath}.ts`),
+          ]),
+        };
+      });
       buildContext.onResolve({ filter: /^@neon-pilot\/extensions\/host-view-components$/ }, () => ({
-        path: join(repoRoot, 'packages/extensions/src/host-view-components.ts'),
+        path: firstExistingPath([
+          join(repoRoot, 'authoring-sdk/backend/host-view-components.js'),
+          join(repoRoot, 'packages/extensions/src/host-view-components.ts'),
+        ]),
       }));
       buildContext.onResolve({ filter: /^@neon-pilot\/daemon$/ }, (args) => {
         const desktopDaemonBundleCandidates = [
@@ -455,6 +518,10 @@ function createExtensionBackendApiPlugin() {
       });
     },
   };
+}
+
+function firstExistingPath(candidates) {
+  return candidates.find((candidate) => typeof candidate === 'string' && existsSync(candidate)) ?? candidates.find(Boolean);
 }
 
 function createHostRuntimeExternalPlugin() {

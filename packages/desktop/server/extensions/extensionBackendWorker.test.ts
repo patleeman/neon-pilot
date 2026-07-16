@@ -175,6 +175,41 @@ export async function doThing(_input, ctx) {
     });
   });
 
+  it('exposes the public cross-extension callAction capability in workers', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'pa-ext-worker-'));
+    const backendPath = join(root, 'backend.mjs');
+    writeFileSync(
+      backendPath,
+      `
+export async function doThing(_input, ctx) {
+  return ctx.extensions.callAction('target-ext', 'listItems', { filter: 'open' });
+}
+`,
+    );
+
+    await loadWorker();
+    workerThreads.messageHandler?.({
+      id: 13,
+      type: 'runExport',
+      extensionId: 'worker-ext',
+      compiled: { path: backendPath, hash: 'hash-call-action' },
+      exportName: 'doThing',
+      args: [{}],
+      context: 'backend',
+    });
+    await waitForPostMessage({
+      id: 1,
+      kind: 'capabilityRequest',
+      extensionId: 'worker-ext',
+      capability: 'extensions',
+      operation: 'invokeAction',
+      input: { extensionId: 'target-ext', actionId: 'listItems', input: { filter: 'open' } },
+    });
+
+    workerThreads.messageHandler?.({ id: 1, kind: 'capabilityResponse', ok: true, result: { ok: true, result: { items: [1] } } });
+    await waitForPostMessage({ id: 13, ok: true, result: { items: [1] } });
+  });
+
   it('falls back to state-rooted runtime paths when worker context omits settings paths', async () => {
     const root = mkdtempSync(join(tmpdir(), 'pa-ext-worker-'));
     const stateRoot = join(root, 'state');

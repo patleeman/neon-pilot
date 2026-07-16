@@ -5,15 +5,15 @@ import { createRoot, type Root } from 'react-dom/client';
 import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { buildExtensionRouteKey, ExtensionRouteHost, QuietExtensionRouteLoading } from './ExtensionRouteHost';
+import { ExtensionRouteHost, QuietExtensionRouteLoading } from './ExtensionRouteHost';
 
 vi.mock('../navigation/lazyRouteRecovery', () => ({
   lazyRouteWithRecovery: () =>
     function MockExtensionPage() {
       const location = useLocation();
-      const [mountedAt] = useState(() => buildExtensionRouteKey(location.pathname, location.search));
+      const [mountedAt] = useState(() => `${location.pathname}${location.search}`);
 
-      return <div data-mounted-route={mountedAt}>{mountedAt}</div>;
+      return <div data-mounted-route={mountedAt} data-current-route={`${location.pathname}${location.search}`} />;
     },
 }));
 
@@ -46,10 +46,6 @@ function RouteHarness() {
 }
 
 describe('ExtensionRouteHost', () => {
-  it('builds route keys from path and search', () => {
-    expect(buildExtensionRouteKey('/telemetry', '?range=24h')).toBe('/telemetry?range=24h');
-  });
-
   it('uses a quiet accessible loading fallback for extension routes', () => {
     const container = document.createElement('div');
     document.body.appendChild(container);
@@ -64,7 +60,7 @@ describe('ExtensionRouteHost', () => {
     expect(container.querySelector('[role="status"]')?.getAttribute('aria-label')).toBe('Loading extension page');
   });
 
-  it('remounts extension pages when the extension route changes', async () => {
+  it('preserves the extension page host when the extension route changes', async () => {
     const container = document.createElement('div');
     document.body.appendChild(container);
     const root = createRoot(container);
@@ -80,12 +76,14 @@ describe('ExtensionRouteHost', () => {
       );
     });
 
-    expect(container.querySelector('[data-mounted-route]')?.textContent).toBe('/knowledge');
+    expect(container.querySelector('[data-mounted-route]')?.getAttribute('data-mounted-route')).toBe('/knowledge');
 
     await act(async () => {
       container.querySelectorAll('button')[1]?.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, button: 0 }));
     });
 
-    expect(container.querySelector('[data-mounted-route]')?.textContent).toBe('/telemetry?range=24h');
+    const extensionPage = container.querySelector('[data-mounted-route]');
+    expect(extensionPage?.getAttribute('data-mounted-route')).toBe('/knowledge');
+    expect(extensionPage?.getAttribute('data-current-route')).toBe('/telemetry?range=24h');
   });
 });

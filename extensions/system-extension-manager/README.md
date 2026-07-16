@@ -54,7 +54,9 @@ The Settings → Extensions surface includes an **Install** dialog for normal us
 
 The loader scans the default runtime install location `<state-root>/extensions`. Users can add more package roots or parent folders through the `extensions.additionalPaths` setting exposed by this extension; entries may be comma- or newline-separated. The loader also accepts package roots through `NEON_PILOT_EXTENSION_PATHS` for process-level overrides.
 
-Extension Manager does not build extensions in-app. Build extensions outside the desktop runtime with repo/CLI tooling such as `pnpm run extension:build -- <extension-dir>` or `neon-pilot-extension build <extension-dir>`, then use **Validate**, **Reload**, and `neon-pilot extensions smoke <extension-id>`. Packaged app validation can also target a local folder with `neon-pilot extensions validate --package-root <extension-dir>`. The extension doctor checks manifest references, dist files, stale output, frontend/backend exports, service handlers, tool schemas, skill files, forbidden process imports, non-portable bundled imports, deprecated frontend action clients, missing worker declarations, and backend import crashes. Desktop runtimes load existing `dist` bundles only and reject runtime compilation. Starter creation supports six templates: `main-page`, `route-sidebar` (route page with contextual-left navigation), `route-right-sidebar` (route page with a context rail), `route-shell` (contextual-left plus right sidebar), `right-rail` (legacy tab-local Workbench rail), and `workbench-detail`; generated READMEs and the packaged `local-extension-development` skill include richer examples for services, subscriptions, selection actions, transcript blocks, and dependencies. Required `dependsOn` entries block enablement when missing; optional dependencies remain runtime-discovery contracts.
+Extension Manager owns a packaged authoring runtime for user extensions. Create with `neon-pilot extensions create`, edit the returned package root, then run `neon-pilot extensions build <extension-id>`, **Validate**, **Reload**, and `neon-pilot extensions smoke <extension-id>`. The builder runs as a child process, confines its target to an installed user-extension package, atomically replaces `dist/`, and preserves the previous bundle on failure. Bundled system extensions remain immutable at runtime. The extension doctor checks manifest references, dist files, stale output, frontend/backend exports, service handlers, tool schemas, skill files, forbidden process imports, non-portable bundled imports, deprecated frontend action clients, missing worker declarations, and backend import crashes.
+
+New work should begin with one of three product-level templates: `capability` for headless or embedded capabilities, `page` for an explicit single-page application, and `application` for an explicit multi-page application with application-owned navigation. Compatibility templates remain available for existing route/sidebar and Workbench patterns. The injected `local-extension-development` skill and its packaged references are the complete no-checkout authoring contract.
 
 Package a built add-on extension with `neon-pilot-extension pack <extension-dir> --out <name>.neon-extension.zip` before importing or sharing it. The bundle is a zip with one top-level extension directory and prebuilt `dist/` files; `node_modules`, `sidecar/target`, and `.dist.tmp-*` are excluded. Import installs that package into `<state-root>/extensions/{extension-id}` and does not build it at runtime. Optional first-party packages use the same zip format and publish those artifacts from GitHub releases.
 
@@ -88,14 +90,16 @@ Native system extensions include:
 - `system-runs` owns background command/subagent tools, the activity shelf, and inline transcript run cards while durable run execution remains core infrastructure.
 - `system-settings` owns deep links for first-party settings subpanels while settings persistence remains core infrastructure.
 
-## View placement model
+## Application and view model
 
-Native extension views declare host intent with `placement`, `scope`, and `activation`.
+New top-level products declare an explicit application. The host owns only global chrome, Launcher search, taskbar identity, open/close/restore behavior, and application routing. The application owns the full canvas below that chrome, including any sidebar or inspector.
 
-- `placement: "primary"` — stable left-sidebar destination plus main page route. Use for global app pages like Automations, Gateways, Telemetry, Settings, Extensions, and standalone Knowledge.
-- `placement: "workbench-tool"` — workbench tool, optionally with a tab-local right sidebar and paired detail pane. Use for side-by-side surfaces like Knowledge tree/editor and File Explorer, or single-pane tabs like Browser and Drawing.
-
-`scope` binds the view data: `global`, `workspace`, or `conversation`. `activation` controls lifecycle: `on-route` for routed pages, `on-open` for rail surfaces, `always` only for tiny host services, and `on-demand` for backend/tool-only work.
+- Use a singleton application for one resumable product view whose resources and conversations are managed internally.
+- Use a multiple-instance application only when users genuinely need parallel independently resumable resources.
+- Use `openPolicy: "internal"` for ordinary pages within the application, `singleton` for a reusable page identity, and `resource` for resource-addressed views.
+- Declare named `navigationSlots` and let same-extension or external contributions register nav items into those slots.
+- Contribute a page to an existing application by targeting its qualified application ID; do not redeclare the application.
+- Keep Workbench rails and transcript-adjacent surfaces as embedded capability extensions when they do not deserve independent taskbar identity.
 
 ## Implementation checklist
 

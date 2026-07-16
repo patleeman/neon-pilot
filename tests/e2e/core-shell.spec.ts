@@ -46,7 +46,6 @@ test('app shell routes, command palette, and settings surfaces work in one launc
     await expect(page.getByRole('heading', { name: 'Routines', exact: true })).toBeVisible({ timeout: 45_000 });
     await expect(page.locator('body')).toContainText(/Pick an event|No routines yet/i);
     await expectCleanViewport(page);
-
     await page.locator('[data-application-id="system-settings:system"]').click();
     await page.waitForURL((url) => url.pathname === '/extensions', { timeout: 30_000 });
     await clickRouteButton(page, '/settings');
@@ -59,6 +58,32 @@ test('app shell routes, command palette, and settings surfaces work in one launc
 
     await page.reload();
     await expect(page.locator('body')).toContainText('Providers', { timeout: 45_000 });
+    await expectCleanViewport(page);
+  } finally {
+    await testApp.close();
+  }
+});
+
+test('extension pages navigate without reloading the renderer @spa-navigation', async ({}, testInfo) => {
+  const testApp = await launchTestApp({
+    testInfo,
+    initialRoute: '/automations',
+    prepareState: (stateRoot) => seedDisabledExtensions(stateRoot, ['system-onboarding']),
+  });
+  try {
+    const page = testApp.page;
+    await expect(page.locator('body')).toContainText(/Automations|automation/i, { timeout: 30_000 });
+
+    const rendererMarker = `spa-${Date.now()}`;
+    await page.evaluate((marker) => {
+      (window as Window & { __neonPilotSpaMarker?: string }).__neonPilotSpaMarker = marker;
+    }, rendererMarker);
+
+    await clickRouteButton(page, '/routines');
+    await expect
+      .poll(() => page.evaluate(() => (window as Window & { __neonPilotSpaMarker?: string }).__neonPilotSpaMarker))
+      .toBe(rendererMarker);
+    await expect(page.getByRole('heading', { name: 'Routines', exact: true })).toBeVisible({ timeout: 45_000 });
     await expectCleanViewport(page);
   } finally {
     await testApp.close();

@@ -33,7 +33,7 @@ Use this sequence when an agent helps a user create a new extension:
 
 Use this as the no-ambiguity loop for an agent building an extension in a repo checkout:
 
-1. Read this guide, [Extension SDK](extension-sdk.md), [Extension authoring](extensions.md), and the closest existing extension `README.md`.
+1. In the bundled app, use the injected `local-extension-development` skill and its packaged references; it is the source of truth when no source checkout exists. In a repo checkout, read this guide, [Extension SDK](10-extension-sdk.md), and [Extension authoring](20-extensions.md).
 2. Inspect existing extension ids, routes, nav labels, action ids, commands, settings components, and tools before choosing names.
 3. Write a short UX brief before implementation:
    - **Primary user and job**: who uses it, what they are trying to accomplish, and what they should inspect or change first.
@@ -45,10 +45,10 @@ Use this as the no-ambiguity loop for an agent building an extension in a repo c
    - **Visual acceptance**: what must be visible in the app screenshot or manual inspection before calling the UI correct.
 4. Ask focused questions for unresolved UX/product decisions before writing code. If the user gave enough detail, state the assumptions and proceed.
 5. For user-visible UI, make a quick artifact or local prototype before implementation unless the user explicitly wants to skip straight to code. The prototype should show the chosen surface, primary actions, and important states; use the shared Neon Pilot UI patterns instead of generic app chrome.
-6. Start from [`docs/extension-templates/`](extension-templates/README.md) when the feature matches a template; otherwise copy the closest first-party extension shape.
+6. In the bundled app, create with `neon-pilot extensions create <id> --name <name> --template capability|page|application`. Repo contributors may also use [`docs/extension-templates/`](../../extension-templates/README.md).
 7. Create editable source files in `src/`, declare every contribution in `extension.json`, and keep generated bundles in `dist/`.
-8. Build with `pnpm run extension:build -- <extension-dir>`.
-9. Run `neon-pilot-extension doctor <extension-dir>` when the CLI is available; in a packaged app, run `neon-pilot extensions validate --package-root <extension-dir>` before install or `neon-pilot extensions validate <extension-id>` after install. For repo extension or boundary work, also run `pnpm run check:extensions:static`.
+8. In the bundled app, build with `neon-pilot extensions build <extension-id>`. In a repo checkout, build with `pnpm run extension:build -- <extension-dir>`.
+9. Run `neon-pilot extensions validate <extension-id>` after the packaged build. For repo extension or boundary work, also run `pnpm run check:extensions:static`.
 10. Reload extensions from Settings -> Extensions, or restart the desktop app when reload is unavailable.
 11. Run `neon-pilot extensions smoke <extension-id>` when the app is running, then validate through the same surface the user will use: open the route, route-owned right sidebar, tab-local workbench rail, Settings section, command, composer control, or agent tool.
     For a Settings component, open `/settings#<sectionId>` and inspect it beside neighboring Settings sections for row spacing, padding, title hierarchy, and action alignment.
@@ -187,7 +187,7 @@ pnpm run extension:build -- /path/to/my-extension
 neon-pilot-extension build /path/to/my-extension
 ```
 
-In the packaged app, use Extension Manager actions to create, validate, and reload built artifacts. Extension UI communicates with backend actions through the native PA client/IPC bridge; do not build extension frontends that fetch `/api/extensions/*`.
+In the packaged app, the injected `local-extension-development` skill uses `neon-pilot extensions create`, `build`, `validate`, `reload`, `enable`, and `smoke`; no source checkout or package manager is required. Extension UI communicates with backend actions through the native PA client/IPC bridge; do not build extension frontends that fetch `/api/extensions/*`.
 
 Validation is not optional. The extension doctor catches missing bundles, stale output, bad manifest references, missing frontend/backend exports, tool schema problems, forbidden backend imports, non-portable paths, and backend import crashes.
 

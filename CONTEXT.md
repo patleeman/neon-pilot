@@ -425,7 +425,7 @@ Use **app shell** for layout chrome, not for extension-owned feature content.
 
 ### Application taskbar
 
-The shell-owned row of pinned and open applications. Selecting an application restores its active application view; application-owned pages and resources do not become taskbar items.
+The shell-owned row of open applications. Each item shows the application identity, active state, and close action. Selecting an application restores its active application view; application-owned pages and resources do not become taskbar items. Pinning is managed in the Launcher and does not keep closed applications in the taskbar.
 
 Use **application taskbar** or **taskbar**, not tab bar or window list.
 

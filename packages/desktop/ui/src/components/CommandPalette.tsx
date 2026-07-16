@@ -48,7 +48,7 @@ import { useConversations } from '../hooks/useConversations';
 import type { ConversationContentSearchMatch } from '../shared/types';
 import { useAllSessions, useSessionsReady } from '../store';
 import { PaletteItemIcon } from './ApplicationIcon';
-import { Button, cx, IconButton, Keycap, PanelMessage, RowButton, SearchInput, SectionLabel } from './ui';
+import { cx, IconButton, Keycap, PanelMessage, RowButton, SearchInput } from './ui';
 
 type ExtensionQuickOpenProvider = {
   list?: () => Promise<ExtensionQuickOpenItem[]> | ExtensionQuickOpenItem[];
@@ -80,6 +80,15 @@ function emptyStateCopy(scope: CommandPaletteScope, query: string): string {
   }
 
   return scope === THREADS_COMMAND_PALETTE_SCOPE ? 'No conversations yet.' : 'No items yet.';
+}
+
+function LauncherPinIcon() {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+      <path d="m7 3 6 0-.6 5 2.1 2.2H5.5L7.6 8z" />
+      <path d="M10 10.2V17" />
+    </svg>
+  );
 }
 
 function launcherTitleMatchTier(title: string, query: string): number {
@@ -299,7 +308,7 @@ export function CommandPalette({
     if (query.trim().length > 0) return undefined;
     if (scope === THREADS_COMMAND_PALETTE_SCOPE) return { archived: archivedVisibleLimit };
     if (scope === ALL_COMMAND_PALETTE_SCOPE) {
-      return { applications: 6, pages: 5, open: 5, commands: 0, archived: 0 };
+      return { applications: null, pages: null, open: 5, commands: 4, archived: 0 };
     }
     return undefined;
   }, [archivedVisibleLimit, query, scope]);
@@ -318,7 +327,27 @@ export function CommandPalette({
     [applicationWorkspace.launcherPins],
   );
   const presentationGroups = useMemo(() => {
-    if (scope !== ALL_COMMAND_PALETTE_SCOPE || query.trim().length === 0) return groups;
+    if (scope !== ALL_COMMAND_PALETTE_SCOPE) return groups;
+    if (query.trim().length === 0) {
+      return groups.flatMap((group) => {
+        if (group.section === 'pages') {
+          const applicationLabels = [...new Set(group.items.map((item) => item.parentLabel ?? 'Other'))];
+          return applicationLabels.map((applicationLabel) => {
+            const items = group.items.filter((item) => (item.parentLabel ?? 'Other') === applicationLabel);
+            return {
+              ...group,
+              section: `pages:${applicationLabel}`,
+              label: `${applicationLabel} pages`,
+              total: items.length,
+              items,
+            };
+          });
+        }
+        if (group.section === 'open') return [{ ...group, label: 'Recent threads' }];
+        if (group.section === 'commands') return [{ ...group, label: 'Suggested actions' }];
+        return [group];
+      });
+    }
     const items = deduplicateLauncherSearchResults(
       groups
         .flatMap((group) => group.items)
@@ -336,9 +365,9 @@ export function CommandPalette({
     return presentationGroups
       .map((group) => ({
         ...group,
-        items: group.items.filter(
-          (item) => item.pinTarget?.kind === 'application' || !item.pinTarget || !pinnedKeys.has(launcherPinKey(item.pinTarget)),
-        ),
+        // Pinned applications and pages remain in the full inventory. Pinning is a shortcut layer,
+        // not a way to make destinations disappear from their owning section.
+        items: group.items.filter((item) => item.pinTarget?.kind !== 'conversation' || !pinnedKeys.has(launcherPinKey(item.pinTarget))),
       }))
       .filter((group) => group.items.length > 0);
   }, [pinnedKeys, presentationGroups, query, scope]);
@@ -900,13 +929,12 @@ export function CommandPalette({
     quickOpenScopeActive,
     quickOpenSearchLoading,
   ]);
-  const showSectionHeaders = visiblePresentationGroups.length > 1 || query.trim().length === 0;
   const displayedLoadingSections = scope === ALL_COMMAND_PALETTE_SCOPE && visibleCount > 0 ? [] : loadingSections;
   const labelForSection = useCallback(
     (section: CommandPaletteSection) => quickOpenSectionLabels[section] ?? COMMAND_PALETTE_SECTION_LABELS[section] ?? section,
     [quickOpenSectionLabels],
   );
-  const searchPlaceholder = 'Search applications, pages, conversations, and actions…';
+  const searchPlaceholder = 'Search Neon Pilot';
 
   if (!open) {
     return null;
@@ -979,44 +1007,44 @@ export function CommandPalette({
 
         {query.trim().length === 0 && scope === ALL_COMMAND_PALETTE_SCOPE && pinnedLauncherItems.length > 0 ? (
           <section className="ui-launcher-pinned-section" aria-label="Pinned">
-            <div className="ui-command-palette-section-header">
-              <SectionLabel>Pinned</SectionLabel>
-            </div>
-            <div className="ui-launcher-pinned-grid">
-              {pinnedLauncherItems.map(({ pin, item }) => {
-                const title = item?.title ?? pin.snapshot.title;
-                const icon = item?.icon ?? pin.snapshot.icon;
-                return (
-                  <div key={pin.key} className={cx('ui-launcher-pinned-item group', !item && 'is-unavailable')}>
-                    <Button
-                      variant="ghost"
-                      className="ui-launcher-pinned-open"
-                      disabled={!item}
-                      onClick={() => {
-                        if (item) void activateItem(item);
-                      }}
-                      title={item ? title : `${title} is unavailable`}
-                    >
-                      <PaletteItemIcon section={item?.section ?? pin.target.kind} icon={icon} />
-                      <span>{title}</span>
-                    </Button>
-                    {onToggleLauncherPin ? (
-                      <IconButton
-                        compact
-                        size="sm"
-                        className="ui-launcher-pinned-unpin"
-                        aria-label={`Unpin ${title}`}
-                        title={`Unpin ${title}`}
-                        data-launcher-secondary-action="true"
-                        onClick={() => onToggleLauncherPin(pin.target, pin.snapshot)}
-                      >
-                        ×
-                      </IconButton>
+            <h2 className="ui-command-palette-section-header">Pinned</h2>
+            {pinnedLauncherItems.map(({ pin, item }) => {
+              const title = item?.title ?? pin.snapshot.title;
+              const icon = item?.icon ?? pin.snapshot.icon;
+              return (
+                <div key={pin.key} className="ui-command-palette-result-row">
+                  <RowButton
+                    disabled={!item}
+                    onClick={() => {
+                      if (item) void activateItem(item);
+                    }}
+                    className={cx('ui-command-palette-result group disabled:cursor-not-allowed', !item && 'opacity-55')}
+                    title={item ? title : `${title} is unavailable`}
+                  >
+                    <PaletteItemIcon section={item?.section ?? pin.target.kind} icon={icon} />
+                    <div className="ui-command-palette-result-copy">
+                      <p className="ui-command-palette-result-title">{title}</p>
+                    </div>
+                    {pin.snapshot.applicationTitle && pin.snapshot.applicationTitle !== title ? (
+                      <span className="ui-command-palette-result-owner">{pin.snapshot.applicationTitle}</span>
                     ) : null}
-                  </div>
-                );
-              })}
-            </div>
+                  </RowButton>
+                  {onToggleLauncherPin ? (
+                    <IconButton
+                      compact
+                      size="sm"
+                      className="ui-command-palette-pin is-pinned"
+                      aria-label={`Unpin ${title}`}
+                      title={`Unpin ${title}`}
+                      data-launcher-secondary-action="true"
+                      onClick={() => onToggleLauncherPin(pin.target, pin.snapshot)}
+                    >
+                      <LauncherPinIcon />
+                    </IconButton>
+                  ) : null}
+                </div>
+              );
+            })}
           </section>
         ) : null}
 
@@ -1040,12 +1068,7 @@ export function CommandPalette({
         >
           {visiblePresentationGroups.map((group) => (
             <section key={group.section} className="ui-command-palette-section">
-              {showSectionHeaders && (
-                <div className="ui-command-palette-section-header">
-                  <SectionLabel>{group.label}</SectionLabel>
-                </div>
-              )}
-
+              {query.trim().length === 0 ? <h2 className="ui-command-palette-section-header">{group.label}</h2> : null}
               <div>
                 {group.items.map((item) => {
                   runningIndex += 1;
@@ -1066,13 +1089,15 @@ export function CommandPalette({
                   const titleCollision =
                     item.pinTarget?.kind === 'conversation' && duplicateConversationTitles.has(item.title.trim().toLocaleLowerCase());
                   const collisionOrdinal = duplicateConversationOrdinals.get(item.id);
-                  const trailingLabel = item.parentLabel
-                    ? titleCollision && item.auxiliaryLabel
-                      ? `${item.auxiliaryLabel}${collisionOrdinal ? ` · ${collisionOrdinal}` : ''}`
-                      : item.parentLabel
-                    : item.section === 'commands'
-                      ? item.meta
-                      : undefined;
+                  const pageParentAlreadyLabeled = query.trim().length === 0 && group.section.startsWith('pages:');
+                  const trailingLabel =
+                    item.parentLabel && !pageParentAlreadyLabeled
+                      ? titleCollision && item.auxiliaryLabel
+                        ? `${item.auxiliaryLabel}${collisionOrdinal ? ` · ${collisionOrdinal}` : ''}`
+                        : item.parentLabel
+                      : item.section === 'commands'
+                        ? item.meta
+                        : undefined;
 
                   return (
                     <div key={item.id} className="ui-command-palette-result-row">
@@ -1114,10 +1139,7 @@ export function CommandPalette({
                             togglePin(item);
                           }}
                         >
-                          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
-                            <path d="m7 3 6 0-.6 5 2.1 2.2H5.5L7.6 8z" />
-                            <path d="M10 10.2V17" />
-                          </svg>
+                          <LauncherPinIcon />
                         </IconButton>
                       ) : null}
                     </div>
@@ -1136,11 +1158,6 @@ export function CommandPalette({
 
           {displayedLoadingSections.map((section) => (
             <section key={`loading:${section}`} className="pb-2 last:pb-0">
-              {showSectionHeaders && (
-                <div className="px-2.5 pb-1 flex items-center gap-2">
-                  <SectionLabel>{labelForSection(section)}</SectionLabel>
-                </div>
-              )}
               <PanelMessage className="px-2.5 py-3 font-mono text-[12px]">Loading {labelForSection(section).toLowerCase()}…</PanelMessage>
             </section>
           ))}

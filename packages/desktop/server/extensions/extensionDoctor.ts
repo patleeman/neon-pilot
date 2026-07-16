@@ -68,8 +68,11 @@ export async function validateExtensionPackage(input: { extensionId?: string; pa
   }
 
   let manifest: ExtensionManifest | undefined;
+  let isUserPackage = entry?.source === 'runtime' || entry?.manifest.packageType === 'user' || Boolean(input.packageRoot && !entry);
   try {
-    manifest = parseExtensionManifest(JSON.parse(readFileSync(manifestPath, 'utf8')));
+    const rawManifest = JSON.parse(readFileSync(manifestPath, 'utf8')) as { packageType?: unknown };
+    isUserPackage ||= rawManifest.packageType === 'user';
+    manifest = parseExtensionManifest(rawManifest);
   } catch (error) {
     add(
       findings,
@@ -81,14 +84,19 @@ export async function validateExtensionPackage(input: { extensionId?: string; pa
     return report(extensionId, packageRoot, undefined, findings);
   }
 
-  validateManifestReferences(packageRoot, manifest, findings);
+  validateManifestReferences(packageRoot, manifest, findings, isUserPackage);
   await validateBuiltImports(packageRoot, manifest, findings);
   await validateBackendImport(packageRoot, manifest, findings);
 
   return report(manifest.id, packageRoot, manifest, findings);
 }
 
-function validateManifestReferences(packageRoot: string, manifest: ExtensionManifest, findings: ExtensionDoctorFinding[]) {
+function validateManifestReferences(
+  packageRoot: string,
+  manifest: ExtensionManifest,
+  findings: ExtensionDoctorFinding[],
+  isUserPackage: boolean,
+) {
   const frontendSource = resolve(packageRoot, 'src', 'frontend.tsx');
   const backendSource = resolve(packageRoot, 'src', 'backend.ts');
   const frontendEntry = manifest.frontend?.entry ? resolve(packageRoot, manifest.frontend.entry) : undefined;
@@ -141,6 +149,9 @@ function validateManifestReferences(packageRoot: string, manifest: ExtensionMani
     if (existsSync(backendSource)) validateForbiddenSourceImports(backendSource, findings);
   }
   validateFrontendActionClient(frontendSource, frontendEntry, findings);
+  for (const sourceFile of frontendSourceFiles(packageRoot)) {
+    validateUserExtensionFrontendPatterns(sourceFile, isUserPackage, findings);
+  }
   validateBackendWorkerDeclarations(manifest, manifestPath(packageRoot), findings);
 
   const frontendContent = existsSync(frontendSource)
@@ -255,6 +266,130 @@ function validateManifestReferences(packageRoot: string, manifest: ExtensionMani
   }
 
   validateDistFreshness(packageRoot, manifest, findings);
+}
+
+function validateUserExtensionFrontendPatterns(frontendSource: string, isUserPackage: boolean, findings: ExtensionDoctorFinding[]): void {
+  if (!isUserPackage || !existsSync(frontendSource)) return;
+  const source = readFileSync(frontendSource, 'utf8');
+  if (/\bclassName\s*=/u.test(source)) {
+    add(
+      findings,
+      'error',
+      'uncompiled-extension-utilities',
+      'User extension frontend source uses className utilities, but the installed-app builder does not compile extension-local Tailwind CSS.',
+      frontendSource,
+      'Compose @neon-pilot/extensions/ui primitives and use narrow inline style objects only for product-specific layout.',
+    );
+  }
+  // Lowercase JSX names are native elements; PascalCase names are shared
+  // components such as Button, TextInput, Select, and Textarea.
+  if (/<(?:button|input|select|textarea)\b/u.test(source)) {
+    add(
+      findings,
+      'error',
+      'raw-extension-control',
+      'User extension frontend source contains raw form or action controls.',
+      frontendSource,
+      'Use Button, ToolbarButton, IconButton, TextInput, Textarea, Select, Checkbox, Switch, or SegmentedControl from @neon-pilot/extensions/ui.',
+    );
+  }
+  if (/<(?:div|span|li|tr)\b[^>]*\bonClick\s*=/su.test(source)) {
+    add(
+      findings,
+      'error',
+      'non-semantic-interactive-container',
+      'A clickable list or layout container is not keyboard- and automation-accessible.',
+      frontendSource,
+      'Use Button or another shared semantic action primitive for clickable rows; do not attach onClick to div, span, li, or tr elements.',
+    );
+  }
+  if (/<DataTableToolbar\b[^>]*(?:searchValue|onSearchChange)=/su.test(source)) {
+    add(
+      findings,
+      'error',
+      'invalid-data-table-toolbar-props',
+      'DataTableToolbar uses unsupported direct search value/change props.',
+      frontendSource,
+      'Pass a rendered SearchInput through search={...}; pass visible controls through actions={...}.',
+    );
+  }
+  if (/<ResourceListItem\b[^>]*\b(?:title|description|active|trailing)=/su.test(source)) {
+    add(
+      findings,
+      'error',
+      'invalid-resource-list-item-props',
+      'ResourceListItem uses unsupported row props, which can render a visually blank list item.',
+      frontendSource,
+      'Use label for the primary text, detail for secondary text, selected for selection state, and children for badges or other extra content.',
+    );
+  }
+  if (
+    /<DataTableToolbar\b(?![^>]*\bactions=)[^>]*>[\s\S]*?<(?:ToolbarButton|Button|IconButton)\b[\s\S]*?<\/DataTableToolbar>/u.test(source)
+  ) {
+    add(
+      findings,
+      'error',
+      'hidden-data-table-toolbar-actions',
+      'DataTableToolbar contains action controls as children, which are not rendered by the shared primitive.',
+      frontendSource,
+      'Move the controls into actions={<>...</>} so management actions remain visible.',
+    );
+  }
+  if (/<IconButton\b[^>]*(?:title|aria-label)=\{?['"][^'"]*delete[^'"]*['"][^>]*>[\s\S]*?[×✕x][\s\S]*?<\/IconButton>/iu.test(source)) {
+    add(
+      findings,
+      'error',
+      'ambiguous-delete-glyph',
+      'A destructive action is rendered as a close glyph, which is ambiguous in a persistent list.',
+      frontendSource,
+      'Use a clearly labeled destructive Button (for example, “Delete”) until a shared trash icon is available.',
+    );
+  }
+  if (/\bheight\s*:\s*['"]calc\(100vh\b/u.test(source)) {
+    add(
+      findings,
+      'error',
+      'host-relative-viewport-height',
+      'The page uses a fixed 100vh calculation inside host-owned application chrome.',
+      frontendSource,
+      'Use WorkbenchShell or flex/minHeight layout so dividers and panes fill the owned content region.',
+    );
+  }
+  if (/<AppPageSection\s*>/u.test(source)) {
+    add(
+      findings,
+      'error',
+      'collapsed-app-page-section',
+      'AppPageSection without props uses the default split settings layout and reserves an empty 12rem header column.',
+      frontendSource,
+      'For full-width content, use <AppPageSection layout="stacked"> or compose the page with WorkbenchShell.',
+    );
+  }
+  if (/\b(?:placeholder|title|aria-label)\s*=\s*['"][^'"\n]*\\u[0-9a-f]{4}[^'"\n]*['"]/iu.test(source)) {
+    add(
+      findings,
+      'error',
+      'escaped-unicode-ui-copy',
+      'A raw JSX attribute contains a Unicode escape such as \\u2026, which JSX renders as implementation text rather than decoding.',
+      frontendSource,
+      'Use the actual character (for example, “…”) or plain ASCII punctuation in user-facing copy.',
+    );
+  }
+}
+
+function frontendSourceFiles(packageRoot: string): string[] {
+  const srcRoot = resolve(packageRoot, 'src');
+  if (!existsSync(srcRoot)) return [];
+  const files: string[] = [];
+  const visit = (directory: string) => {
+    for (const entry of readdirSync(directory, { withFileTypes: true })) {
+      const path = resolve(directory, entry.name);
+      if (entry.isDirectory()) visit(path);
+      else if (entry.isFile() && /\.[jt]sx$/u.test(entry.name)) files.push(path);
+    }
+  };
+  visit(srcRoot);
+  return files;
 }
 
 function manifestPath(packageRoot: string): string {

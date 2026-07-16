@@ -320,7 +320,13 @@ function createWorkerBackendContext(
         thinkingLevel?: string | null;
         serviceTier?: string | null;
         allowedToolNames?: string[];
-      }) => callHostCapability(extensionId, 'conversations', 'create', { ...(input ?? {}), runtimeScope, runtimeSettingsFilePath }),
+      }) =>
+        callHostCapability(extensionId, 'conversations', 'create', {
+          ...(input ?? {}),
+          runtimeScope,
+          runtimeSettingsFilePath,
+          liveSessionResourceOptions,
+        }),
       setActiveTools: (conversationId: string, toolNames: string[]) =>
         callHostCapability(extensionId, 'conversations', 'setActiveTools', { conversationId, toolNames }),
       appendCustomEntry: (conversationId: string, customType: string, data?: unknown) =>
@@ -439,6 +445,15 @@ function createWorkerBackendContext(
       },
     },
     extensions: {
+      callAction: async (targetExtensionId: string, actionId: string, input?: unknown) => {
+        const result = (await callHostCapability(extensionId, 'extensions', 'invokeAction', {
+          extensionId: targetExtensionId,
+          actionId,
+          ...(input !== undefined ? { input } : {}),
+        })) as { ok?: boolean; result?: unknown; error?: string };
+        if (result?.ok === false) throw new Error(result.error || `Action "${actionId}" failed on extension "${targetExtensionId}".`);
+        return result?.result;
+      },
       invokeAction: (input: { extensionId: string; actionId: string; input?: unknown; signal?: AbortSignal }) =>
         callHostCapability(extensionId, 'extensions', 'invokeAction', input),
       listActions: () => callHostCapability(extensionId, 'extensions', 'listActions'),

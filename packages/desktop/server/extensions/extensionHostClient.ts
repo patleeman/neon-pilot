@@ -387,20 +387,20 @@ async function handleInProcessExtensionHostRequestUnchecked(request: ExtensionHo
     const { invokeExtensionAction } = await import('./extensionBackend.js');
     if (request.type === 'invokeAction') {
       const { createExtensionBackendToolContextFromSnapshot } = await import('./extensionHostToolContext.js');
-      const actionArgs: Parameters<typeof invokeExtensionAction> = [
-        request.extensionId,
-        request.actionId,
-        request.input,
-        await resolveRequestServerContext(request),
-        request.toolContext
-          ? { ...createExtensionBackendToolContextFromSnapshot(request.toolContextSnapshot), ...request.toolContext }
-          : createExtensionBackendToolContextFromSnapshot(request.toolContextSnapshot),
-        request.agentToolContext,
-      ];
-      if (request.signal) actionArgs.push(request.signal);
       return {
         ok: true,
-        result: await invokeExtensionAction(...actionArgs),
+        result: await invokeExtensionAction(
+          request.extensionId,
+          request.actionId,
+          request.input,
+          await resolveRequestServerContext(request),
+          request.toolContext
+            ? { ...createExtensionBackendToolContextFromSnapshot(request.toolContextSnapshot), ...request.toolContext }
+            : createExtensionBackendToolContextFromSnapshot(request.toolContextSnapshot),
+          request.agentToolContext,
+          request.signal,
+          request.resourceOptionsMode,
+        ),
       };
     }
     if (request.type === 'invokeProtocolEntrypoint') {

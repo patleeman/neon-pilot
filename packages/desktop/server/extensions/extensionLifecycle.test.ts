@@ -1,7 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -38,10 +39,12 @@ vi.mock('./extensionSubscriptions.js', () => ({
 }));
 
 type ExecFileSync = typeof import('node:child_process').execFileSync;
+type ExecFile = typeof import('node:child_process').execFile;
+const execFile = vi.fn<Parameters<ExecFile>, ReturnType<ExecFile>>();
 const execFileSync = vi.fn<Parameters<ExecFileSync>, ReturnType<ExecFileSync>>();
 vi.mock('node:child_process', async (importOriginal) => {
   const actual = await importOriginal<typeof import('node:child_process')>();
-  return { ...actual, execFileSync };
+  return { ...actual, execFile, execFileSync };
 });
 
 const {
@@ -51,6 +54,7 @@ const {
   exportRuntimeExtension,
   inspectRuntimeExtensionBundle,
   importRuntimeExtensionBundle,
+  resolveExtensionBuilderScript,
   snapshotRuntimeExtension,
 } = await import('./extensionLifecycle.js');
 
@@ -65,6 +69,7 @@ describe('extensionLifecycle', () => {
   const runtimeRoot = join(stateRoot, 'extensions');
 
   beforeEach(() => {
+    delete process.env.NEON_PILOT_DESKTOP_DEV_BUNDLE;
     rmSync(stateRoot, { recursive: true, force: true });
     findExtensionEntry.mockReset().mockReturnValue(null);
     getRuntimeExtensionsRoot.mockReset().mockReturnValue(runtimeRoot);
@@ -78,6 +83,11 @@ describe('extensionLifecycle', () => {
     uninstallExtensionSubscriptions.mockReset();
     parseExtensionManifest.mockClear();
     execFileSync.mockReset();
+    execFile.mockReset();
+    execFile.mockImplementation(((_command, _args, _options, callback) => {
+      callback?.(null, '', '');
+      return {} as ReturnType<ExecFile>;
+    }) as ExecFile);
     execFileSync.mockImplementation((command, args) => {
       if (command === 'zipinfo') return safeBundleZipInfo as ReturnType<ExecFileSync>;
       if (command === 'unzip') {
@@ -101,6 +111,8 @@ describe('extensionLifecycle', () => {
 
   afterEach(() => {
     rmSync(stateRoot, { recursive: true, force: true });
+    delete process.env.NEON_PILOT_DESKTOP_DEV_BUNDLE;
+    delete process.env.NEON_PILOT_REPO_ROOT;
   });
 
   it('creates a main-page runtime extension scaffold with normalized manifest and starter files', () => {
@@ -126,6 +138,63 @@ describe('extensionLifecycle', () => {
     expect(frontend).toContain('AppPageIntro');
     expect(frontend).not.toContain('text-[34px]');
     expect(readFileSync(join(runtimeRoot, 'my-extension', 'src', 'backend.ts'), 'utf-8')).toContain('export async function ping');
+  });
+
+  it('creates capability, explicit page, and multi-page application scaffolds', () => {
+    createRuntimeExtension({ id: 'headless-capability', name: 'Headless Capability', template: 'capability' }, stateRoot);
+    createRuntimeExtension({ id: 'reading-list', name: 'Reading List', template: 'page' }, stateRoot);
+    createRuntimeExtension({ id: 'local-models', name: 'Local Models', template: 'application' }, stateRoot);
+
+    for (const extensionId of ['reading-list', 'local-models']) {
+      expect(readFileSync(join(runtimeRoot, extensionId, 'src', 'frontend.tsx'), 'utf-8')).not.toContain('className=');
+    }
+
+    const capability = JSON.parse(readFileSync(join(runtimeRoot, 'headless-capability', 'extension.json'), 'utf-8'));
+    expect(capability.frontend).toBeUndefined();
+    expect(capability.contributes.commands).toEqual([expect.objectContaining({ action: 'ping' })]);
+    expect(existsSync(join(runtimeRoot, 'headless-capability', 'src', 'frontend.tsx'))).toBe(false);
+
+    const page = JSON.parse(readFileSync(join(runtimeRoot, 'reading-list', 'extension.json'), 'utf-8'));
+    expect(page.contributes.applications).toEqual([
+      expect.objectContaining({ id: 'app', startRoute: '/ext/reading-list', instancePolicy: 'singleton' }),
+    ]);
+    expect(page.contributes.views[0]).toMatchObject({ applicationId: 'reading-list:app', openPolicy: 'internal' });
+
+    const application = JSON.parse(readFileSync(join(runtimeRoot, 'local-models', 'extension.json'), 'utf-8'));
+    expect(application.contributes.applications[0]).toMatchObject({
+      id: 'app',
+      startRoute: '/ext/local-models',
+      sidebarView: 'application-sidebar',
+      instancePolicy: 'singleton',
+    });
+    expect(application.contributes.views).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ route: '/ext/local-models', applicationId: 'local-models:app', openPolicy: 'internal' }),
+        expect.objectContaining({ route: '/ext/local-models/items', applicationId: 'local-models:app', openPolicy: 'internal' }),
+        expect.objectContaining({ id: 'application-sidebar', location: 'sidebar' }),
+      ]),
+    );
+    expect(application.contributes.nav.every((item: { applicationId?: string }) => item.applicationId === 'local-models:app')).toBe(true);
+  });
+
+  it('keeps every accepted user UI scaffold compatible with packaged authoring validation', () => {
+    const templates = [
+      'main-page',
+      'page',
+      'application',
+      'right-rail',
+      'route-right-sidebar',
+      'route-sidebar',
+      'route-shell',
+      'workbench-detail',
+    ] as const;
+    for (const template of templates) {
+      const id = `starter-${template}`;
+      createRuntimeExtension({ id, name: `Starter ${template}`, template }, stateRoot);
+      const frontend = readFileSync(join(runtimeRoot, id, 'src', 'frontend.tsx'), 'utf-8');
+      expect(frontend, template).not.toContain('className=');
+      expect(frontend, template).not.toMatch(/<(?:button|input|select|textarea)\b/u);
+    }
   });
 
   it('creates rightRail and workbench detail templates', () => {
@@ -244,20 +313,20 @@ describe('extensionLifecycle', () => {
   it('validates create input and prevents duplicate ids or directories', () => {
     expect(() => createRuntimeExtension({ id: 'Bad', name: 'Name' }, stateRoot)).toThrow('Extension id must be');
     expect(() => createRuntimeExtension({ id: 'ok-id', name: '   ' }, stateRoot)).toThrow('Extension name is required');
-    expect(() => createRuntimeExtension({ id: 'ok-id', name: 'Name', template: 'bad' }, stateRoot)).toThrow(
-      'Extension template must be main-page, route-sidebar, route-right-sidebar, route-shell, right-rail, or workbench-detail.',
-    );
+    expect(() => createRuntimeExtension({ id: 'ok-id', name: 'Name', template: 'bad' }, stateRoot)).toThrow('Extension template must be');
     findExtensionEntry.mockReturnValueOnce({});
     expect(() => createRuntimeExtension({ id: 'ok-id', name: 'Name' }, stateRoot)).toThrow('Extension id already exists');
     mkdirSync(join(runtimeRoot, 'ok-id'), { recursive: true });
     expect(() => createRuntimeExtension({ id: 'ok-id', name: 'Name' }, stateRoot)).toThrow('Extension directory already exists');
   });
 
-  it('snapshots, exports, and rejects invalid build targets', async () => {
+  it('snapshots, exports, and builds user extensions with the packaged authoring runtime', async () => {
+    process.env.NEON_PILOT_DESKTOP_DEV_BUNDLE = '1';
+    process.env.NEON_PILOT_REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../../..');
     const packageRoot = join(stateRoot, 'source-ext');
     mkdirSync(packageRoot, { recursive: true });
     writeFileSync(join(packageRoot, 'extension.json'), '{}');
-    findExtensionEntry.mockReturnValue({ packageRoot, manifest: { schemaVersion: 2 } });
+    findExtensionEntry.mockReturnValue({ packageRoot, manifest: { schemaVersion: 2, packageType: 'user' } });
 
     const snapshot = snapshotRuntimeExtension('ext', stateRoot);
     expect(snapshot.snapshotPath).toContain(join(stateRoot, 'extension-snapshots', 'ext'));
@@ -265,7 +334,31 @@ describe('extensionLifecycle', () => {
 
     expect(exportRuntimeExtension('ext', stateRoot).exportPath).toContain(join(stateRoot, 'extension-exports', 'ext-'));
     expect(execFileSync).toHaveBeenCalledWith('zip', expect.arrayContaining(['-qry']), { cwd: stateRoot });
-    await expect(buildRuntimeExtension('ext')).rejects.toThrow('no longer builds extensions at runtime');
+    await expect(buildRuntimeExtension('ext')).resolves.toMatchObject({ ok: true, extensionId: 'ext', packageRoot });
+    expect(execFile).toHaveBeenCalledWith(
+      process.execPath,
+      expect.arrayContaining([expect.stringContaining('extension-build.mjs'), packageRoot]),
+      expect.objectContaining({ timeout: 120_000 }),
+      expect.any(Function),
+    );
+  });
+
+  it('does not execute builder fallbacks from cwd outside explicit development mode', () => {
+    const cwd = join(stateRoot, 'untrusted-cwd');
+    mkdirSync(join(cwd, 'scripts'), { recursive: true });
+    writeFileSync(join(cwd, 'scripts', 'extension-build.mjs'), 'throw new Error("should not run")');
+    const previousRepoRoot = process.env.NEON_PILOT_REPO_ROOT;
+    const previousDevBundle = process.env.NEON_PILOT_DESKTOP_DEV_BUNDLE;
+    delete process.env.NEON_PILOT_REPO_ROOT;
+    delete process.env.NEON_PILOT_DESKTOP_DEV_BUNDLE;
+    try {
+      expect(resolveExtensionBuilderScript(join(stateRoot, 'missing-resources'), cwd)).toBeNull();
+    } finally {
+      if (previousRepoRoot === undefined) delete process.env.NEON_PILOT_REPO_ROOT;
+      else process.env.NEON_PILOT_REPO_ROOT = previousRepoRoot;
+      if (previousDevBundle === undefined) delete process.env.NEON_PILOT_DESKTOP_DEV_BUNDLE;
+      else process.env.NEON_PILOT_DESKTOP_DEV_BUNDLE = previousDevBundle;
+    }
   });
 
   it('imports safe extension bundles into the runtime extension root', () => {

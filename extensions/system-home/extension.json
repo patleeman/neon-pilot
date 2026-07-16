@@ -10,10 +10,10 @@
         "id": "home",
         "title": "Home",
         "description": "Open applications and resume recent work.",
-        "icon": "app",
+        "icon": "home",
         "startRoute": "/home",
         "instancePolicy": "singleton",
-        "defaultPinned": true,
+        "defaultPinned": false,
         "order": 0,
         "navigationSlots": [{ "id": "primary", "order": 0 }]
       }
@@ -34,7 +34,7 @@
         "id": "home",
         "label": "Home",
         "route": "/home",
-        "icon": "app",
+        "icon": "home",
         "pageType": "dashboard",
         "applicationId": "system-home:home",
         "slot": "primary",

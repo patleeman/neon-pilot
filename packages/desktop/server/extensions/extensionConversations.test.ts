@@ -247,7 +247,12 @@ describe('extensionConversations', () => {
       allowedToolNames: ['bash'],
     });
 
-    expect(live.createSession).toHaveBeenCalledWith('/repo', { initialModel: 'model-2', allowedToolNames: ['bash'] });
+    expect(live.createSession).toHaveBeenCalledWith('/repo', {
+      resources: true,
+      initialModel: 'model-2',
+      allowedToolNames: ['bash'],
+      extensionFactories: ['factory'],
+    });
     expect(entry.session.setSessionName).toHaveBeenCalledWith('Created Title');
     expect(entry.session.prompt).toHaveBeenCalledWith('Start here');
     expect(entry.session.followUp).not.toHaveBeenCalled();
@@ -259,6 +264,28 @@ describe('extensionConversations', () => {
       cwd: '/repo',
     });
     expect(result).toEqual({ id: 'conv-1', conversationId: 'conv-1' });
+  });
+
+  it('uses asynchronously materialized resources when an extension creates a live conversation', async () => {
+    live.createSession.mockResolvedValue({ id: 'conv-resources' });
+    live.registry.set('conv-resources', liveEntry());
+    const buildLiveSessionResourceOptionsAsync = vi.fn(async () => ({
+      additionalSkillPaths: ['/app/authoring/SKILL.md'],
+      systemPromptSupplement: 'Read the bundled authoring skill.',
+    }));
+
+    await createExtensionConversationsCapability({
+      getRuntimeScope: () => 'shared',
+      buildLiveSessionResourceOptionsAsync,
+      buildLiveSessionExtensionFactories: () => ['extension-factory'] as never,
+    }).create({ cwd: '/blank-cwd' });
+
+    expect(buildLiveSessionResourceOptionsAsync).toHaveBeenCalledWith('shared');
+    expect(live.createSession).toHaveBeenCalledWith('/blank-cwd', {
+      additionalSkillPaths: ['/app/authoring/SKILL.md'],
+      systemPromptSupplement: 'Read the bundled authoring skill.',
+      extensionFactories: ['extension-factory'],
+    });
   });
 
   it('adds conversations created through extensions to the persisted workspace so sidebars refresh', async () => {

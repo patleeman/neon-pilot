@@ -141,6 +141,14 @@
         }
       },
       {
+        "id": "provideExtensionAuthoringInstructions",
+        "handler": "provideExtensionAuthoringInstructions",
+        "title": "Provide extension authoring instructions",
+        "worker": {
+          "enabled": true
+        }
+      },
+      {
         "id": "manageExtension",
         "handler": "manageExtension",
         "title": "Manage extension",
@@ -149,10 +157,12 @@
           "inputActions": [
             "list",
             "create",
+            "build",
             "snapshot",
             "delete",
             "reload",
             "smoke",
+            "invoke",
             "validate",
             "hostViewComponents",
             "listInstallable",
@@ -172,6 +182,14 @@
     ]
   },
   "contributes": {
+    "instructionProviders": [
+      {
+        "id": "extension-authoring",
+        "handler": "provideExtensionAuthoringInstructions",
+        "title": "Extension authoring skill pointer",
+        "priority": 40
+      }
+    ],
     "nav": [
       {
         "id": "extensions-nav",
@@ -323,8 +341,11 @@
         "action": "manageExtension",
         "jsonDefault": true,
         "inputAction": "create",
-        "usage": "extensions create <extensionId> [--json]",
-        "examples": ["neon-pilot extensions create system-settings", "neon-pilot extensions create system-settings --json"],
+        "usage": "extensions create <extensionId> --name <name> [--description <text>] [--template <template>] [--json]",
+        "examples": [
+          "neon-pilot extensions create reading-list --name \"Reading List\" --template page",
+          "neon-pilot extensions create local-models --name \"Local Models\" --template application --json"
+        ],
         "argsSchema": {
           "type": "array",
           "items": {
@@ -343,6 +364,23 @@
             "dry-run": {
               "type": "boolean",
               "description": "Validate and describe the operation without changing app state."
+            },
+            "name": { "type": "string", "description": "User-facing extension name." },
+            "description": { "type": "string", "description": "One-sentence user-facing description." },
+            "template": {
+              "type": "string",
+              "enum": [
+                "capability",
+                "page",
+                "application",
+                "main-page",
+                "route-sidebar",
+                "route-right-sidebar",
+                "route-shell",
+                "right-rail",
+                "workbench-detail"
+              ],
+              "description": "Starter architecture. Prefer capability, page, or application for new work."
             }
           },
           "additionalProperties": true
@@ -353,6 +391,35 @@
         "idempotent": false,
         "startsBackgroundWork": false,
         "supportsDryRun": true,
+        "outputModes": ["text", "json"]
+      },
+      {
+        "id": "extensions-build",
+        "command": "extensions build",
+        "description": "Build an installed user extension with Neon Pilot's packaged authoring runtime.",
+        "action": "manageExtension",
+        "jsonDefault": true,
+        "inputAction": "build",
+        "usage": "extensions build <extensionId> [--json]",
+        "examples": ["neon-pilot extensions build local-models --json"],
+        "argsSchema": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 1,
+          "maxItems": 1,
+          "description": "Positional args: installed extension id."
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": { "json": { "type": "boolean", "description": "Print structured JSON output." } },
+          "additionalProperties": false
+        },
+        "mode": "write",
+        "requiresApp": false,
+        "destructive": false,
+        "idempotent": true,
+        "startsBackgroundWork": false,
+        "supportsDryRun": false,
         "outputModes": ["text", "json"]
       },
       {
@@ -708,6 +775,38 @@
         "outputModes": ["text", "json"]
       },
       {
+        "id": "extensions-invoke",
+        "command": "extensions invoke",
+        "description": "Invoke a callable action on an installed extension.",
+        "action": "manageExtension",
+        "jsonDefault": true,
+        "inputAction": "invoke",
+        "usage": "extensions invoke <extensionId> <actionId> [--input-json <json>] [--json]",
+        "examples": ["neon-pilot extensions invoke reading-list listArticles --input-json '{}' --json"],
+        "argsSchema": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 2,
+          "maxItems": 2,
+          "description": "Positional args: extensionId actionId."
+        },
+        "flagsSchema": {
+          "type": "object",
+          "properties": {
+            "json": { "type": "boolean", "description": "Print structured JSON output." },
+            "input-json": { "type": "string", "description": "JSON value passed to the extension action." }
+          },
+          "additionalProperties": false
+        },
+        "mode": "write",
+        "requiresApp": true,
+        "destructive": false,
+        "idempotent": false,
+        "startsBackgroundWork": false,
+        "supportsDryRun": false,
+        "outputModes": ["text", "json"]
+      },
+      {
         "id": "extensions-enable",
         "command": "extensions enable",
         "description": "Enable an installed extension.",
@@ -870,7 +969,7 @@
       {
         "id": "local-extension-development",
         "title": "Local Extension Development",
-        "description": "Workflow for creating, externally building, validating, reloading, and debugging native extensions.",
+        "description": "Build complete Neon Pilot extensions, pages, applications, and application contributions from the installed app without a source checkout.",
         "path": "skills/local-extension-development/SKILL.md"
       }
     ]

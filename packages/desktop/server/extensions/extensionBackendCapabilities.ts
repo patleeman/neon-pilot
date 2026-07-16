@@ -19,6 +19,7 @@ import {
 } from '../automation/eventBusHost.js';
 import type { FileAccess, ScopedFileSystem } from '../filesystem/filesystemAuthority.js';
 import { createModelRegistryForAuthFile } from '../models/modelRegistry.js';
+import type { LiveSessionResourceOptions } from '../routes/context.js';
 import { resolveSecret } from '../secrets/secretStore.js';
 import { createSettingsStore } from '../settings/settingsStore.js';
 import { type AppEventTopic, invalidateAppTopics, publishAppEvent } from '../shared/appEvents.js';
@@ -167,6 +168,7 @@ interface ExtensionBackendCapabilityConversations {
       thinkingLevel?: string | null;
       serviceTier?: string | null;
       allowedToolNames?: string[];
+      liveSessionResourceOptions?: Record<string, unknown>;
     },
   ): Promise<unknown> | unknown;
   setActiveTools(extensionId: string, conversationId: string, toolNames: string[]): Promise<unknown> | unknown;
@@ -995,6 +997,11 @@ function dispatchConversationsCapability(
           : {}),
       ...(input.allowedToolNames !== undefined
         ? { allowedToolNames: optionalStringArray(input.allowedToolNames, 'Conversation allowed tool names') }
+        : {}),
+      ...(input.liveSessionResourceOptions &&
+      typeof input.liveSessionResourceOptions === 'object' &&
+      !Array.isArray(input.liveSessionResourceOptions)
+        ? { liveSessionResourceOptions: input.liveSessionResourceOptions as Record<string, unknown> }
         : {}),
     });
   }
@@ -2528,13 +2535,20 @@ export function createExtensionBackendCapabilityDispatcher(
       input?: Parameters<ReturnType<typeof createExtensionConversationsCapability>['create']>[0] & {
         runtimeScope?: string;
         runtimeSettingsFilePath?: string;
+        liveSessionResourceOptions?: Record<string, unknown>;
       },
     ) =>
       createExtensionConversationsCapability(
-        input?.runtimeSettingsFilePath
+        input?.runtimeSettingsFilePath || input?.liveSessionResourceOptions
           ? {
               getRuntimeScope: () => input.runtimeScope ?? 'shared',
-              getSettingsFile: () => input.runtimeSettingsFilePath!,
+              ...(input.runtimeSettingsFilePath ? { getSettingsFile: () => input.runtimeSettingsFilePath! } : {}),
+              ...(input.liveSessionResourceOptions
+                ? {
+                    buildLiveSessionResourceOptions: () => input.liveSessionResourceOptions! as LiveSessionResourceOptions,
+                    buildLiveSessionResourceOptionsAsync: async () => input.liveSessionResourceOptions! as LiveSessionResourceOptions,
+                  }
+                : {}),
             }
           : undefined,
       ).create(input),

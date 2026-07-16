@@ -42,14 +42,13 @@ Neon Pilot uses adaptive workbench layouts, not one-off page chrome. Every main-
 
 Use `docs/design/page-template-standards.md` for the accepted shell-region rules and approved page-type map before inventing local page chrome. The six defaults are Conversation, Table, Editor, Settings, Dashboard, and Setup.
 
-Routes are composed from shell regions:
+The host owns only the top bar, Launcher, taskbar, navigation history, and global status. Each application owns the complete canvas below it and composes its own regions:
 
-- global left nav: persistent top-level and utility navigation
-- contextual left area: route-declared selection/navigation content, blank when absent
+- application sidebar: optional application-owned destinations or resource navigation
 - main page: required primary workflow surface
-- right sidebar: route-declared context rail, hidden when absent
+- inspector: optional application-owned selected-object context
 
-Threads belong to the Chat route's contextual left area. Do not keep Threads visible on unrelated routes to fill space. Workbench belongs to the Chat route's right sidebar; other routes may use the same right sidebar region for inspectors, selected-item details, setup output, activity, logs, previews, or metadata.
+Threads belong to the Agent application's sidebar. Do not keep them visible in unrelated applications. Workbench belongs to Agent; other applications may compose inspectors for selected-item details, setup output, activity, logs, previews, or metadata.
 
 Route-owned right sidebars use the shared context rail grammar: `ContextRail` as the root, `ContextRailHeader` for one compact title/subtitle/action band, `ContextRailBody` for the single scroll container, and `ContextRailSection` for grouped content. The shell owns the rail background and divider. Do not create route-local right bars with custom `aside` padding, custom header heights, card stacks, or a brighter/darker panel background than the host region.
 

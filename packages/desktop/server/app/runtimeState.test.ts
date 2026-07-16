@@ -82,6 +82,10 @@ vi.mock('../extensions/extensionRuntimeResources.js', () => ({
   listRuntimeExtensionBackendEntries: listRuntimeExtensionBackendEntriesMock,
 }));
 
+vi.mock('../extensions/extensionRegistry.js', () => ({
+  listExtensionSkillRegistrations: listExtensionSkillRegistrationsMock,
+}));
+
 vi.mock('@earendil-works/pi-coding-agent', () => ({
   AuthStorage: authStorageMock,
 }));
@@ -167,6 +171,8 @@ describe('createRuntimeState', () => {
     buildSkillInjectionPlanAsyncMock.mockResolvedValue({ skillPaths: ['/skills/async'], inlineSkills: [], diagnostics: [] });
     buildPromptTemplatePlanAsyncMock.mockClear();
     buildPromptTemplatePlanAsyncMock.mockResolvedValue({ templatePaths: ['/prompts/async.md'], templates: [], diagnostics: [] });
+    buildInstructionPlanMock.mockReset();
+    buildInstructionPlanMock.mockResolvedValue({ layers: [], finalSystemPrompt: '', diagnostics: [] });
     authStorageMock.hasAuth.mockReset();
     authStorageMock.hasAuth.mockReturnValue(false);
     authStorageMock.create.mockClear();
@@ -221,6 +227,28 @@ describe('createRuntimeState', () => {
     expect(materializeRuntimeResourcesToAgentDirMock).toHaveBeenCalledWith(resolvedShared, temporaryAgentDir);
     expect(existsSync(temporaryAgentDir)).toBe(false);
     expect(logger.warn).not.toHaveBeenCalledWith('failed to materialize runtime resources', expect.anything());
+  });
+
+  it('invalidates cached live-session resources when extension skills register after startup', () => {
+    const state = createTestRuntimeState();
+    state.materializeRuntimeResources();
+    expect(state.buildLiveSessionResourceOptions().additionalSkillPaths).toEqual(['/skills/sync']);
+
+    listExtensionSkillRegistrationsMock.mockReturnValue([
+      {
+        extensionId: 'system-extension-manager',
+        id: 'local-extension-development',
+        path: '/app/skills/local-extension-development/SKILL.md',
+      },
+    ]);
+    buildSkillInjectionPlanMock.mockReturnValue({
+      skillPaths: ['/app/skills/local-extension-development'],
+      inlineSkills: [],
+      diagnostics: [],
+    });
+
+    expect(state.buildLiveSessionResourceOptions().additionalSkillPaths).toEqual(['/app/skills/local-extension-development']);
+    expect(buildSkillInjectionPlanMock).toHaveBeenCalledTimes(2);
   });
 
   it('blocks global active tool mutation but allows lifecycle-scoped active tool changes', () => {
@@ -383,19 +411,32 @@ describe('createRuntimeState', () => {
     });
   });
 
-  it('seeds live session resource options while materializing runtime resources', async () => {
+  it('does not let startup materialization suppress asynchronously assembled instructions', async () => {
+    buildInstructionPlanMock.mockResolvedValueOnce({
+      layers: [
+        {
+          id: 'bundled-authoring',
+          content: 'Read the bundled extension authoring skill.',
+          source: { kind: 'extension', label: 'Extension Manager', extensionId: 'system-extension-manager' },
+        },
+      ],
+      finalSystemPrompt: '',
+      diagnostics: [],
+    });
     const state = createTestRuntimeState();
 
     state.materializeRuntimeResources();
 
     await expect(state.buildLiveSessionResourceOptionsAsync()).resolves.toEqual({
       additionalExtensionPaths: ['/ext/shared'],
-      additionalSkillPaths: ['/skills/sync'],
-      additionalPromptTemplatePaths: ['/prompts/sync.md'],
+      additionalSkillPaths: ['/skills/async'],
+      additionalPromptTemplatePaths: ['/prompts/async.md'],
       additionalThemePaths: ['/themes/shared.json'],
+      systemPromptSupplement: 'Read the bundled extension authoring skill.',
     });
-    expect(buildSkillInjectionPlanAsyncMock).not.toHaveBeenCalled();
-    expect(buildPromptTemplatePlanAsyncMock).not.toHaveBeenCalled();
+    expect(buildSkillInjectionPlanAsyncMock).toHaveBeenCalledTimes(1);
+    expect(buildPromptTemplatePlanAsyncMock).toHaveBeenCalledTimes(1);
+    expect(buildInstructionPlanMock).toHaveBeenCalledTimes(1);
   });
 
   it('clears live session resource caches after skill runtime resources refresh', async () => {

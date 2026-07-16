@@ -9,19 +9,24 @@ import { addNotification } from '../components/notifications/notificationStore';
 import { ExtensionPage } from './ExtensionPage';
 import { useExtensionRegistry } from './useExtensionRegistry';
 
+const nativeHostMockState = vi.hoisted(() => ({ nextMountId: 0 }));
+
 vi.mock('../components/notifications/notificationStore', () => ({
   addNotification: vi.fn(),
 }));
 
 vi.mock('./NativeExtensionSurfaceHost', () => ({
-  NativeExtensionSurfaceHost: ({ surface }: { surface: { extensionId: string; id: string } }) => {
+  NativeExtensionSurfaceHost: ({ surface, search }: { surface: { extensionId: string; id: string }; search: string }) => {
     const [mountedSurfaceId] = useState(surface.id);
+    const [mountId] = useState(() => ++nativeHostMockState.nextMountId);
     return (
       <div
         data-testid="surface-host"
         data-extension-id={surface.extensionId}
         data-surface-id={surface.id}
         data-mounted-surface-id={mountedSurfaceId}
+        data-mount-id={mountId}
+        data-search={search}
       />
     );
   },
@@ -38,6 +43,7 @@ vi.mock('./useExtensionRegistry', () => ({
 
 describe('ExtensionPage', () => {
   afterEach(() => {
+    nativeHostMockState.nextMountId = 0;
     window.localStorage.clear();
     vi.mocked(useExtensionRegistry).mockReset();
     vi.mocked(useExtensionRegistry).mockReturnValue({
@@ -233,6 +239,75 @@ describe('ExtensionPage', () => {
     expect(screen.queryByText(/Loading extension/i)).toBeNull();
   });
 
+  it('keeps a registered application route quiet while its surface catches up', () => {
+    vi.mocked(useExtensionRegistry).mockReturnValue({
+      loading: false,
+      error: null,
+      applications: [],
+      applicationNavigation: [
+        {
+          id: 'automations',
+          extensionId: 'system-automations',
+          applicationId: 'system-agent:agent',
+          label: 'Automations',
+          route: '/automations',
+          order: 10,
+        },
+      ],
+      extensions: [],
+      routes: [],
+      surfaces: [],
+    } as never);
+
+    const { container } = render(
+      <MemoryRouter initialEntries={['/automations']}>
+        <ExtensionPage />
+      </MemoryRouter>,
+    );
+
+    expect(container.querySelector('[role="status"]')?.getAttribute('aria-label')).toBe('Loading extension page');
+    expect(screen.queryByText('No page is registered here')).toBeNull();
+  });
+
+  it('keeps a manifest-declared page quiet while application registration catches up', () => {
+    vi.mocked(useExtensionRegistry).mockReturnValue({
+      loading: false,
+      error: null,
+      applications: [],
+      applicationNavigation: [],
+      extensions: [
+        {
+          id: 'system-gateways',
+          enabled: true,
+          packageType: 'system',
+          contributes: {
+            views: [
+              {
+                id: 'page',
+                title: 'Gateways',
+                location: 'main',
+                route: '/gateways',
+                component: 'GatewaysPage',
+                applicationId: 'system-agent:agent',
+              },
+            ],
+          },
+        },
+      ],
+      routes: [],
+      surfaces: [],
+    } as never);
+
+    const { container } = render(
+      <MemoryRouter initialEntries={['/gateways']}>
+        <ExtensionPage />
+      </MemoryRouter>,
+    );
+
+    expect(container.querySelector('[role="status"]')?.getAttribute('aria-label')).toBe('Loading extension page');
+    expect(screen.queryByText('No page is registered here')).toBeNull();
+  });
+
   it('renders the most specific extension route when parent and child routes both match', () => {
     vi.mocked(useExtensionRegistry).mockReturnValue({
       loading: false,
@@ -347,6 +422,54 @@ describe('ExtensionPage', () => {
     const host = screen.getByTestId('surface-host');
     expect(host.getAttribute('data-surface-id')).toBe('page');
     expect(host.getAttribute('data-mounted-surface-id')).toBe('page');
+  });
+
+  it('preserves a native surface when only its route state changes', () => {
+    vi.mocked(useExtensionRegistry).mockReturnValue({
+      loading: false,
+      error: null,
+      surfaces: [
+        {
+          extensionId: 'fixture-reports',
+          id: 'reports-page',
+          title: 'Reports',
+          location: 'main',
+          route: '/reports',
+          component: 'ReportsPage',
+          packageType: 'user',
+          frontend: { entry: 'dist/frontend.js' },
+        },
+      ],
+      routes: [],
+      extensions: [],
+    } as never);
+
+    function Harness() {
+      const navigate = useNavigate();
+      return (
+        <>
+          <button type="button" onClick={() => navigate('/reports?sort=recent')}>
+            Sort reports
+          </button>
+          <ExtensionPage />
+        </>
+      );
+    }
+
+    render(
+      <MemoryRouter initialEntries={['/reports?sort=name']}>
+        <Routes>
+          <Route path="*" element={<Harness />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    const initialMountId = screen.getByTestId('surface-host').getAttribute('data-mount-id');
+    fireEvent.click(screen.getByRole('button', { name: 'Sort reports' }));
+
+    const host = screen.getByTestId('surface-host');
+    expect(host.getAttribute('data-search')).toBe('?sort=recent');
+    expect(host.getAttribute('data-mount-id')).toBe(initialMountId);
   });
 
   it('shows a calm recovery state for unknown extension routes without warning toasts', () => {

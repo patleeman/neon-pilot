@@ -1,4 +1,4 @@
-import { resolve } from 'node:path';
+import { basename, dirname, resolve } from 'node:path';
 
 import { DefaultResourceLoader, type ExtensionFactory, loadProjectContextFiles } from '@earendil-works/pi-coding-agent';
 import { getPiAgentRuntimeDir } from '@neon-pilot/core';
@@ -31,9 +31,15 @@ function buildNeonSystemPrompt(input: { cwd: string; agentDir: string; systemPro
   )}`;
 }
 
-function buildDs4SystemPrompt(input: { cwd: string; agentDir: string; skillPaths: string[] }): string {
+function buildDs4SystemPrompt(input: { cwd: string; agentDir: string; skillPaths: string[]; systemPromptSupplement?: string }): string {
   const agentsPointers = renderAgentsPointers(input.cwd, input.agentDir);
-  void input.skillPaths;
+  const skillPointers = [...new Set(input.skillPaths.map((path) => (path.endsWith('SKILL.md') ? path : resolve(path, 'SKILL.md'))))]
+    .map((path) => ({ id: basename(dirname(path)), path }))
+    .sort((left, right) => left.id.localeCompare(right.id) || left.path.localeCompare(right.path));
+  const skillCatalog =
+    skillPointers.length > 0
+      ? `\n\nAvailable skills (pointer only; read the exact SKILL.md when a request names or clearly matches one):\n${skillPointers.map(({ id, path }) => `- ${id}: ${path}`).join('\n')}\nDo not search the filesystem for skills. Use the pointer above or run \`ds4 skills get <id>\` before acting.`
+      : '';
   return `You are an expert coding assistant inside Neon Pilot.
 
 Guidelines:
@@ -46,7 +52,7 @@ DS4 mode:
 - Only the shown tools are directly available. Use bash to explore and invoke withheld system tools through the \`ds4\` CLI; start with \`ds4 help\` and \`ds4 tools\`.
 - The read tool uses compact \`line|text\` output; line numbers are references, not file content. For large edits, the edit tool supports one \`[upto]\` marker between unique head and tail anchors.
 - DS4 bash compacts eligible shell output with RTK by default when RTK is installed. Use \`ds4 compression off\` to disable it, and \`ds4 compression rtk\` to re-enable it.
-- Skills are progressively loaded too. Use \`ds4 skills list\`, \`ds4 skills search <query>\`, and \`ds4 skills get <id-or-query>\` before applying a workflow.${agentsPointers}`;
+- Skills are progressively loaded too. Use \`ds4 skills list\`, \`ds4 skills search <query>\`, and \`ds4 skills get <id-or-query>\` before applying a workflow.${renderSystemPromptSupplement(input.systemPromptSupplement)}${skillCatalog}${agentsPointers}`;
 }
 
 function labelAgentsFile(filePath: string, agentDir: string): string {
@@ -148,6 +154,7 @@ function createLiveSessionLoader(cwd: string, options: LiveSessionLoaderOptions 
           cwd,
           agentDir,
           skillPaths: options.skillDiscoveryPaths ?? options.additionalSkillPaths ?? [],
+          systemPromptSupplement: options.systemPromptSupplement,
         })
       : buildNeonSystemPrompt({ cwd, agentDir, systemPromptSupplement: options.systemPromptSupplement }),
     noSkills: options.noSkills,

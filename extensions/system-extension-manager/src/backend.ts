@@ -1,8 +1,10 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import type { ExtensionBackendContext } from '@neon-pilot/extensions';
 import {
+  buildRuntimeExtension,
   createRuntimeExtension,
   deleteRuntimeExtension,
   installCatalogExtension as installCatalogExtensionFromHost,
@@ -22,6 +24,25 @@ import {
 import { HOST_VIEW_COMPONENT_DEFINITIONS } from '@neon-pilot/extensions/host-view-components';
 
 const ADDITIONAL_EXTENSION_PATHS_SETTING = 'extensions.additionalPaths';
+
+export async function provideExtensionAuthoringInstructions() {
+  const skillPath = fileURLToPath(new URL('../skills/local-extension-development/SKILL.md', import.meta.url));
+  return {
+    layers: [
+      {
+        id: 'extension-authoring-skill-pointer',
+        providerId: 'system-extension-manager',
+        title: 'Bundled extension authoring skill',
+        content: `When a request creates, changes, validates, or debugs a Neon Pilot extension, page, or application, read and follow the bundled skill at ${skillPath}. Treat the installed app and its packaged resources as read-only.`,
+        source: { kind: 'extension', label: 'Extension Manager', extensionId: 'system-extension-manager' },
+        scope: 'runtime',
+        priority: 40,
+        mutable: false,
+        risk: 'normal',
+      },
+    ],
+  };
+}
 
 interface ExtensionIdInput {
   id?: unknown;
@@ -68,6 +89,10 @@ export async function createExtension(input: unknown, _ctx: ExtensionBackendCont
     template: body.template,
   });
   return { ok: true, ...result };
+}
+
+export async function buildExtension(input: unknown, _ctx: ExtensionBackendContext) {
+  return buildRuntimeExtension(requireExtensionId(asRecord(input)));
 }
 
 export async function snapshotExtension(input: ExtensionIdInput, _ctx: ExtensionBackendContext) {
@@ -145,10 +170,22 @@ export async function manageExtension(input: unknown, ctx: ExtensionBackendConte
   const action = typeof body.action === 'string' ? body.action : 'list';
   if (action === 'list') return listExtensions(body, ctx);
   if (action === 'create') return createExtension(body, ctx);
+  if (action === 'build') return buildExtension(body, ctx);
   if (action === 'snapshot') return snapshotExtension(body as ExtensionIdInput, ctx);
   if (action === 'delete') return deleteExtension(body as ExtensionIdInput, ctx);
   if (action === 'reload') return reloadExtension(body as ExtensionIdInput, ctx);
   if (action === 'smoke') return smokeExtension(body as ExtensionIdInput, ctx);
+  if (action === 'invoke') {
+    const extensionId = requireExtensionId(body);
+    const actionId = typeof body.actionId === 'string' ? body.actionId.trim() : '';
+    if (!actionId) throw new Error('extension action id is required.');
+    return {
+      ok: true,
+      extensionId,
+      actionId,
+      result: await ctx.extensions.callAction(extensionId, actionId, body.input),
+    };
+  }
   if (action === 'validate') return validateExtension(body, ctx);
   if (action === 'hostViewComponents') return listHostViewComponents(body, ctx);
   if (action === 'listInstallable') return listInstallableExtensions(body, ctx);
@@ -191,6 +228,7 @@ function normalizeManagerInput(input: unknown): Record<string, unknown> {
       description: flags.description,
       template: flags.template,
     };
+  if (command === 'extensions build') return { ...body, action: 'build', extensionId: args[0] };
   if (command === 'extensions snapshot') return { ...body, action: 'snapshot', extensionId: args[0] };
   if (command === 'extensions delete' || command === 'extensions uninstall') return { ...body, action: 'delete', extensionId: args[0] };
   if (command === 'extensions catalog') return { ...body, action: 'listInstallable' };
@@ -202,6 +240,18 @@ function normalizeManagerInput(input: unknown): Record<string, unknown> {
   if (command === 'extensions reload')
     return args[0] ? { ...body, action: 'reload', extensionId: args[0] } : { ...body, action: 'reloadExtensions' };
   if (command === 'extensions smoke') return { ...body, action: 'smoke', extensionId: args[0] };
+  if (command === 'extensions invoke') {
+    const rawInput = flags['input-json'] ?? flags.inputJson;
+    let parsedInput: unknown = undefined;
+    if (typeof rawInput === 'string' && rawInput.trim()) {
+      try {
+        parsedInput = JSON.parse(rawInput);
+      } catch {
+        throw new Error('--input-json must be valid JSON.');
+      }
+    }
+    return { ...body, action: 'invoke', extensionId: args[0], actionId: args[1], input: parsedInput };
+  }
   if (command === 'extensions enable') return { ...body, action: 'enable', extensionId: args[0] };
   if (command === 'extensions disable') return { ...body, action: 'disable', extensionId: args[0] };
   if (command === 'extensions paths') return { ...body, action: 'readSearchPaths' };

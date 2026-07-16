@@ -42,6 +42,54 @@ const packagedExtensionFilter = [
 const defaultInstallableExtensionFilter = ['system-browser', 'system-onboarding'].flatMap((id) =>
   packagedExtensionFilter.map((entry) => `${id}/${entry.replace(/^\*\//u, '')}`),
 );
+const packagedExtensionSdkFilter = [
+  'index.d.ts',
+  'desktopBridge.d.ts',
+  'host.d.ts',
+  'ui.d.ts',
+  'settings.d.ts',
+  'data.d.ts',
+  'composer.d.ts',
+  'excalidraw.d.ts',
+  'host-view-components.d.ts',
+  'workbench.d.ts',
+  'workbench-artifacts.d.ts',
+  'workbench-browser.d.ts',
+  'workbench-diffs.d.ts',
+  'workbench-files.d.ts',
+  'workbench-runs.d.ts',
+  'workbench-transcript.d.ts',
+  ...[
+    'agent',
+    'artifacts',
+    'audio',
+    'automations',
+    'browser',
+    'checkpoints',
+    'cli',
+    'compaction',
+    'conversations',
+    'documents',
+    'events',
+    'extensions',
+    'gateways',
+    'images',
+    'knowledge',
+    'mcp',
+    'modelGateway',
+    'promptAssembly',
+    'runs',
+    'runtime',
+    'settings',
+    'skills',
+    'telemetry',
+    'terminal',
+    'tools',
+    'transcription',
+    'videos',
+    'webContent',
+  ].map((name) => `backend/${name}.d.ts`),
+];
 
 function readDesktopPackageVersion() {
   const packageJson = JSON.parse(readFileSync(resolve('packages/desktop/package.json'), 'utf8'));
@@ -180,6 +228,13 @@ const electronBuilderConfig = {
       filter: packagedExtensionFilter,
     },
     {
+      from: 'packages/extensions/dist',
+      to: 'extensions/system-extension-manager/skills/local-extension-development/references/sdk',
+      // Keep this list aligned with extension-build.mjs. Declarations are a
+      // product contract: packaged agents must never see APIs the builder rejects.
+      filter: packagedExtensionSdkFilter,
+    },
+    {
       from: 'installable-extensions',
       to: 'default-installable-extensions',
       filter: defaultInstallableExtensionFilter,
@@ -192,6 +247,10 @@ const electronBuilderConfig = {
     {
       from: 'docs',
       to: 'docs',
+    },
+    {
+      from: 'dist/extension-authoring',
+      to: 'extension-authoring',
     },
     ...optionalExtraResource({
       from: 'prompt-catalog',

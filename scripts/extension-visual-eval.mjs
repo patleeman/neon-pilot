@@ -159,6 +159,20 @@ async function waitForBodyWithout(cdp, child, label, pattern, timeoutMs = 15_000
   throw new Error(`Timed out waiting for ${label}. Last body text:\n${lastBody.slice(-1200)}`);
 }
 
+async function waitForBodyText(cdp, child, label, expected, present = true, timeoutMs = 15_000) {
+  const deadline = Date.now() + timeoutMs;
+  let lastBody = '';
+  while (Date.now() < deadline) {
+    if (child.exitCode !== null) throw new Error(`App exited while waiting for ${label}.`);
+    lastBody = String(await evalJs(cdp, 'document.body ? document.body.innerText : ""')).trim();
+    if (lastBody.includes(expected) === present) return lastBody;
+    await sleep(250);
+  }
+  throw new Error(
+    `Timed out waiting for ${label} (${present ? 'present' : 'absent'}: ${expected}). Last body text:\n${lastBody.slice(-1200)}`,
+  );
+}
+
 async function waitForPathname(cdp, child, route, timeoutMs = 20_000) {
   const expected = route.split(/[?#]/)[0] || '/';
   const deadline = Date.now() + timeoutMs;
@@ -192,6 +206,53 @@ async function clickVisibleButton(cdp, label) {
       return true;
     })()`,
   );
+}
+
+async function clickVisibleText(cdp, label, withinText = '', timeoutMs = 15_000) {
+  const expression = `(() => {
+      const targetLabel = ${JSON.stringify(label)};
+      const scopeText = ${JSON.stringify(withinText)};
+      const normalizeText = (value) => String(value || '').trim().toLocaleLowerCase();
+      // Match text inside a semantic control. UI capitalization is presentation
+      // and should not make a valid interaction contract fail.
+      const candidates = [...document.querySelectorAll('body *')]
+        .filter((item) => normalizeText(item.textContent) === normalizeText(targetLabel))
+        .map((item) => item.closest('button, [role="button"], a, [tabindex], tr'))
+        .filter(Boolean)
+        .filter((item, index, all) => all.indexOf(item) === index)
+        .filter((item) => {
+          if (!scopeText) return true;
+          const scope = item.closest('tr, li, [role="row"], [role="listitem"], [data-resource-id]');
+          return normalizeText(scope?.textContent).includes(normalizeText(scopeText));
+        })
+        .filter((item) => {
+          const rect = item.getBoundingClientRect();
+          const style = getComputedStyle(item);
+          return rect.width > 0
+            && rect.height > 0
+            && style.visibility !== 'hidden'
+            && style.pointerEvents !== 'none'
+            && !item.disabled
+            && item.getAttribute('aria-disabled') !== 'true';
+        })
+        .sort((left, right) => {
+          const leftInDialog = Boolean(left.closest('[role="dialog"], [aria-modal="true"]'));
+          const rightInDialog = Boolean(right.closest('[role="dialog"], [aria-modal="true"]'));
+          if (leftInDialog !== rightInDialog) return leftInDialog ? -1 : 1;
+          const a = left.getBoundingClientRect();
+          const b = right.getBoundingClientRect();
+          return (a.width * a.height) - (b.width * b.height);
+        });
+      if (!candidates[0]) return false;
+      candidates[0].click();
+      return true;
+    })()`;
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (await evalJs(cdp, expression)) return true;
+    await sleep(250);
+  }
+  return false;
 }
 
 async function dismissOnboardingOverlayIfRequested(cdp, child) {
@@ -267,7 +328,10 @@ function resizeScreenshotForJudge(file, outDir, maxPixels) {
 }
 
 function captureModeSet() {
-  const raw = arg('capture-modes', 'viewport,full,scroll')
+  // Electron's custom-protocol page can render a black image when CDP uses
+  // captureBeyondViewport. Scroll-depth viewport captures cover the real app
+  // scroll containers reliably, so they are the default visual evidence.
+  const raw = arg('capture-modes', 'viewport,scroll')
     .split(',')
     .map((mode) => mode.trim().toLowerCase())
     .filter(Boolean);
@@ -618,6 +682,10 @@ export async function runVisualCapture() {
     .split(',')
     .map((route) => route.trim())
     .filter(Boolean);
+  const setupActionsPath = arg('setup-actions');
+  const setupActions = setupActionsPath ? JSON.parse(readFileSync(resolve(setupActionsPath), 'utf8')) : [];
+  const interactionsPath = arg('interactions');
+  const interactions = interactionsPath ? JSON.parse(readFileSync(resolve(interactionsPath), 'utf8')) : [];
   const judgeImageMaxPixels = numberArg('judge-image-max-px', 900);
   const captureModes = captureModeSet();
 
@@ -625,12 +693,19 @@ export async function runVisualCapture() {
   if (!existsSync(appPath)) throw new Error(`App not found: ${appPath}`);
   if (appEntry && !existsSync(resolve(appEntry))) throw new Error(`App entry not found: ${resolve(appEntry)}`);
   if (extensionZip && !existsSync(extensionZip)) throw new Error(`Extension zip not found: ${extensionZip}`);
+  if (!Array.isArray(setupActions)) throw new Error('--setup-actions must point to a JSON array.');
+  if (!Array.isArray(interactions)) throw new Error('--interactions must point to a JSON array.');
   mkdirSync(outDir, { recursive: true });
 
   const tempRoot = mkdtempSync(join(tmpdir(), 'neon-pilot-extension-visual-'));
   const stateRoot = join(tempRoot, 'state');
   const debugPort = await allocatePort();
-  const executablePath = join(appPath, 'Contents', 'MacOS', basename(appPath, '.app'));
+  const plistPath = join(appPath, 'Contents', 'Info.plist');
+  const executableName = String(
+    spawnSync('/usr/libexec/PlistBuddy', ['-c', 'Print :CFBundleExecutable', plistPath], { encoding: 'utf8' }).stdout ?? '',
+  ).trim();
+  if (!executableName) throw new Error(`Could not resolve CFBundleExecutable from ${plistPath}`);
+  const executablePath = join(appPath, 'Contents', 'MacOS', executableName);
   const stdoutChunks = [];
   const stderrChunks = [];
   const renderLogs = () =>
@@ -660,10 +735,10 @@ export async function runVisualCapture() {
       NEON_PILOT_DESKTOP_USER_DATA_DIR: join(tempRoot, 'user-data'),
       NEON_PILOT_DAEMON_SOCKET_PATH: join(tempRoot, 'daemon.sock'),
       NEON_PILOT_DESKTOP_DEV_BUNDLE: appEntry ? '1' : undefined,
-      NEON_PILOT_REPO_ROOT: repoRoot,
+      NEON_PILOT_REPO_ROOT: appEntry ? repoRoot : undefined,
     },
     stdio: ['ignore', 'pipe', 'pipe'],
-    cwd: appEntry ? desktopPackageDir : repoRoot,
+    cwd: appEntry ? desktopPackageDir : tempRoot,
   });
   child.stdout.on('data', (chunk) => stdoutChunks.push(String(chunk)));
   child.stderr.on('data', (chunk) => stderrChunks.push(String(chunk)));
@@ -710,6 +785,15 @@ export async function runVisualCapture() {
         await patchJson(cdp, `/api/extensions/${encodeURIComponent(importedExtensionId)}`, { enabled: true });
       }
       await postJson(cdp, '/api/extensions/reload', {});
+      for (const action of setupActions) {
+        if (!action || typeof action.actionId !== 'string') throw new Error('Every visual setup action needs an actionId.');
+        const result = await postJson(
+          cdp,
+          `/api/extensions/${encodeURIComponent(importedExtensionId)}/actions/${encodeURIComponent(action.actionId)}`,
+          action.input ?? {},
+        );
+        if (result?.ok === false) throw new Error(`Visual setup action ${action.actionId} failed: ${JSON.stringify(result)}`);
+      }
       await cdp.send('Page.reload', { ignoreCache: true });
       await waitForLoadedBody(cdp, child, 'post-import reload');
       const routes = requestedGeneratedRoutes.length > 0 ? requestedGeneratedRoutes : inferGeneratedRoutes(manifest);
@@ -722,6 +806,64 @@ export async function runVisualCapture() {
             judgeScreenshot: resizeScreenshotForJudge(capture.screenshot, outDir, judgeImageMaxPixels),
           });
         }
+      }
+      for (const interaction of interactions) {
+        const steps = Array.isArray(interaction?.steps)
+          ? interaction.steps
+          : [
+              {
+                clickText: interaction?.clickText,
+                clickTextAny: interaction?.clickTextAny,
+                expectText: interaction?.expectText,
+                expectAbsentText: interaction?.expectAbsentText,
+              },
+            ];
+        if (!interaction || typeof interaction.route !== 'string' || steps.length === 0) {
+          throw new Error('Every visual interaction needs a route and at least one click step.');
+        }
+        await cdp.send('Page.navigate', { url: `neon-pilot://app${interaction.route}` });
+        await waitForPathname(cdp, child, interaction.route);
+        await waitForLoadedBody(cdp, child, interaction.route);
+        await sleep(800);
+        if (typeof interaction.expectBeforeText === 'string') {
+          await waitForBodyText(cdp, child, 'interaction precondition', interaction.expectBeforeText, true);
+        }
+        if (typeof interaction.expectBeforeAbsentText === 'string') {
+          await waitForBodyText(cdp, child, 'interaction precondition', interaction.expectBeforeAbsentText, false);
+        }
+        for (const step of steps) {
+          const clickLabels = Array.isArray(step?.clickTextAny)
+            ? step.clickTextAny.filter((label) => typeof label === 'string' && label.trim())
+            : typeof step?.clickText === 'string'
+              ? [step.clickText]
+              : [];
+          if (clickLabels.length === 0) throw new Error('Every visual interaction step needs clickText or clickTextAny.');
+          let clickedLabel = '';
+          for (const label of clickLabels) {
+            if (await clickVisibleText(cdp, label, typeof step.withinText === 'string' ? step.withinText : '')) {
+              clickedLabel = label;
+              break;
+            }
+          }
+          if (!clickedLabel) {
+            throw new Error(`Could not find an enabled, topmost interaction target: ${clickLabels.join(' or ')}`);
+          }
+          if (typeof step.expectText === 'string') {
+            await waitForBodyText(cdp, child, `${clickedLabel} result`, step.expectText, true);
+          }
+          if (typeof step.expectAbsentText === 'string') {
+            await waitForBodyText(cdp, child, `${clickedLabel} result`, step.expectAbsentText, false);
+          }
+          await sleep(350);
+        }
+        const variant = typeof interaction.variant === 'string' ? interaction.variant : 'interaction';
+        const screenshot = await captureScreenshot(cdp, interaction.route, outDir, 'generated-screenshots', variant, false);
+        generated.push({
+          route: interaction.route,
+          variant,
+          screenshot,
+          judgeScreenshot: resizeScreenshotForJudge(screenshot, outDir, judgeImageMaxPixels),
+        });
       }
     }
 
@@ -739,6 +881,8 @@ export async function runVisualCapture() {
       generated,
       judgeImageMaxPixels,
       captureModes: [...captureModes],
+      setupActions,
+      interactions,
     };
     write(resolve(outDir, 'visual-capture-summary.json'), `${JSON.stringify(metadata, null, 2)}\n`, 'utf8');
     writeJudgePrompt(outDir, baseline, generated, metadata);

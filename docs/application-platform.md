@@ -25,6 +25,8 @@ An application owns:
 
 The shell does not expose a global page selector, conversation controls, extension actions, or inspector toggle.
 
+All routes owned by installed applications and extensions use client-side navigation. Moving between applications or pages must not reload the renderer document; application content may change, but the shell, extension registry, and shared runtime remain mounted.
+
 ## Extension and application boundaries
 
 An extension is the installable package and permission boundary. An application is a top-level user experience contributed by an extension.
@@ -51,14 +53,11 @@ Closing an application view dismisses it from the taskbar. It does not delete, a
 
 ## Taskbar behavior
 
-- Users may pin or unpin any available application.
-- Pinned applications remain visible when closed.
-- Open unpinned applications remain visible until their last application view closes.
+- The taskbar shows open applications with an icon, label, active state, and direct close action.
 - Clicking an inactive application restores its most recently active view.
-- Clicking the active application opens its view menu when the application supports multiple views.
-- Hovering an application opens the same view menu after a short delay.
-- The taskbar moves applications that do not fit into one overflow menu.
-- Pinned applications keep a stable user-selected order; open unpinned applications follow them by recency.
+- Closing an application removes it from the taskbar without deleting application data.
+- Pinning belongs to the Launcher; pinned applications remain easy to launch but do not remain in the taskbar while closed.
+- Narrow taskbars keep labels useful and allow horizontal access to additional open applications instead of replacing ordinary items with an ambiguous overflow control.
 - The last active valid application view is restored after restart.
 
 ## Launcher behavior

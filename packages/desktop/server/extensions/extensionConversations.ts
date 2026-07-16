@@ -679,7 +679,16 @@ export function createExtensionConversationsCapability(
       if (input?.serviceTier) options.initialServiceTier = input.serviceTier;
       if (input?.allowedToolNames) options.allowedToolNames = input.allowedToolNames;
 
-      const created = await createSession(cwd, options);
+      const liveSessionResourceOptions = serverContext?.buildLiveSessionResourceOptionsAsync
+        ? await serverContext.buildLiveSessionResourceOptionsAsync(serverContext.getRuntimeScope())
+        : (serverContext?.buildLiveSessionResourceOptions?.(serverContext.getRuntimeScope()) ??
+          buildLiveSessionResourceOptionsForRuntime());
+
+      const created = await createSession(cwd, {
+        ...liveSessionResourceOptions,
+        ...options,
+        extensionFactories: serverContext?.buildLiveSessionExtensionFactories?.() ?? buildLiveSessionExtensionFactoriesForRuntime(),
+      });
 
       const initialPrompt = input?.prompt?.trim() || input?.initialPrompt?.trim();
       if (input?.title?.trim()) {

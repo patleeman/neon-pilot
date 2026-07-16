@@ -163,19 +163,24 @@ describe('DesktopTopBar', () => {
   });
 
   it('keeps global navigation together without application panel toggles', () => {
-    const html = renderTopBar({
-      isElectron: true,
-      activeHostId: 'local',
-      activeHostLabel: 'Local',
-      activeHostKind: 'local',
-      activeHostSummary: 'Local runtime is healthy.',
-      launchMode: 'stable',
-      launchLabel: null,
-    });
+    const html = renderTopBar(
+      {
+        isElectron: true,
+        activeHostId: 'local',
+        activeHostLabel: 'Local',
+        activeHostKind: 'local',
+        activeHostSummary: 'Local runtime is healthy.',
+        launchMode: 'stable',
+        launchLabel: null,
+      },
+      { onOpenHome: () => {} },
+    );
 
+    expect(html).toContain('Open Home');
     expect(html).toContain('Open Neon Pilot');
     expect(html.indexOf('Go back')).toBeLessThan(html.indexOf('Go forward'));
-    expect(html.indexOf('Go forward')).toBeLessThan(html.indexOf('Open Neon Pilot'));
+    expect(html.indexOf('Go forward')).toBeLessThan(html.indexOf('Open Home'));
+    expect(html.indexOf('Open Home')).toBeLessThan(html.indexOf('Open Neon Pilot'));
     expect(html).not.toContain('Hide sidebar');
     expect(html).not.toContain('Hide right sidebar');
   });

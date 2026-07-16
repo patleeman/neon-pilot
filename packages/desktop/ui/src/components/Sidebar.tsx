@@ -117,7 +117,6 @@ import { addNotification } from './notifications/notificationStore';
 import { ContextMenu, ContextMenuSection, ContextMenuSections } from './shared/ContextMenu';
 import { estimateContextMenuHeight } from './shared/contextMenuPosition';
 import { TextPromptDialog } from './shared/TextPromptDialog';
-import { shouldUseDocumentNavigationForSidebarRoute } from './sidebarNavigationRouting';
 import { CardMeta, IconButton, MenuItem, RowButton, SectionLabel, SidebarNavButton } from './ui';
 import { useSidebarConversationScope } from './useSidebarConversationScope';
 import { WorkspaceQuickSelectModal } from './WorkspaceQuickSelectModal';
@@ -515,14 +514,12 @@ function TopNavItem({
   label,
   badge,
   forceActive = false,
-  documentNavigationRoutes = [],
 }: {
   to: string;
   icon: string;
   label: string;
   badge?: number | null;
   forceActive?: boolean;
-  documentNavigationRoutes?: readonly string[];
 }) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -536,13 +533,9 @@ function TopNavItem({
       if (browserPath === to && routerPath !== to) {
         window.history.replaceState(window.history.state, '', routerPath);
       }
-      if (shouldUseDocumentNavigationForSidebarRoute(location.pathname, to, documentNavigationRoutes) && typeof window !== 'undefined') {
-        window.location.assign(to);
-        return;
-      }
       navigate(to);
     },
-    [documentNavigationRoutes, location.hash, location.pathname, location.search, navigate, to],
+    [location.hash, location.pathname, location.search, navigate, to],
   );
 
   return (
@@ -573,7 +566,6 @@ function SidebarPrimaryNav({
   newConversationHotkeyLabel,
   items,
   slotMetadata,
-  documentNavigationRoutes,
   onOpenChat,
   onNewConversation,
 }: {
@@ -583,7 +575,6 @@ function SidebarPrimaryNav({
   newConversationHotkeyLabel: string;
   items: SidebarExtensionNavItem[];
   slotMetadata: ReadonlyMap<string, { label?: string; order: number }>;
-  documentNavigationRoutes: readonly string[];
   onOpenChat: () => void;
   onNewConversation: () => void;
 }) {
@@ -619,12 +610,7 @@ function SidebarPrimaryNav({
         return (
           <div key={`${item.extensionId}:${item.id}`}>
             {slotLabel ? <SectionLabel className="px-4 pb-1 pt-2">{slotLabel}</SectionLabel> : null}
-            <TopNavItem
-              to={item.route}
-              icon={getExtensionNavIcon(item.icon)}
-              label={item.label}
-              documentNavigationRoutes={documentNavigationRoutes}
-            />
+            <TopNavItem to={item.route} icon={getExtensionNavIcon(item.icon)} label={item.label} />
           </div>
         );
       })}
@@ -632,17 +618,11 @@ function SidebarPrimaryNav({
   );
 }
 
-function SidebarSettingsNav({
-  items,
-  notice,
-  documentNavigationRoutes,
-}: {
-  items: SidebarExtensionNavItem[];
-  notice: string | null;
-  documentNavigationRoutes: readonly string[];
-}) {
+function SidebarSettingsNav({ items, notice }: { items: SidebarExtensionNavItem[]; notice: string | null }) {
+  if (items.length === 0 && !notice) return null;
+
   return (
-    <div className="relative z-20 shrink-0 bg-panel">
+    <nav className="relative z-20 shrink-0 bg-panel" aria-label="Application settings navigation">
       {notice ? (
         <CardMeta as="div" aria-live="polite" className="px-4 pb-2" style={{ color: 'rgb(var(--color-accent) / 0.8)' }}>
           {notice}
@@ -650,16 +630,10 @@ function SidebarSettingsNav({
       ) : null}
       <div className="border-t border-border-subtle px-0 py-2 space-y-0.5">
         {items.map((item) => (
-          <TopNavItem
-            key={`${item.extensionId}:${item.id}`}
-            to={item.route}
-            icon={getExtensionNavIcon(item.icon)}
-            label={item.label}
-            documentNavigationRoutes={documentNavigationRoutes}
-          />
+          <TopNavItem key={`${item.extensionId}:${item.id}`} to={item.route} icon={getExtensionNavIcon(item.icon)} label={item.label} />
         ))}
       </div>
-    </div>
+    </nav>
   );
 }
 
@@ -3892,7 +3866,6 @@ export function Sidebar({ onNewConversation, applicationId = 'system-agent:agent
         .map(({ item }) => item),
     [applicationNavItems],
   );
-  const documentNavigationRoutes = useMemo(() => applicationNavItems.map((item) => item.route), [applicationNavItems]);
   const activeSidebarSurface = useMemo(() => {
     return resolveRouteSidebarSurface({
       pathname: location.pathname,
@@ -3914,7 +3887,6 @@ export function Sidebar({ onNewConversation, applicationId = 'system-agent:agent
           newConversationHotkeyLabel={newConversationHotkeyLabel}
           items={primaryNavItems}
           slotMetadata={applicationSlotMetadata}
-          documentNavigationRoutes={documentNavigationRoutes}
           onOpenChat={handleOpenChat}
           onNewConversation={() => {
             handleNewConversation();
@@ -4283,11 +4255,7 @@ export function Sidebar({ onNewConversation, applicationId = 'system-agent:agent
           <div className="flex-1 min-h-0" aria-label="No contextual sidebar" />
         )}
 
-        <SidebarSettingsNav
-          items={settingsNavItems}
-          notice={sidebarNotice?.text ?? null}
-          documentNavigationRoutes={documentNavigationRoutes}
-        />
+        <SidebarSettingsNav items={settingsNavItems} notice={sidebarNotice?.text ?? null} />
       </aside>
       {renameConversationGroupPrompt ? (
         <TextPromptDialog

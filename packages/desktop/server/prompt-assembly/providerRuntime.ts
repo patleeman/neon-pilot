@@ -39,6 +39,10 @@ export async function invokePromptAssemblyProvider<T>(input: {
         extensionId: input.provider.extensionId,
         actionId: input.provider.handler,
         input: input.payload,
+        // Prompt providers run while assembled session resources are being built.
+        // Giving their workers that same assembled context would recurse into the
+        // in-flight prompt build and deadlock until the provider timeout.
+        resourceOptionsMode: 'minimal',
         signal: abortController.signal,
       }),
       timeoutPromise,

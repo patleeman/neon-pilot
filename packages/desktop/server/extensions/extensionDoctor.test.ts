@@ -56,6 +56,106 @@ describe('extension doctor', () => {
     expect(report.summary.errors).toBe(0);
   });
 
+  it('rejects user-extension Tailwind utilities and raw controls that the packaged builder cannot style', async () => {
+    const root = createExtensionPackage();
+    writeFileSync(
+      join(root, 'extension.json'),
+      JSON.stringify({
+        schemaVersion: 2,
+        id: 'doctor-test',
+        name: 'Doctor Test',
+        packageType: 'user',
+        frontend: { entry: 'dist/frontend.js' },
+        contributes: {
+          views: [{ id: 'page', title: 'Doctor Test', location: 'main', route: '/ext/doctor-test', component: 'DoctorPage' }],
+        },
+      }),
+    );
+    writeFileSync(
+      join(root, 'src', 'frontend.tsx'),
+      `export function DoctorPage() { return <div className="flex"><button>Save</button></div>; }\n`,
+    );
+    writeFileSync(join(root, 'dist', 'frontend.js'), `export function DoctorPage() { return null; }\n`);
+    writeFileSync(join(root, 'dist', 'build-manifest.json'), '{}\n');
+
+    const report = await validateExtensionPackage({ packageRoot: root });
+
+    expect(report.ok).toBe(false);
+    expect(report.findings.map((finding) => finding.code)).toEqual(
+      expect.arrayContaining(['uncompiled-extension-utilities', 'raw-extension-control']),
+    );
+  });
+
+  it('applies user UI guards to imported source files and packageType spoofing', async () => {
+    const root = createExtensionPackage();
+    writeFileSync(
+      join(root, 'extension.json'),
+      JSON.stringify({
+        schemaVersion: 2,
+        id: 'doctor-test',
+        name: 'Doctor Test',
+        packageType: 'system',
+        frontend: { entry: 'dist/frontend.js' },
+        contributes: {
+          views: [{ id: 'page', title: 'Doctor Test', location: 'main', route: '/ext/doctor-test', component: 'DoctorPage' }],
+        },
+      }),
+    );
+    mkdirSync(join(root, 'src', 'components'), { recursive: true });
+    writeFileSync(join(root, 'src', 'frontend.tsx'), `export { DoctorPage } from './components/DoctorPage';\n`);
+    writeFileSync(
+      join(root, 'src', 'components', 'DoctorPage.tsx'),
+      `export function DoctorPage() { return <div className="flex"><button>Save</button></div>; }\n`,
+    );
+    writeFileSync(join(root, 'dist', 'frontend.js'), `export function DoctorPage() { return null; }\n`);
+    writeFileSync(join(root, 'dist', 'build-manifest.json'), '{}\n');
+
+    const report = await validateExtensionPackage({ packageRoot: root });
+
+    expect(report.findings.map((finding) => finding.code)).toEqual(
+      expect.arrayContaining(['uncompiled-extension-utilities', 'raw-extension-control']),
+    );
+    expect(report.findings.some((finding) => finding.path?.endsWith('src/components/DoctorPage.tsx'))).toBe(true);
+  });
+
+  it('rejects shared-toolbar misuse, ambiguous destructive glyphs, and host-relative viewport sizing', async () => {
+    const root = createExtensionPackage();
+    writeFileSync(
+      join(root, 'extension.json'),
+      JSON.stringify({
+        schemaVersion: 2,
+        id: 'doctor-test',
+        name: 'Doctor Test',
+        packageType: 'user',
+        frontend: { entry: 'dist/frontend.js' },
+        contributes: {
+          views: [{ id: 'page', title: 'Doctor Test', location: 'main', route: '/ext/doctor-test', component: 'DoctorPage' }],
+        },
+      }),
+    );
+    writeFileSync(
+      join(root, 'src', 'frontend.tsx'),
+      `export function DoctorPage() { return <main style={{ height: 'calc(100vh - 200px)' }}><AppPageSection><DataTableToolbar searchValue=""><ToolbarButton>Refresh</ToolbarButton></DataTableToolbar><ResourceListItem title="Blank row" description="Hidden" active trailing={<Pill>Draft</Pill>} /><IconButton title="Delete item">✕</IconButton><div onClick={() => {}}>Clickable row</div><span aria-label="Loading\\u2026">{'Loading\\u2026'}</span></AppPageSection></main>; }\n`,
+    );
+    writeFileSync(join(root, 'dist', 'frontend.js'), `export function DoctorPage() { return null; }\n`);
+    writeFileSync(join(root, 'dist', 'build-manifest.json'), '{}\n');
+
+    const report = await validateExtensionPackage({ packageRoot: root });
+
+    expect(report.findings.map((finding) => finding.code)).toEqual(
+      expect.arrayContaining([
+        'invalid-data-table-toolbar-props',
+        'hidden-data-table-toolbar-actions',
+        'invalid-resource-list-item-props',
+        'ambiguous-delete-glyph',
+        'host-relative-viewport-height',
+        'collapsed-app-page-section',
+        'escaped-unicode-ui-copy',
+        'non-semantic-interactive-container',
+      ]),
+    );
+  });
+
   it('reports missing exports and non-portable imports with fixable findings', async () => {
     const root = createExtensionPackage();
     writeFileSync(join(root, 'src', 'frontend.tsx'), `export function WrongPage() { return null; }\n`);

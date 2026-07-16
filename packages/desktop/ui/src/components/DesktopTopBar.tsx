@@ -23,6 +23,16 @@ function UpdateReadyIcon() {
   );
 }
 
+function HomeIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.25" aria-hidden="true">
+      <path d="M1.8 6.4 7 2.3l5.2 4.1" />
+      <path d="M3.2 5.7v6h7.6v-6" />
+      <path d="M5.7 11.7V8.5h2.6v3.2" />
+    </svg>
+  );
+}
+
 const MAX_BROWSER_NAVIGATION_INDEX = 10_000;
 export const APP_NAVIGATION_COMMAND_EVENT = 'neon-pilot-app-navigation-command';
 
@@ -70,6 +80,7 @@ export function DesktopTopBar({
   applications,
   applicationWorkspace,
   activeApplicationId,
+  onOpenHome,
   onActivateApplication,
   onCloseApplication,
   trailingExtra,
@@ -78,6 +89,7 @@ export function DesktopTopBar({
   applications: readonly ApplicationRegistration[];
   applicationWorkspace: ApplicationWorkspaceState;
   activeApplicationId: string | null;
+  onOpenHome?: () => void;
   onActivateApplication: (application: ApplicationRegistration) => void;
   onCloseApplication: (applicationId: string) => void;
   trailingExtra?: React.ReactNode;
@@ -296,6 +308,15 @@ export function DesktopTopBar({
             title="Go forward"
           >
             →
+          </ToolbarButton>
+          <ToolbarButton
+            className="ui-desktop-top-bar__icon-button"
+            onClick={onOpenHome}
+            disabled={!onOpenHome}
+            aria-label="Open Home"
+            title="Home"
+          >
+            <HomeIcon />
           </ToolbarButton>
           <ToolbarButton
             ref={launcherRef}
