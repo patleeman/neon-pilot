@@ -293,6 +293,8 @@
         "title": "Settings",
         "location": "main",
         "route": "/settings",
+        "applicationId": "system-settings:system",
+        "openPolicy": "internal",
         "component": "SettingsPage",
         "activation": "on-route"
       },

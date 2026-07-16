@@ -136,6 +136,14 @@ Navigation command:
 { "id": "open", "title": "Open My App", "action": "app.navigate", "args": { "to": "/ext/my-app" } }
 ```
 
+An add/create command normally navigates to the page's inline editor because the Launcher does not have the record fields yet:
+
+```json
+{ "id": "new", "title": "Add item", "action": "app.navigate", "args": { "to": "/ext/my-app?action=new" } }
+```
+
+Read `context.search` in the page, parse the query with `URLSearchParams`, and open the inline editor when `action=new`. Use a backend action directly only when the command contribution already supplies every required safe input.
+
 Backend command actions must reference a declared backend action with `worker.enabled: true`.
 
 Treat commands as the searchable action model, not only as navigation. Add a command for each primary workflow action the user can perform—such as add/create, refresh, run, update/toggle, or delete—when that action is meaningful outside the current pointer context. For a CRUD page, an open command plus at least its primary add/create command is the normal minimum.

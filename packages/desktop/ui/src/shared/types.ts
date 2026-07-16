@@ -939,6 +939,8 @@ export type AppEventTopic =
   | 'knowledgeBase'
   | 'readiness';
 
+export type AppInvalidationTopic = string;
+
 export type ConversationPlacement = 'closed' | 'open' | 'pinned' | 'archived';
 
 export type SetupReadinessStatus = 'ready' | 'needs_setup' | 'blocked' | 'not_applicable' | 'unknown';
@@ -989,7 +991,7 @@ export interface SetupReadinessSnapshot {
 
 export type AppEvent =
   | { type: 'connected' }
-  | { type: 'invalidate'; topics: AppEventTopic[] }
+  | { type: 'invalidate'; topics: AppInvalidationTopic[] }
   | { type: 'live_title'; sessionId: string; title: string }
   | { type: 'conversation_state_changed'; conversation: ConversationRuntimeState }
   | { type: 'session_meta_changed'; sessionId: string }
@@ -1014,7 +1016,7 @@ export type AppEvent =
   | { type: 'daemon_snapshot'; state: DaemonState };
 
 export type DesktopAppEvent =
-  | { type: 'invalidate'; topics: AppEventTopic[] }
+  | { type: 'invalidate'; topics: AppInvalidationTopic[] }
   | { type: 'live_title'; sessionId: string; title: string }
   | { type: 'conversation_state_changed'; conversation: ConversationRuntimeState }
   | { type: 'notification'; extensionId: string; message: string; severity?: string; details?: string }

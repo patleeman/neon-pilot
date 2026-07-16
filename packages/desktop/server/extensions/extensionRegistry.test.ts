@@ -446,6 +446,34 @@ describe('extension registry', () => {
       }),
     ).toThrow('must be handled by a main view assigned to "application-owner:first"');
 
+    const localApplicationManifest = {
+      schemaVersion: 2,
+      id: 'local-app',
+      name: 'Local App',
+      contributes: {
+        applications: [{ id: 'app', title: 'App', startRoute: '/app', navigationSlots: [{ id: 'primary' }] }],
+        views: [{ id: 'page', title: 'Page', location: 'main', route: '/app', component: 'Page', applicationId: 'local-app:app' }],
+      },
+    };
+    expect(() =>
+      parseExtensionManifest({
+        ...localApplicationManifest,
+        contributes: {
+          ...localApplicationManifest.contributes,
+          nav: [{ id: 'page', label: 'Page', route: '/app', applicationId: 'local-app:missing', slot: 'primary' }],
+        },
+      }),
+    ).toThrow('applicationId "local-app:missing" must reference an application in the same extension');
+    expect(() =>
+      parseExtensionManifest({
+        ...localApplicationManifest,
+        contributes: {
+          ...localApplicationManifest.contributes,
+          nav: [{ id: 'page', label: 'Page', route: '/app', applicationId: 'local-app:app', slot: 'missing' }],
+        },
+      }),
+    ).toThrow('slot "missing" is not declared by application "local-app:app"');
+
     expect(() =>
       parseExtensionManifest({
         schemaVersion: 2,

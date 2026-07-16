@@ -39,9 +39,11 @@ export type AppEventTopic =
   | 'notifications'
   | 'readiness';
 
+export type AppInvalidationTopic = string;
+
 export type AppEvent =
   | { type: 'connected' }
-  | { type: 'invalidate'; topics: AppEventTopic[] }
+  | { type: 'invalidate'; topics: AppInvalidationTopic[] }
   | { type: 'live_title'; sessionId: string; title: string }
   | { type: 'conversation_state_changed'; conversation: ConversationRuntimeState }
   | { type: 'notification'; extensionId: string; message: string; severity: string; details?: string }
@@ -736,7 +738,7 @@ export function publishAppEvent(event: AppEvent): void {
   }
 }
 
-export function invalidateAppTopics(...topics: AppEventTopic[]): void {
+export function invalidateAppTopics(...topics: AppInvalidationTopic[]): void {
   const expandedTopics = topics.includes('runs') ? [...topics, 'executions' as const] : topics;
   const uniqueTopics = [...new Set(expandedTopics)].sort();
   if (uniqueTopics.length === 0) {

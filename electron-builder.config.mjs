@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 
 import { checkPackagedNativeRuntime } from './scripts/check-packaged-native-runtime.mjs';
 import { defaultInstallableBundleNames } from './scripts/default-installable-extensions.mjs';
+import { packagedExtensionSdkSeeds, resolvePackagedExtensionSdkFilter } from './scripts/packaged-extension-sdk.mjs';
 
 const DEFAULT_DESKTOP_RELEASE_REPO_SLUG = 'patleeman/neon-pilot';
 
@@ -42,54 +43,7 @@ const packagedExtensionFilter = [
 const defaultInstallableExtensionFilter = ['system-browser', 'system-onboarding'].flatMap((id) =>
   packagedExtensionFilter.map((entry) => `${id}/${entry.replace(/^\*\//u, '')}`),
 );
-const packagedExtensionSdkFilter = [
-  'index.d.ts',
-  'desktopBridge.d.ts',
-  'host.d.ts',
-  'ui.d.ts',
-  'settings.d.ts',
-  'data.d.ts',
-  'composer.d.ts',
-  'excalidraw.d.ts',
-  'host-view-components.d.ts',
-  'workbench.d.ts',
-  'workbench-artifacts.d.ts',
-  'workbench-browser.d.ts',
-  'workbench-diffs.d.ts',
-  'workbench-files.d.ts',
-  'workbench-runs.d.ts',
-  'workbench-transcript.d.ts',
-  ...[
-    'agent',
-    'artifacts',
-    'audio',
-    'automations',
-    'browser',
-    'checkpoints',
-    'cli',
-    'compaction',
-    'conversations',
-    'documents',
-    'events',
-    'extensions',
-    'gateways',
-    'images',
-    'knowledge',
-    'mcp',
-    'modelGateway',
-    'promptAssembly',
-    'runs',
-    'runtime',
-    'settings',
-    'skills',
-    'telemetry',
-    'terminal',
-    'tools',
-    'transcription',
-    'videos',
-    'webContent',
-  ].map((name) => `backend/${name}.d.ts`),
-];
+const packagedExtensionSdkFilter = packagedExtensionSdkSeeds;
 
 function readDesktopPackageVersion() {
   const packageJson = JSON.parse(readFileSync(resolve('packages/desktop/package.json'), 'utf8'));
@@ -121,6 +75,13 @@ export const desktopReleasePublishConfig = {
 const electronBuilderConfig = {
   appId: desktopReleaseIdentity.appId,
   productName: desktopReleaseIdentity.productName,
+  async beforePack() {
+    const resolved = resolvePackagedExtensionSdkFilter(resolve('packages/extensions/dist'));
+    const undeclaredDependencies = resolved.filter((relative) => !packagedExtensionSdkFilter.includes(relative));
+    if (undeclaredDependencies.length > 0) {
+      throw new Error(`Packaged extension SDK filter is missing declaration dependencies: ${undeclaredDependencies.join(', ')}`);
+    }
+  },
   async afterPack(context) {
     if (context.electronPlatformName !== 'darwin') {
       return;

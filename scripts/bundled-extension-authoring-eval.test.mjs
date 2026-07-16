@@ -6,8 +6,13 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { analyzeBundledAuthoringManifest } from './bundled-authoring-contract.mjs';
+import { buildBenchmarkBaseEnv } from './benchmark-child-env.mjs';
+import { hasForbiddenPackagedResourceRead } from './benchmark-packaged-resource-policy.mjs';
+import { isSuccessfulBehaviorResult } from './bundled-behavior-evidence.mjs';
 import { createArtifactRedactor, registerSensitiveStringLeaves } from './benchmark-artifact-redaction.mjs';
 import { resolveBenchmarkProxyAuthStrategy } from './benchmark-provider-proxy-contract.mjs';
+import { validateGeneratedVisualEvidence } from './bundled-visual-evidence.mjs';
+import { packagedExtensionSdkSeeds, resolvePackagedExtensionSdkFilter } from './packaged-extension-sdk.mjs';
 
 const tempRoots = [];
 
@@ -21,12 +26,100 @@ describe('bundled extension authoring eval', () => {
     expect(resolveBenchmarkProxyAuthStrategy('anthropic-messages')).toEqual({ header: 'x-api-key', prefix: '' });
   });
 
+  it('passes only non-secret host environment fields into benchmark children', () => {
+    const childEnv = buildBenchmarkBaseEnv({
+      PATH: '/bin',
+      LANG: 'en_US.UTF-8',
+      BUNDLED_EVAL_HOST_SECRET: 'must-not-cross',
+      GH_TOKEN: 'must-not-cross',
+      SSH_AUTH_SOCK: '/private/agent.sock',
+    });
+    expect(childEnv).toEqual({ PATH: '/bin', LANG: 'en_US.UTF-8' });
+  });
+
   it('keeps proxy concurrency accounting scoped to admitted requests and rejects redirects', () => {
     const source = readFileSync(join(new URL('..', import.meta.url).pathname, 'scripts/benchmark-provider-proxy.mjs'), 'utf8');
     expect(source).toContain('let counted = false');
     expect(source).toContain('counted = true');
     expect(source).toContain('if (counted) activeRequests');
     expect(source).toContain("redirect: 'error'");
+  });
+
+  it('registers the ephemeral provider proxy bearer with artifact redaction', () => {
+    const source = readFileSync(join(new URL('..', import.meta.url).pathname, 'scripts/bundled-extension-authoring-eval.mjs'), 'utf8');
+    expect(source).toContain('benchmarkProxyToken = randomBytes(32)');
+    expect(source).toContain('artifactRedactor.add(benchmarkProxyToken)');
+  });
+
+  it('verifies and filesystem-isolates the signed app used for agent authoring', () => {
+    const source = readFileSync(join(new URL('..', import.meta.url).pathname, 'scripts/bundled-extension-authoring-eval.mjs'), 'utf8');
+    expect(source).toContain("['--verify', '--deep', '--strict', appBundle]");
+    expect(source).toContain("run('/bin/cp', ['-cR', appBundle, runtimeAppBundle]");
+    expect(source).toContain("'/usr/bin/sandbox-exec'");
+    expect(source).toContain('sandbox-exec-multi-root-denied');
+    expect(source).toContain("resolve('/tmp', `.neon-pilot-authoring-temp-canary-");
+    expect(source).toContain("resolve(repoRoot, 'package.json')");
+    expect(source).toContain('(literal ${sandboxLiteral(tempCanary)})');
+    expect(source).toContain('(subpath ${sandboxLiteral(realpathSync(repoRoot))})');
+    expect(source).toContain("'--no-sandbox'");
+    expect(source).toContain('CFBundleExecutable');
+    expect(source).toContain('child.runtimePid = record.pid');
+    expect(source).toContain("process.kill(runtimePid, 'SIGKILL')");
+    expect(source).toContain("block?.type === 'tool_use'");
+    expect(source).toContain('Inspect agent-authored tool inputs, never tool outputs');
+  });
+
+  it('rejects action-level failures wrapped by a successful CLI envelope', () => {
+    expect(isSuccessfulBehaviorResult({ ok: false, error: 'benchmark text was not saved' })).toBe(false);
+    expect(isSuccessfulBehaviorResult({ error: 'benchmark text was not saved' })).toBe(false);
+    expect(isSuccessfulBehaviorResult({ ok: true, details: { ok: false, error: 'write failed' } })).toBe(false);
+    expect(isSuccessfulBehaviorResult({ ok: true, result: { details: { ok: true, value: 'saved' } } })).toBe(true);
+    expect(isSuccessfulBehaviorResult({ ok: true, value: 'benchmark text' })).toBe(true);
+  });
+
+  it('gates UI cases on an image-backed taste judge', () => {
+    const source = readFileSync(join(new URL('..', import.meta.url).pathname, 'scripts/bundled-extension-authoring-eval.mjs'), 'utf8');
+    expect(source).toContain("resolve(repoRoot, 'scripts/extension-visual-judge.mjs')");
+    expect(source).toContain("aggregate?.decision === 'pass'");
+    expect(source).toContain('result?.imageAccess === true');
+    expect(source).toContain('Number(result?.overall ?? 0) >= 4');
+    expect(source).toContain('result.mustFix.length === 0');
+    expect(source).toContain('visualEvidenceProblems.length === 0 &&');
+  });
+
+  it('packages the recursive closure of public SDK declarations', () => {
+    const root = mkdtempSync(join(tmpdir(), 'packaged-extension-sdk-'));
+    tempRoots.push(root);
+    writeFileSync(join(root, 'workbench.d.ts'), "export type { BrowserTabItem } from './workbenchBrowserTabs.js';\n");
+    writeFileSync(join(root, 'workbench-browser.d.ts'), "export { createTabs } from './workbenchBrowserTabs.js';\n");
+    writeFileSync(join(root, 'workbenchBrowserTabs.d.ts'), 'export interface BrowserTabItem { id: string }\n');
+    const declarations = resolvePackagedExtensionSdkFilter(root, ['workbench.d.ts', 'workbench-browser.d.ts']);
+    expect(declarations).toContain('workbenchBrowserTabs.d.ts');
+    expect(packagedExtensionSdkSeeds).toContain('backend/browser.d.ts');
+    expect(packagedExtensionSdkSeeds).toContain('workbenchBrowserTabs.d.ts');
+  });
+
+  it('rejects blank, host-error, and semantically incomplete generated routes', () => {
+    const out = mkdtempSync(join(tmpdir(), 'bundled-authoring-visual-evidence-'));
+    tempRoots.push(out);
+    const healthy = join(out, 'healthy.txt');
+    const broken = join(out, 'broken.txt');
+    const liveError = join(out, 'live-error.txt');
+    writeFileSync(healthy, 'Local Models\nModels\nRefresh');
+    writeFileSync(broken, 'APPLICATION UNAVAILABLE\nLocal Models');
+    writeFileSync(liveError, 'This extension surface could not be loaded.');
+    const expectation = [{ route: '/ext/models', expectAllText: ['Models', 'Refresh'] }];
+
+    expect(validateGeneratedVisualEvidence(['/ext/models'], [{ route: '/ext/models', text: healthy }], expectation)).toEqual([]);
+    expect(validateGeneratedVisualEvidence(['/ext/models'], [{ route: '/ext/models', text: broken }], expectation)).toEqual(
+      expect.arrayContaining([expect.stringContaining('host error surface'), expect.stringContaining('missing expected text')]),
+    );
+    expect(validateGeneratedVisualEvidence(['/ext/models'], [{ route: '/ext/models', text: liveError }], expectation)).toEqual(
+      expect.arrayContaining([expect.stringContaining('host error surface')]),
+    );
+    expect(validateGeneratedVisualEvidence(['/ext/models'], [{ route: '/ext/models', text: healthy }], [])).toEqual([
+      '/ext/models: missing semantic route expectation',
+    ]);
   });
 
   it('requires stable conversation quiescence instead of treating a tool-batch gap as completion', () => {
@@ -37,8 +130,31 @@ describe('bundled extension authoring eval', () => {
     expect(source).toContain("newestBlock?.type === 'text'");
     expect(source).toContain('latest === null || Number(block?.index) > Number(latest?.index)');
     expect(source).toContain('Packaged app exited during an unfinished agent tool turn');
-    expect(source).toContain('appExited: true');
-    expect(source).toContain("appProcess = launchPackagedApp(resolve(caseOut, 'relaunch'))");
+    expect(source).toContain("'failed-agent-sessions'");
+    expect(source).toContain("'generated-extension-on-failure'");
+    expect(source).not.toContain('appExited: true');
+    expect(source).toContain('env: benchmarkChildEnv');
+    expect(source).not.toContain('env: { ...process.env');
+    expect(source).toContain("text.replaceAll(String(allowedPath), '[PACKAGED_NEON_PILOT]')");
+  });
+
+  it('allows public packaged authoring reads but rejects private bundled extension reads', () => {
+    const app = '/Applications/Neon Pilot.app';
+    const skill = `${app}/Contents/Resources/extensions/system-extension-manager/skills/local-extension-development`;
+    const authoring = `${app}/Contents/Resources/extension-authoring`;
+    expect(hasForbiddenPackagedResourceRead(`{"path":"${skill}/SKILL.md"}`, app, [skill, authoring])).toBe(false);
+    expect(hasForbiddenPackagedResourceRead(`{"path":"${skill}\\\\\\"}`, app, [skill, authoring])).toBe(false);
+    expect(hasForbiddenPackagedResourceRead(`{"path":"${authoring}/sdk/index.d.ts"}`, app, [skill, authoring])).toBe(false);
+    expect(
+      hasForbiddenPackagedResourceRead(`{"path":"${app}/Contents/Resources/extensions/system-alerts/extension.json"}`, app, [
+        skill,
+        authoring,
+      ]),
+    ).toBe(true);
+    expect(hasForbiddenPackagedResourceRead(`rg secret "${app}/Contents/Resources/app.asar"`, app, [skill, authoring])).toBe(true);
+    expect(
+      hasForbiddenPackagedResourceRead(`{"path":"${authoring}/../extensions/system-alerts/extension.json"}`, app, [skill, authoring]),
+    ).toBe(true);
   });
 
   it('redacts a deliberately echoed provider credential from every artifact file', () => {

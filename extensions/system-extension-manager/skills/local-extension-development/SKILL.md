@@ -82,7 +82,7 @@ The scaffold is a structural starting point, not finished product UI. Edit `src/
 - Use `ctx.storage`, `ctx.filesystem`, `ctx.shell`, `ctx.git`, `ctx.events`, and other documented backend capabilities instead of direct host internals.
 - Never import `child_process`, `worker_threads`, or Electron.
 - Declare every action, component, command, tool, permission, service, and application relationship in `extension.json`.
-- Give every primary user-reachable action its own command contribution, not only an "open" command. Inventory create/add, refresh, run, update/toggle, and destructive actions from the request; make each applicable primary action searchable and executable through the Launcher. A page whose main workflow adds records normally needs both an open-page command and an add/create command wired to its declared backend action.
+- Give every primary user-reachable action its own command contribution, not only an "open" command. Inventory create/add, refresh, run, update/toggle, and destructive actions from the request; make each applicable primary action searchable and executable through the Launcher. Point commands with complete safe inputs at declared backend actions. When the action needs user input, use `app.navigate` with a documented query intent so the page opens its inline editor; never invoke an input-requiring backend action with empty arguments.
 - Confirm destructive actions immediately before mutation.
 - Implement visible empty, loading, error, success, disabled, and long-running states when relevant.
 - Use shared UI primitives. Do not recreate buttons, inputs, tables, lists, sidebars, rails, dialogs, settings rows, or page chrome.

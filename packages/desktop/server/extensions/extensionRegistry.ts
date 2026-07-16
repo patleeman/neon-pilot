@@ -1175,12 +1175,38 @@ function validateRouteShellRegionReferences(contributes: Record<string, unknown>
       .filter((view): view is Record<string, unknown> => isRecord(view) && view.location === 'main' && typeof view.route === 'string')
       .map((view) => view.route as string),
   );
+  const localApplications = new Map(
+    (Array.isArray(contributes.applications) ? contributes.applications : [])
+      .filter((application): application is Record<string, unknown> => isRecord(application) && typeof application.id === 'string')
+      .map((application) => [
+        `${extensionId}:${application.id as string}`,
+        new Set(
+          (Array.isArray(application.navigationSlots) ? application.navigationSlots : [])
+            .filter((slot): slot is Record<string, unknown> => isRecord(slot) && typeof slot.id === 'string')
+            .map((slot) => slot.id as string),
+        ),
+      ]),
+  );
 
   for (const [index, nav] of contributes.nav.entries()) {
     if (!isRecord(nav)) continue;
 
     if (typeof nav.route === 'string' && !mainRoutes.has(nav.route)) {
       throw new Error(`Extension manifest contributes.nav[${index}].route "${nav.route}" must reference a matching main view route.`);
+    }
+
+    if (typeof nav.applicationId === 'string' && nav.applicationId.startsWith(`${extensionId}:`)) {
+      const slots = localApplications.get(nav.applicationId);
+      if (!slots) {
+        throw new Error(
+          `Extension manifest contributes.nav[${index}].applicationId "${nav.applicationId}" must reference an application in the same extension.`,
+        );
+      }
+      if (typeof nav.slot === 'string' && !slots.has(nav.slot)) {
+        throw new Error(
+          `Extension manifest contributes.nav[${index}].slot "${nav.slot}" is not declared by application "${nav.applicationId}".`,
+        );
+      }
     }
 
     if (typeof nav.sidebarView === 'string') {

@@ -105,6 +105,8 @@ Use 1-5 for each dimension.
 
 Judges must return strict JSON:
 
+Reserve `mustFix` for concrete defects that block shipping and therefore require a `borderline` or `fail` decision. A `pass` decision must return an empty `mustFix` array; put optional refinements in `topFindings` instead.
+
 ```json
 {
   "judge": "model-name",

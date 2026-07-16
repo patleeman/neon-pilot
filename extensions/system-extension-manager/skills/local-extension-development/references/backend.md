@@ -53,7 +53,7 @@ Do not import Neon Pilot internals. Do not use direct `child_process`, `worker_t
 
 Tools map a model-facing name and JSON input schema to a declared backend action. Keep them coarse, task-oriented, and safe. The tool description and schema already reach the model; add prompt guidance only for behavioral constraints the schema cannot express.
 
-Long-lived services belong in `backend.services`. A service handler returns a cleanup function. Add health checks and restart policy for recoverable background work.
+Long-lived services belong in `backend.services`. Declare `network:listen`, export a serializable start handler, and declare a separate exported `stopHandler`; worker services cannot return cleanup functions. Add health checks and restart policy for recoverable background work.
 
 Use manifest subscriptions for supported host events and `ctx.events` for extension-owned events. Prefer event-driven frontend updates over polling when the backend can publish changes.
 

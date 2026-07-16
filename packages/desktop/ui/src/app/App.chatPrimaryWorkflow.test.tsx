@@ -2,7 +2,7 @@
 import { act, screen, waitFor } from '@testing-library/react';
 import React, { useEffect } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
-import { Outlet, useParams } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { DesktopAppEvent, SessionMeta } from '../shared/types';
@@ -91,13 +91,15 @@ vi.mock('../components/Layout', async () => {
   };
 });
 
-vi.mock('../extensions/ExtensionRouteHost', () => ({
-  ExtensionRouteHost: () => <main>Extension route</main>,
-}));
+vi.mock('../extensions/ExtensionRouteHost', async () => {
+  const { ConversationPage } = await import('../pages/ConversationPage');
+  return { ExtensionRouteHost: () => <ConversationPage /> };
+});
 
 vi.mock('../pages/ConversationPage', () => ({
   ConversationPage: () => {
-    const { id } = useParams();
+    const location = useLocation();
+    const id = location.pathname.startsWith('/conversations/') ? location.pathname.slice('/conversations/'.length) : undefined;
     const { setTitle } = useLiveTitles();
 
     useEffect(() => {

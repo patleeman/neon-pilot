@@ -175,7 +175,7 @@ import { registerGatewayRoutes, startTelegramGatewayRuntime, stopTelegramGateway
 import { registerServerRoutes } from '../routes/registerAll.js';
 import { buildToolsRouteState } from '../routes/tools.js';
 import { createSettingsStore } from '../settings/settingsStore.js';
-import { type AppEvent, type AppEventTopic, invalidateAppTopics, publishAppEvent, subscribeAppEvents } from '../shared/appEvents.js';
+import { type AppEvent, type AppInvalidationTopic, invalidateAppTopics, publishAppEvent, subscribeAppEvents } from '../shared/appEvents.js';
 import {
   getLocalhostWebappProxyStatus,
   startLocalhostWebappProxy,
@@ -302,26 +302,8 @@ export interface DesktopLocalApiDispatchResult {
 
 type DesktopAppBridgeEvent = { type: 'open' } | { type: 'event'; event: unknown } | { type: 'error'; message: string } | { type: 'close' };
 
-function isAppEventTopic(value: unknown): value is AppEventTopic {
-  return (
-    value === 'sessions' ||
-    value === 'sessionFiles' ||
-    value === 'artifacts' ||
-    value === 'checkpoints' ||
-    value === 'attachments' ||
-    value === 'extensions' ||
-    value === 'tasks' ||
-    value === 'models' ||
-    value === 'gateways' ||
-    value === 'runs' ||
-    value === 'executions' ||
-    value === 'automation' ||
-    value === 'daemon' ||
-    value === 'workspace' ||
-    value === 'knowledgeBase' ||
-    value === 'notifications' ||
-    value === 'readiness'
-  );
+function isExtensionInvalidationTopic(value: unknown): value is AppInvalidationTopic {
+  return typeof value === 'string' && value.length > 0 && value.length <= 128 && /^[a-zA-Z0-9._:-]+$/u.test(value);
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -1143,7 +1125,7 @@ export async function publishDesktopAppEventFromExtensionHost(event: unknown): P
   }
 
   if (event.type === 'invalidate') {
-    const topics = Array.isArray(event.topics) ? event.topics.filter(isAppEventTopic) : [];
+    const topics = Array.isArray(event.topics) ? [...new Set(event.topics.filter(isExtensionInvalidationTopic))].slice(0, 64) : [];
     if (topics.length > 0) {
       invalidateAppTopics(...topics);
     }

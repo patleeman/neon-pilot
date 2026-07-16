@@ -201,6 +201,7 @@ export type ExtensionIconName =
   | 'file'
   | 'gear'
   | 'graph'
+  | 'home'
   | 'kanban'
   | 'play'
   | 'sparkle'

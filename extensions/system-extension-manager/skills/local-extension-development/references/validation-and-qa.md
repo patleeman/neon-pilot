@@ -60,6 +60,10 @@ Use Neon Pilot itself:
 
 Capture screenshots of the full host frame for the primary state and at least one important empty, populated, loading, error, or secondary state. Use viewport and scroll-depth captures for application-owned scroll containers; do not accept a black or blank capture as evidence. Populate the product through its real backend/UI path rather than hard-coded sample state.
 
+When more than one Neon Pilot process may exist, do not use native computer control: a same-name window is not proof that you reached the authored extension and may expose unrelated user data. Use extension lifecycle commands for build/validate/smoke and the host-owned extension QA flow for exact-process route, interaction, and screenshot evidence.
+
+For durable state, mutate through a declared action, restart the app/extension host, then read through another declared action. A same-process write/read pair does not prove persistence.
+
 ## Surface-specific checks
 
 - Application: Launcher, start page, internal nav, taskbar close/reopen, singleton reuse, restart.

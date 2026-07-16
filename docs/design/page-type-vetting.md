@@ -8,8 +8,8 @@ Approved on 2026-07-01. New app and first-party extension pages must choose one 
 
 Approved shell rules:
 
-- Global left navigation stays on every route.
-- The middle-left contextual area is route-owned and blank/visually absent when undeclared; global top and bottom nav items still remain.
+- Global application navigation lives in the host top bar and launcher.
+- The left contextual area is application-owned and blank/visually absent when undeclared.
 - The main page is required.
 - The right sidebar is route-owned context and hidden when undeclared.
 - Threads belong to Chat. Workbench is Chat's right-sidebar content, not the generic shell name.
@@ -32,6 +32,8 @@ No seventh type is approved. If a workflow does not fit these six, document the 
 | Route              | Page type    | Left area          | Right sidebar    | Notes                                                                                                   |
 | ------------------ | ------------ | ------------------ | ---------------- | ------------------------------------------------------------------------------------------------------- |
 | `/conversations/*` | Conversation | Threads            | Workbench        | Core-owned for now; extensions contribute into Chat rather than defining separate transcript routes.    |
+| `/conversations`   | Conversation | Agent navigation   | Workbench        | Agent application entry route; individual conversations remain internal application state.              |
+| `/home`            | Dashboard    | Blank              | None             | Optional launcher and recent-work starting point.                                                       |
 | `/automations`     | Table        | Blank              | None             | Main-only table workflow. Details/create/edit can remain dialog-backed when they are short-lived flows. |
 | `/gateways`        | Setup        | Blank              | Gateway context  | Provider onboarding, readiness, docs, activity, and test output use Setup grammar.                      |
 | `/model-arena`     | Dashboard    | Blank              | Arena context    | Monitors challenger state, eligibility, settings, and history.                                          |
@@ -46,17 +48,19 @@ No seventh type is approved. If a workflow does not fit these six, document the 
 
 Every first-party extension route with a `main` view must declare one approved page type on its nav item.
 
-| Extension                  | Route          | Page type   | Contextual left     | Right sidebar              |
-| -------------------------- | -------------- | ----------- | ------------------- | -------------------------- |
-| `system-automations`       | `/automations` | `table`     | None                | None                       |
-| `system-dynamic-workflows` | `/workflows`   | `editor`    | `workflows-sidebar` | None                       |
-| `system-extension-manager` | `/extensions`  | `table`     | None                | `extension-details-rail`   |
-| `system-gateways`          | `/gateways`    | `setup`     | None                | `gateway-context-rail`     |
-| `system-model-arena`       | `/model-arena` | `dashboard` | None                | `model-arena-context-rail` |
-| `system-routines`          | `/routines`    | `editor`    | `routines-sidebar`  | `routines-context-rail`    |
-| `system-settings`          | `/settings`    | `settings`  | `settings-sidebar`  | None                       |
-| `system-skills`            | `/skills`      | `table`     | None                | `skills-context-rail`      |
-| `system-telemetry`         | `/telemetry`   | `dashboard` | None                | None                       |
+| Extension                  | Route            | Page type      | Contextual left     | Right sidebar              |
+| -------------------------- | ---------------- | -------------- | ------------------- | -------------------------- |
+| `system-agent`             | `/conversations` | `conversation` | None                | None                       |
+| `system-automations`       | `/automations`   | `table`        | None                | None                       |
+| `system-dynamic-workflows` | `/workflows`     | `editor`       | `workflows-sidebar` | None                       |
+| `system-extension-manager` | `/extensions`    | `table`        | None                | `extension-details-rail`   |
+| `system-gateways`          | `/gateways`      | `setup`        | None                | `gateway-context-rail`     |
+| `system-home`              | `/home`          | `dashboard`    | None                | None                       |
+| `system-model-arena`       | `/model-arena`   | `dashboard`    | None                | `model-arena-context-rail` |
+| `system-routines`          | `/routines`      | `editor`       | `routines-sidebar`  | `routines-context-rail`    |
+| `system-settings`          | `/settings`      | `settings`     | `settings-sidebar`  | None                       |
+| `system-skills`            | `/skills`        | `table`        | None                | `skills-context-rail`      |
+| `system-telemetry`         | `/telemetry`     | `dashboard`    | None                | None                       |
 
 The manifest shape keeps side-region fields off `main` views. Side-region metadata belongs only on `sidebar` and `rightRail` views; the nav item binds those views to a route with `sidebarView` and `rightSidebarView`.
 

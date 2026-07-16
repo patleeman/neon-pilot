@@ -8,6 +8,8 @@ import { tmpdir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { isSuccessfulBehaviorResult } from './bundled-behavior-evidence.mjs';
+
 const require = createRequire(import.meta.url);
 const WebSocket = require('ws');
 
@@ -162,10 +164,11 @@ async function waitForBodyWithout(cdp, child, label, pattern, timeoutMs = 15_000
 async function waitForBodyText(cdp, child, label, expected, present = true, timeoutMs = 15_000) {
   const deadline = Date.now() + timeoutMs;
   let lastBody = '';
+  const normalizedExpected = String(expected).toLocaleLowerCase();
   while (Date.now() < deadline) {
     if (child.exitCode !== null) throw new Error(`App exited while waiting for ${label}.`);
     lastBody = String(await evalJs(cdp, 'document.body ? document.body.innerText : ""')).trim();
-    if (lastBody.includes(expected) === present) return lastBody;
+    if (lastBody.toLocaleLowerCase().includes(normalizedExpected) === present) return lastBody;
     await sleep(250);
   }
   throw new Error(
@@ -222,8 +225,17 @@ async function clickVisibleText(cdp, label, withinText = '', timeoutMs = 15_000)
         .filter((item, index, all) => all.indexOf(item) === index)
         .filter((item) => {
           if (!scopeText) return true;
-          const scope = item.closest('tr, li, [role="row"], [role="listitem"], [data-resource-id]');
-          return normalizeText(scope?.textContent).includes(normalizeText(scopeText));
+          const expectedScopeText = normalizeText(scopeText);
+          let scope = item;
+          while (scope && scope !== document.body) {
+            if (normalizeText(scope.textContent).includes(expectedScopeText)) {
+              const matchingControls = [...scope.querySelectorAll('button, [role="button"], a, [tabindex]')]
+                .filter((control) => normalizeText(control.textContent) === normalizeText(targetLabel));
+              return matchingControls.length === 1 && matchingControls[0] === item;
+            }
+            scope = scope.parentElement;
+          }
+          return false;
         })
         .filter((item) => {
           const rect = item.getBoundingClientRect();
@@ -243,13 +255,29 @@ async function clickVisibleText(cdp, label, withinText = '', timeoutMs = 15_000)
           const b = right.getBoundingClientRect();
           return (a.width * a.height) - (b.width * b.height);
         });
-      if (!candidates[0]) return false;
-      candidates[0].click();
-      return true;
+      for (const candidate of candidates) {
+        const rect = candidate.getBoundingClientRect();
+        const points = [
+          [rect.left + rect.width / 2, rect.top + rect.height / 2],
+          [rect.left + Math.min(8, rect.width / 2), rect.top + rect.height / 2],
+          [rect.right - Math.min(8, rect.width / 2), rect.top + rect.height / 2],
+        ];
+        for (const [x, y] of points) {
+          const topmost = document.elementsFromPoint(x, y).find((element) => getComputedStyle(element).pointerEvents !== 'none');
+          if (topmost && (topmost === candidate || candidate.contains(topmost))) return { x, y };
+        }
+      }
+      return false;
     })()`;
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
-    if (await evalJs(cdp, expression)) return true;
+    const point = await evalJs(cdp, expression);
+    if (point && Number.isFinite(point.x) && Number.isFinite(point.y)) {
+      await cdp.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: point.x, y: point.y });
+      await cdp.send('Input.dispatchMouseEvent', { type: 'mousePressed', x: point.x, y: point.y, button: 'left', clickCount: 1 });
+      await cdp.send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: point.x, y: point.y, button: 'left', clickCount: 1 });
+      return true;
+    }
     await sleep(250);
   }
   return false;
@@ -621,6 +649,7 @@ function writeJudgePrompt(outDir, baseline, generated, metadata) {
     '- Treat a good top viewport as insufficient when middle, bottom, full-page, or sibling-page screenshots show inconsistent spacing or controls.',
     '- Use the rubric dimensions and failure tags exactly where possible.',
     '- Be strict about IDE/tooling density, text economy, flat surfaces, action chrome, and neutral color.',
+    '- Reserve mustFix for shipping blockers. If decision is pass, mustFix must be an empty array; put optional refinements in topFindings.',
     '- Return strict JSON only.',
     '',
     'Return strict JSON:',
@@ -679,6 +708,10 @@ export async function runVisualCapture() {
     .map((route) => route.trim())
     .filter(Boolean);
   const requestedGeneratedRoutes = arg('generated-routes')
+    .split(',')
+    .map((route) => route.trim())
+    .filter(Boolean);
+  const preSetupGeneratedRoutes = arg('pre-setup-generated-routes')
     .split(',')
     .map((route) => route.trim())
     .filter(Boolean);
@@ -785,6 +818,24 @@ export async function runVisualCapture() {
         await patchJson(cdp, `/api/extensions/${encodeURIComponent(importedExtensionId)}`, { enabled: true });
       }
       await postJson(cdp, '/api/extensions/reload', {});
+      for (const route of preSetupGeneratedRoutes) {
+        await cdp.send('Page.navigate', { url: `neon-pilot://app${route}` });
+        await waitForPathname(cdp, child, route);
+        await waitForLoadedBody(cdp, child, `${route} pre-setup`);
+        await sleep(800);
+        await dismissOnboardingOverlayIfRequested(cdp, child);
+        const body = String(await evalJs(cdp, 'document.body ? document.body.innerText : ""')).trim();
+        const textFile = resolve(outDir, 'generated-screenshots', `${routeSlug(route)}.empty-state.txt`);
+        write(textFile, `${body}\n`, 'utf8');
+        const screenshot = await captureScreenshot(cdp, route, outDir, 'generated-screenshots', 'empty-state', false);
+        generated.push({
+          route,
+          variant: 'empty-state',
+          screenshot,
+          text: textFile,
+          judgeScreenshot: resizeScreenshotForJudge(screenshot, outDir, judgeImageMaxPixels),
+        });
+      }
       for (const action of setupActions) {
         if (!action || typeof action.actionId !== 'string') throw new Error('Every visual setup action needs an actionId.');
         const result = await postJson(
@@ -792,12 +843,13 @@ export async function runVisualCapture() {
           `/api/extensions/${encodeURIComponent(importedExtensionId)}/actions/${encodeURIComponent(action.actionId)}`,
           action.input ?? {},
         );
-        if (result?.ok === false) throw new Error(`Visual setup action ${action.actionId} failed: ${JSON.stringify(result)}`);
+        if (!isSuccessfulBehaviorResult(result)) {
+          throw new Error(`Visual setup action ${action.actionId} failed: ${JSON.stringify(result)}`);
+        }
       }
       await cdp.send('Page.reload', { ignoreCache: true });
       await waitForLoadedBody(cdp, child, 'post-import reload');
       const routes = requestedGeneratedRoutes.length > 0 ? requestedGeneratedRoutes : inferGeneratedRoutes(manifest);
-      generated = [];
       for (const route of routes) {
         const captures = await captureRoute(cdp, child, route, outDir, 'generated-screenshots', captureModes);
         for (const capture of captures) {
@@ -814,8 +866,10 @@ export async function runVisualCapture() {
               {
                 clickText: interaction?.clickText,
                 clickTextAny: interaction?.clickTextAny,
+                withinText: interaction?.withinText,
                 expectText: interaction?.expectText,
                 expectAbsentText: interaction?.expectAbsentText,
+                expectPath: interaction?.expectPath,
               },
             ];
         if (!interaction || typeof interaction.route !== 'string' || steps.length === 0) {
@@ -854,9 +908,31 @@ export async function runVisualCapture() {
           if (typeof step.expectAbsentText === 'string') {
             await waitForBodyText(cdp, child, `${clickedLabel} result`, step.expectAbsentText, false);
           }
+          if (typeof step.expectPath === 'string') {
+            await waitForPathname(cdp, child, step.expectPath);
+          }
           await sleep(350);
         }
+        if (interaction.reloadBeforeCapture === true) {
+          await cdp.send('Page.reload', { ignoreCache: true });
+          await waitForLoadedBody(cdp, child, `${interaction.route} post-interaction reload`);
+          await waitForPathname(cdp, child, interaction.route);
+          if (typeof interaction.expectAfterReloadText === 'string') {
+            await waitForBodyText(cdp, child, 'post-interaction reload', interaction.expectAfterReloadText, true);
+          }
+          if (typeof interaction.expectAfterReloadAbsentText === 'string') {
+            await waitForBodyText(cdp, child, 'post-interaction reload', interaction.expectAfterReloadAbsentText, false);
+          }
+        }
         const variant = typeof interaction.variant === 'string' ? interaction.variant : 'interaction';
+        // Confirmation overlays and asynchronous invalidation-driven rerenders
+        // can settle a frame after the text assertion succeeds. Give Chromium
+        // two animation frames plus a short compositor settle, then discard one
+        // warm-up capture so the evidence image is never a transient dark frame.
+        await evalJs(cdp, 'new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve(true))))');
+        await sleep(1_000);
+        await cdp.send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
+        await sleep(200);
         const screenshot = await captureScreenshot(cdp, interaction.route, outDir, 'generated-screenshots', variant, false);
         generated.push({
           route: interaction.route,
@@ -882,6 +958,7 @@ export async function runVisualCapture() {
       judgeImageMaxPixels,
       captureModes: [...captureModes],
       setupActions,
+      preSetupGeneratedRoutes,
       interactions,
     };
     write(resolve(outDir, 'visual-capture-summary.json'), `${JSON.stringify(metadata, null, 2)}\n`, 'utf8');

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { fireEvent, render, screen } from '@testing-library/react';
-import { useState } from 'react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, useState } from 'react';
 import { MemoryRouter, Route, Routes, useNavigate } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -10,6 +10,17 @@ import { ExtensionPage } from './ExtensionPage';
 import { useExtensionRegistry } from './useExtensionRegistry';
 
 const nativeHostMockState = vi.hoisted(() => ({ nextMountId: 0 }));
+const extensionConfirmApi = vi.hoisted(() => ({
+  list: vi.fn(async () => ({ ok: true, confirmations: [] })),
+  resolve: vi.fn(async () => ({ ok: true, acknowledged: true })),
+}));
+
+vi.mock('../client/api', () => ({
+  api: {
+    extensionUiConfirmations: extensionConfirmApi.list,
+    resolveExtensionUiConfirmation: extensionConfirmApi.resolve,
+  },
+}));
 
 vi.mock('../components/notifications/notificationStore', () => ({
   addNotification: vi.fn(),
@@ -44,6 +55,8 @@ vi.mock('./useExtensionRegistry', () => ({
 describe('ExtensionPage', () => {
   afterEach(() => {
     nativeHostMockState.nextMountId = 0;
+    extensionConfirmApi.list.mockClear();
+    extensionConfirmApi.resolve.mockClear();
     window.localStorage.clear();
     vi.mocked(useExtensionRegistry).mockReset();
     vi.mocked(useExtensionRegistry).mockReturnValue({
@@ -113,6 +126,57 @@ describe('ExtensionPage', () => {
     expect(host.getAttribute('data-extension-id')).toBe('system-settings');
     expect(host.getAttribute('data-surface-id')).toBe('providers');
     expect(screen.queryByText(/Extension surface unavailable/i)).toBeNull();
+  });
+
+  it('renders and resolves backend confirmations requested by an extension page', async () => {
+    vi.mocked(useExtensionRegistry).mockReturnValue({
+      loading: false,
+      error: null,
+      applications: [],
+      applicationNavigation: [],
+      routes: [],
+      extensions: [],
+      surfaces: [
+        {
+          extensionId: 'reading-list',
+          id: 'reading-list-page',
+          title: 'Reading List',
+          location: 'main',
+          route: '/reading-list',
+          component: 'ReadingListPage',
+          packageType: 'user',
+          frontend: { entry: 'dist/frontend.js' },
+        },
+      ],
+    } as never);
+
+    render(
+      <MemoryRouter initialEntries={['/reading-list']}>
+        <ExtensionPage />
+      </MemoryRouter>,
+    );
+
+    act(() => {
+      window.dispatchEvent(
+        new CustomEvent('neon-pilot-extension-ui-confirm', {
+          detail: {
+            requestId: 'delete-article',
+            extensionId: 'reading-list',
+            title: 'Delete article?',
+            message: 'This removes it from your reading list.',
+            confirmLabel: 'Delete',
+            cancelLabel: 'Keep',
+            timeoutMs: 60_000,
+          },
+        }),
+      );
+    });
+
+    expect(await screen.findByRole('dialog')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+
+    await waitFor(() => expect(extensionConfirmApi.resolve).toHaveBeenCalledWith('delete-article', 'confirmed'));
+    expect(screen.queryByRole('dialog')).toBeNull();
   });
 
   it('keeps a disabled application recoverable even when its stale surface is still registered', () => {

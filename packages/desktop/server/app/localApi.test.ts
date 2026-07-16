@@ -62,13 +62,32 @@ vi.mock('../extensions/extensionHostClient.js', () => ({
 
 import { saveConversationArtifact } from '@neon-pilot/core';
 
-import { dispatchDesktopLocalApiRequest, normalizeDesktopLocalApiTailBlocks, rollbackDesktopConversation } from './localApi.js';
+import { subscribeAppEvents } from '../shared/appEvents.js';
+import {
+  dispatchDesktopLocalApiRequest,
+  normalizeDesktopLocalApiTailBlocks,
+  publishDesktopAppEventFromExtensionHost,
+  rollbackDesktopConversation,
+} from './localApi.js';
 
 function readJsonBody(response: Awaited<ReturnType<typeof dispatchDesktopLocalApiRequest>>) {
   return JSON.parse(Buffer.from(response.body).toString('utf-8')) as Record<string, unknown>;
 }
 
 describe('desktop local API conversation actions', () => {
+  it('forwards safe extension-defined invalidation topics and drops malformed topics', async () => {
+    const events: unknown[] = [];
+    const unsubscribe = subscribeAppEvents((event) => events.push(event));
+
+    await publishDesktopAppEventFromExtensionHost({
+      type: 'invalidate',
+      topics: ['articles', 'articles', 'reviews.detail', 'not valid', '', 123],
+    });
+
+    expect(events).toContainEqual({ type: 'invalidate', topics: ['articles', 'reviews.detail'] });
+    unsubscribe();
+  });
+
   it('drops unsafe desktop local API tail block limits', () => {
     expect(normalizeDesktopLocalApiTailBlocks(20)).toBe(20);
     expect(normalizeDesktopLocalApiTailBlocks(50000)).toBe(10000);

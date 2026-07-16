@@ -5,10 +5,12 @@ import { pathToFileURL } from 'node:url';
 
 import { init, parse } from 'es-module-lexer';
 
-import type { ExtensionManifest } from './extensionManifest.js';
+import type { ExtensionManifest, ExtensionPermission } from './extensionManifest.js';
+import { manifestHasAnyPermission } from './extensionPermissions.js';
 import { forbiddenExtensionBackendNativeImports } from './extensionProcessGuard.js';
 import type { LoadedExtensionManifest } from './extensionRegistry.js';
 import { findExtensionEntry, parseExtensionManifest } from './extensionRegistry.js';
+import { isKnownHostCommand } from './hostCommands.js';
 
 export type ExtensionDoctorSeverity = 'error' | 'warning' | 'info';
 
@@ -42,6 +44,36 @@ const forbiddenPackagedBackendPrefixes = [
   '@sinclair/typebox',
   'jsdom',
 ];
+const forbiddenUserBackendImports = new Set([
+  ...forbiddenExtensionBackendNativeImports,
+  'fs',
+  'fs/promises',
+  'node:fs',
+  'node:fs/promises',
+  'http',
+  'https',
+  'http2',
+  'net',
+  'tls',
+  'dgram',
+  'dns',
+  'node:http',
+  'node:https',
+  'node:http2',
+  'node:net',
+  'node:tls',
+  'node:dgram',
+  'node:dns',
+  'module',
+  'node:module',
+  'process',
+  'node:process',
+  'electron',
+  'fsevents',
+  'esbuild',
+  'better-sqlite3',
+  '@xenova/transformers',
+]);
 
 export async function validateExtensionPackage(input: { extensionId?: string; packageRoot?: string }): Promise<ExtensionDoctorReport> {
   const entry = input.extensionId ? findExtensionEntry(input.extensionId) : null;
@@ -85,8 +117,8 @@ export async function validateExtensionPackage(input: { extensionId?: string; pa
   }
 
   validateManifestReferences(packageRoot, manifest, findings, isUserPackage);
-  await validateBuiltImports(packageRoot, manifest, findings);
-  await validateBackendImport(packageRoot, manifest, findings);
+  await validateBuiltImports(packageRoot, manifest, findings, isUserPackage);
+  if (!isUserPackage) await validateBackendImport(packageRoot, manifest, findings);
 
   return report(manifest.id, packageRoot, manifest, findings);
 }
@@ -146,7 +178,7 @@ function validateManifestReferences(
         'Build the extension.',
       );
     if (!existsSync(backendSource)) add(findings, 'warning', 'missing-backend-source', 'src/backend.ts is missing.', backendSource);
-    if (existsSync(backendSource)) validateForbiddenSourceImports(backendSource, findings);
+    if (isUserPackage && existsSync(backendSource)) validateForbiddenSourceImports(backendSource, findings);
   }
   validateFrontendActionClient(frontendSource, frontendEntry, findings);
   for (const sourceFile of frontendSourceFiles(packageRoot)) {
@@ -164,6 +196,10 @@ function validateManifestReferences(
     : backendEntry && existsSync(backendEntry)
       ? readFileSync(backendEntry, 'utf8')
       : '';
+
+  validateBackendCapabilityPermissions(manifest, backendContent, backendSource, findings);
+  validateContributedActionReferences(manifest, findings);
+  validateExternalApplicationNavigation(manifest, findings);
 
   for (const component of collectFrontendComponents(manifest)) {
     if (frontendContent && !hasExport(frontendContent, component)) {
@@ -228,6 +264,25 @@ function validateManifestReferences(
         backendSource,
       );
     }
+    const stopHandler = service.stopHandler?.trim();
+    if (stopHandler && backendContent && !hasExport(backendContent, stopHandler)) {
+      add(
+        findings,
+        'error',
+        'missing-backend-export',
+        `Backend service stopHandler "${stopHandler}" is referenced by the manifest but is not exported.`,
+        backendSource,
+      );
+    }
+    if (!manifestHasAnyPermission(manifest, ['network:listen'])) {
+      add(
+        findings,
+        'error',
+        'missing-capability-permission',
+        `Backend service "${service.id}" requires permission "network:listen".`,
+        manifestPath(packageRoot),
+      );
+    }
   }
 
   // Validate backend lifecycle handler references.
@@ -268,9 +323,232 @@ function validateManifestReferences(
   validateDistFreshness(packageRoot, manifest, findings);
 }
 
+function maskNonCode(source: string): string {
+  const chars = [...source];
+  const mask = (index: number) => {
+    if (chars[index] !== '\n' && chars[index] !== '\r') chars[index] = ' ';
+  };
+  const scanString = (start: number, quote: string): number => {
+    let index = start;
+    mask(index++);
+    while (index < chars.length) {
+      if (chars[index] === '\\') {
+        mask(index++);
+        if (index < chars.length) mask(index++);
+        continue;
+      }
+      const current = chars[index];
+      mask(index++);
+      if (current === quote) break;
+    }
+    return index;
+  };
+  const scanTemplate = (start: number): number => {
+    let index = start;
+    mask(index++);
+    while (index < chars.length) {
+      if (chars[index] === '\\') {
+        mask(index++);
+        if (index < chars.length) mask(index++);
+        continue;
+      }
+      if (chars[index] === '`') {
+        mask(index++);
+        break;
+      }
+      if (chars[index] === '$' && chars[index + 1] === '{') {
+        index = scanCode(index + 2, true);
+        if (chars[index] === '}') index += 1;
+        continue;
+      }
+      mask(index++);
+    }
+    return index;
+  };
+  const scanCode = (start: number, stopAtClosingBrace = false): number => {
+    let index = start;
+    let braceDepth = 0;
+    while (index < chars.length) {
+      const char = chars[index];
+      const next = chars[index + 1];
+      if (stopAtClosingBrace && char === '}' && braceDepth === 0) return index;
+      if (char === '{') {
+        braceDepth += 1;
+        index += 1;
+        continue;
+      }
+      if (char === '}' && braceDepth > 0) {
+        braceDepth -= 1;
+        index += 1;
+        continue;
+      }
+      if (char === '/' && next === '/') {
+        mask(index++);
+        mask(index++);
+        while (index < chars.length && chars[index] !== '\n') mask(index++);
+        continue;
+      }
+      if (char === '/' && next === '*') {
+        mask(index++);
+        mask(index++);
+        while (index < chars.length) {
+          if (chars[index] === '*' && chars[index + 1] === '/') {
+            mask(index++);
+            mask(index++);
+            break;
+          }
+          mask(index++);
+        }
+        continue;
+      }
+      if (char === '/') {
+        let previous = index - 1;
+        while (previous >= 0 && /\s/u.test(chars[previous]!)) previous -= 1;
+        if (previous < 0 || '=(:,!&|?{;['.includes(chars[previous]!)) {
+          mask(index++);
+          while (index < chars.length) {
+            if (chars[index] === '\\') {
+              mask(index++);
+              if (index < chars.length) mask(index++);
+              continue;
+            }
+            const current = chars[index];
+            mask(index++);
+            if (current === '/') {
+              while (index < chars.length && /[a-z]/iu.test(chars[index]!)) mask(index++);
+              break;
+            }
+          }
+          continue;
+        }
+      }
+      if (char === "'" || char === '"') {
+        index = scanString(index, char);
+        continue;
+      }
+      if (char === '`') {
+        index = scanTemplate(index);
+        continue;
+      }
+      index += 1;
+    }
+    return index;
+  };
+  scanCode(0);
+  return chars.join('');
+}
+
+function maskComments(source: string): string {
+  const chars = [...source];
+  const mask = (index: number) => {
+    if (chars[index] !== '\n' && chars[index] !== '\r') chars[index] = ' ';
+  };
+  let index = 0;
+  let quote = '';
+  while (index < chars.length) {
+    const char = chars[index]!;
+    const next = chars[index + 1];
+    if (quote) {
+      if (char === '\\') index += 2;
+      else {
+        if (char === quote) quote = '';
+        index += 1;
+      }
+      continue;
+    }
+    if (char === "'" || char === '"' || char === '`') {
+      quote = char;
+      index += 1;
+      continue;
+    }
+    if (char === '/' && next === '/') {
+      mask(index++);
+      mask(index++);
+      while (index < chars.length && chars[index] !== '\n') mask(index++);
+      continue;
+    }
+    if (char === '/' && next === '*') {
+      mask(index++);
+      mask(index++);
+      while (index < chars.length) {
+        if (chars[index] === '*' && chars[index + 1] === '/') {
+          mask(index++);
+          mask(index++);
+          break;
+        }
+        mask(index++);
+      }
+      continue;
+    }
+    index += 1;
+  }
+  return chars.join('');
+}
+
+function addBinding(bindings: Set<string>, candidate: string | undefined): void {
+  const value = candidate?.trim();
+  if (value && /^[A-Z_$][\w$]*$/u.test(value)) bindings.add(value);
+}
+
+function unboundJsxComponents(source: string, _fileName: string): string[] {
+  const code = maskNonCode(source);
+  const runtimeBindings = new Set<string>();
+
+  for (const match of code.matchAll(/\bimport\s+(?!type\b)([\s\S]*?)\s+from\b/gu)) {
+    const clause = match[1]!.trim();
+    addBinding(runtimeBindings, clause.match(/^([\w$]+)/u)?.[1]);
+    addBinding(runtimeBindings, clause.match(/\*\s+as\s+([\w$]+)/u)?.[1]);
+    const named = clause.match(/\{([\s\S]*?)\}/u)?.[1] ?? '';
+    for (const item of named.split(',')) {
+      const cleaned = item.trim();
+      if (!cleaned || cleaned.startsWith('type ')) continue;
+      const parts = cleaned.split(/\s+as\s+/u);
+      addBinding(runtimeBindings, parts[1] ?? parts[0]);
+    }
+  }
+  for (const match of code.matchAll(/\b(?:const|let|var|function|class|enum)\s+([\w$]+)/gu)) {
+    addBinding(runtimeBindings, match[1]);
+  }
+  for (const match of code.matchAll(/\b(?:const|let|var)\s*\{([^}]*)\}\s*=/gu)) {
+    for (const item of match[1]!.split(',')) {
+      const [property, alias] = item.split(':').map((part) => part.trim());
+      addBinding(runtimeBindings, (alias ?? property)?.replace(/=.*$/u, '').trim());
+    }
+  }
+  for (const match of code.matchAll(/\bfunction\s+[\w$]+\s*\(\s*\{([^}]*)\}/gu)) {
+    for (const item of match[1]!.split(',')) {
+      const [property, alias] = item.split(':').map((part) => part.trim());
+      addBinding(runtimeBindings, (alias ?? property)?.replace(/=.*$/u, '').trim());
+    }
+  }
+
+  const missing = new Set<string>();
+  for (const match of code.matchAll(/<\/?\s*([A-Z_$][\w$]*)(?=[.\s/>])/gu)) {
+    const isClosingTag = code.startsWith('</', match.index);
+    const preceding = match.index > 0 ? code[match.index - 1] : '';
+    // In TSX, a capitalized name immediately following an identifier, call,
+    // or indexed expression is a type argument (`useState<Model>()` or
+    // `ChangeEvent<HTMLInputElement>`), not an opening JSX element.
+    if (!isClosingTag && /[\w$.)\]]/u.test(preceding ?? '')) continue;
+    if (!runtimeBindings.has(match[1]!)) missing.add(match[1]!);
+  }
+  return [...missing].sort();
+}
+
 function validateUserExtensionFrontendPatterns(frontendSource: string, isUserPackage: boolean, findings: ExtensionDoctorFinding[]): void {
   if (!isUserPackage || !existsSync(frontendSource)) return;
   const source = readFileSync(frontendSource, 'utf8');
+  const missingJsxBindings = unboundJsxComponents(source, frontendSource);
+  if (missingJsxBindings.length > 0) {
+    add(
+      findings,
+      'error',
+      'unbound-jsx-component',
+      `JSX components are used without runtime imports or declarations: ${missingJsxBindings.join(', ')}.`,
+      frontendSource,
+      'Import every shared component from @neon-pilot/extensions/ui (or declare/import the local component) before using it in JSX.',
+    );
+  }
   if (/\bclassName\s*=/u.test(source)) {
     add(
       findings,
@@ -335,6 +613,16 @@ function validateUserExtensionFrontendPatterns(frontendSource: string, isUserPac
       'Move the controls into actions={<>...</>} so management actions remain visible.',
     );
   }
+  if (/<KeyValueTable\b(?![^>]*\bitems=)[^>]*(?:\/>|>[\s\S]*?<\/KeyValueTable>)/u.test(source)) {
+    add(
+      findings,
+      'error',
+      'invalid-key-value-table-content',
+      'KeyValueTable requires an items array and does not render KeyValueItem children.',
+      frontendSource,
+      'Pass items={[{ label: "Engine", value: runtime.engine }]} to KeyValueTable, or use KeyValueList with KeyValueItem children.',
+    );
+  }
   if (/<IconButton\b[^>]*(?:title|aria-label)=\{?['"][^'"]*delete[^'"]*['"][^>]*>[\s\S]*?[×✕x][\s\S]*?<\/IconButton>/iu.test(source)) {
     add(
       findings,
@@ -373,6 +661,35 @@ function validateUserExtensionFrontendPatterns(frontendSource: string, isUserPac
       'A raw JSX attribute contains a Unicode escape such as \\u2026, which JSX renders as implementation text rather than decoding.',
       frontendSource,
       'Use the actual character (for example, “…”) or plain ASCII punctuation in user-facing copy.',
+    );
+  }
+  if (/\b(?:const|let|var)\s+[\w$]+\s*=\s*pa\.storage\.(?:get|list)\s*\(/u.test(source)) {
+    add(
+      findings,
+      'error',
+      'unawaited-frontend-storage-read',
+      'Frontend code treats an asynchronous pa.storage read as a synchronous value.',
+      frontendSource,
+      'Await pa.storage.get/list inside an async function before reading the value or putting it into React state.',
+    );
+  }
+  const confirmResultBindings = [...source.matchAll(/\b(?:const|let|var)\s+([\w$]+)\s*=\s*await\s+pa\.ui\.confirm\s*\(/gu)].map(
+    (match) => match[1]!,
+  );
+  const readsStructuredFrontendConfirm = confirmResultBindings.some((binding) =>
+    new RegExp(`\\b${binding.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&')}\\.confirmed\\b`, 'u').test(source),
+  );
+  if (
+    readsStructuredFrontendConfirm ||
+    /\b(?:const|let|var)\s*\{[^}]*\bconfirmed\b[^}]*\}\s*=\s*await\s+pa\.ui\.confirm\s*\(/u.test(source)
+  ) {
+    add(
+      findings,
+      'error',
+      'invalid-frontend-confirm-result',
+      'Frontend pa.ui.confirm returns a boolean, not a structured confirmation result.',
+      frontendSource,
+      'Use `const confirmed = await pa.ui.confirm(...); if (!confirmed) return;`. Only backend ctx.ui.confirm returns an object with confirmed/status.',
     );
   }
 }
@@ -514,12 +831,17 @@ function validateDistFreshness(
   }
 }
 
-async function validateBuiltImports(packageRoot: string, manifest: ExtensionManifest, findings: ExtensionDoctorFinding[]) {
+async function validateBuiltImports(
+  packageRoot: string,
+  manifest: ExtensionManifest,
+  findings: ExtensionDoctorFinding[],
+  isUserPackage: boolean,
+) {
   await init;
   const frontendEntry = manifest.frontend?.entry ? resolve(packageRoot, manifest.frontend.entry) : undefined;
   const backendEntry = resolveBackendRuntimeEntry(packageRoot, manifest);
-  if (frontendEntry && existsSync(frontendEntry)) validatePortableImports(frontendEntry, findings, 'frontend');
-  if (backendEntry && existsSync(backendEntry)) validatePortableImports(backendEntry, findings, 'backend');
+  if (frontendEntry && existsSync(frontendEntry)) validatePortableImports(frontendEntry, findings, 'frontend', isUserPackage);
+  if (backendEntry && existsSync(backendEntry)) validatePortableImports(backendEntry, findings, 'backend', isUserPackage);
 }
 
 async function validateBackendImport(packageRoot: string, manifest: ExtensionManifest, findings: ExtensionDoctorFinding[]) {
@@ -538,12 +860,27 @@ async function validateBackendImport(packageRoot: string, manifest: ExtensionMan
   }
 }
 
-function validatePortableImports(filePath: string, findings: ExtensionDoctorFinding[], side: 'frontend' | 'backend') {
+function validatePortableImports(
+  filePath: string,
+  findings: ExtensionDoctorFinding[],
+  side: 'frontend' | 'backend',
+  isUserPackage: boolean,
+) {
   const source = readFileSync(filePath, 'utf8');
   const [imports] = parse(source);
   for (const importRecord of imports) {
     const specifier = importRecord.n;
     if (!specifier) continue;
+    if (side === 'backend' && isUserPackage && forbiddenUserBackendImports.has(specifier)) {
+      add(
+        findings,
+        'error',
+        'forbidden-backend-runtime-import',
+        `User backend bundle imports forbidden host module: ${specifier}`,
+        filePath,
+      );
+      continue;
+    }
     if (specifier.startsWith('/') || specifier.startsWith('file:')) {
       add(
         findings,
@@ -597,14 +934,134 @@ function validateFrontendBundleRuntime(filePath: string, findings: ExtensionDoct
 
 function validateForbiddenSourceImports(filePath: string, findings: ExtensionDoctorFinding[]) {
   const source = readFileSync(filePath, 'utf8');
-  for (const specifier of forbiddenExtensionBackendNativeImports) {
-    if (source.includes(`'${specifier}'`) || source.includes(`"${specifier}"`)) {
+  const withoutComments = maskComments(source);
+  const code = maskNonCode(source);
+  for (const specifier of forbiddenUserBackendImports) {
+    const escaped = specifier.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
+    if (new RegExp(`\\b(?:from\\s*|import\\s*(?:\\(\\s*)?|require\\s*\\()\\s*['"]${escaped}['"]`, 'u').test(withoutComments)) {
       add(
         findings,
         'error',
         'forbidden-process-import',
-        `Backend source imports ${specifier}; use ctx.shell or ctx.git instead.`,
+        `User backend source imports forbidden host module ${specifier}; use the typed ctx capability instead.`,
         filePath,
+      );
+    }
+  }
+  if (/\bprocess\s*\./u.test(code) || /\bprocess\s*\[/u.test(code)) {
+    add(
+      findings,
+      'error',
+      'forbidden-process-access',
+      'User backend source accesses the host process directly.',
+      filePath,
+      'Use ExtensionBackendContext capabilities; environment variables and process globals are outside the extension boundary.',
+    );
+  }
+  if (/\b(?:eval|Function)\s*\(|\bglobalThis\b|\bimport\s*\(/u.test(code)) {
+    add(
+      findings,
+      'error',
+      'forbidden-dynamic-code',
+      'User backend source uses dynamic code, dynamic imports, or host globals.',
+      filePath,
+      'Use static imports and ExtensionBackendContext capabilities only.',
+    );
+  }
+}
+
+function hasAnyPermission(manifest: ExtensionManifest, expected: string[]): boolean {
+  return manifestHasAnyPermission(manifest, expected as ExtensionPermission[]);
+}
+
+function validateBackendCapabilityPermissions(
+  manifest: ExtensionManifest,
+  source: string,
+  sourcePath: string,
+  findings: ExtensionDoctorFinding[],
+): void {
+  if (!source) return;
+  const requirements = [
+    { pattern: /\bctx\.storage\.(?:get|list)\s*\(/u, permissions: ['storage:read', 'storage:readwrite'], capability: 'storage reads' },
+    { pattern: /\bctx\.storage\.(?:put|delete)\s*\(/u, permissions: ['storage:write', 'storage:readwrite'], capability: 'storage writes' },
+    { pattern: /\bctx\.secrets\.get\s*\(/u, permissions: ['secrets:read'], capability: 'secret reads' },
+    { pattern: /\bctx\.shell\.(?:exec|spawn)\s*\(/u, permissions: ['shell:execute'], capability: 'shell execution' },
+    {
+      pattern: /\bctx\.filesystem\.(?:requestRoot|workspace|app|cache|temp)\s*\(/u,
+      permissions: ['filesystem:read', 'filesystem:write', 'filesystem:readwrite'],
+      capability: 'filesystem access',
+    },
+    {
+      pattern: /\bctx\.extensions\.(?:callAction|listActions|getStatus)\s*\(/u,
+      permissions: ['extensions:read'],
+      capability: 'extension reads/calls',
+    },
+    { pattern: /\bctx\.extensions\.setEnabled\s*\(/u, permissions: ['extensions:write'], capability: 'extension writes' },
+    { pattern: /\bctx\.ui\.confirm\s*\(/u, permissions: ['ui:confirm'], capability: 'confirmation UI' },
+    { pattern: /\bctx\.ui\.invalidate\s*\(/u, permissions: ['ui:invalidate'], capability: 'UI invalidation' },
+    { pattern: /\bctx\.notify\.(?:toast|system|setBadge|clearBadge)\s*\(/u, permissions: ['ui:notify'], capability: 'notifications' },
+  ];
+  for (const requirement of requirements) {
+    if (!requirement.pattern.test(source) || hasAnyPermission(manifest, requirement.permissions)) continue;
+    add(
+      findings,
+      'error',
+      'missing-capability-permission',
+      `Backend source uses ${requirement.capability} but does not declare one of: ${requirement.permissions.join(', ')}.`,
+      sourcePath,
+    );
+  }
+}
+
+function validateContributedActionReferences(manifest: ExtensionManifest, findings: ExtensionDoctorFinding[]): void {
+  const backendActions = new Set((manifest.backend?.actions ?? []).map((action) => action.id));
+  const references = [
+    ...(manifest.contributes?.commands ?? []).map((item) => ({ kind: 'command', id: item.id, action: item.action })),
+    ...(manifest.contributes?.contextMenus ?? []).map((item) => ({ kind: 'context menu', id: item.id, action: item.action })),
+    ...(manifest.contributes?.toolbarActions ?? []).map((item) => ({ kind: 'toolbar action', id: item.id, action: item.action })),
+    ...(manifest.contributes?.messageActions ?? []).map((item) => ({ kind: 'message action', id: item.id, action: item.action })),
+    ...(manifest.contributes?.statusBarItems ?? [])
+      .filter((item) => typeof item.action === 'string')
+      .map((item) => ({ kind: 'status item', id: item.id, action: item.action! })),
+  ];
+  for (const reference of references) {
+    if (backendActions.has(reference.action) || isKnownHostCommand(reference.action)) continue;
+    add(
+      findings,
+      'error',
+      'dangling-contributed-action',
+      `Contributed ${reference.kind} "${reference.id}" references unknown action "${reference.action}".`,
+      undefined,
+      'Reference a declared backend action or a documented host command.',
+    );
+  }
+}
+
+function validateExternalApplicationNavigation(manifest: ExtensionManifest, findings: ExtensionDoctorFinding[]): void {
+  for (const item of manifest.contributes?.nav ?? []) {
+    if (!item.applicationId || item.applicationId.startsWith(`${manifest.id}:`)) continue;
+    const separator = item.applicationId.indexOf(':');
+    if (separator <= 0) continue;
+    const targetExtensionId = item.applicationId.slice(0, separator);
+    const target = findExtensionEntry(targetExtensionId);
+    const application = target?.manifest.contributes?.applications?.find(
+      (candidate) => `${targetExtensionId}:${candidate.id}` === item.applicationId,
+    );
+    if (!application) {
+      add(
+        findings,
+        'error',
+        'unknown-target-application',
+        `Navigation "${item.id}" targets unavailable application "${item.applicationId}".`,
+      );
+      continue;
+    }
+    if (item.slot && !(application.navigationSlots ?? []).some((slot) => slot.id === item.slot)) {
+      add(
+        findings,
+        'error',
+        'unknown-target-navigation-slot',
+        `Navigation "${item.id}" targets undeclared slot "${item.slot}" in application "${item.applicationId}".`,
       );
     }
   }
@@ -612,8 +1069,16 @@ function validateForbiddenSourceImports(filePath: string, findings: ExtensionDoc
 
 function collectFrontendComponents(manifest: ExtensionManifest): string[] {
   const contributions = manifest.contributes;
+  const viewComponents = (contributions?.views ?? []).flatMap((item) => {
+    if (typeof item.component === 'string') return [item.component];
+    if (!item.component || typeof item.component !== 'object' || !('overrides' in item.component)) return [];
+    const overrides = item.component.overrides;
+    return overrides && typeof overrides === 'object'
+      ? Object.values(overrides).filter((value): value is string => typeof value === 'string')
+      : [];
+  });
   return [
-    ...(contributions?.views ?? []).map((item) => item.component),
+    ...viewComponents,
     ...(contributions?.composerControls ?? []).map((item) => item.component),
     ...(contributions?.composerInputTools ?? []).map((item) => item.component),
     ...(contributions?.composerShelves ?? []).map((item) => item.component),

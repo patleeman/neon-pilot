@@ -5,7 +5,7 @@ import { basename, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const defaultModels = ['opencode-go/kimi-k2.5', 'opencode-go/mimo-v2.5', 'opencode-go/qwen3.6-plus'];
+const defaultModels = ['opencode-go/qwen3.6-plus', 'opencode-go/mimo-v2.5', 'opencode-go/kimi-k2.5'];
 
 function arg(name, fallback = '') {
   const args = process.argv.slice(2).filter((value, index) => !(index === 0 && value === '--'));
@@ -79,6 +79,18 @@ function readImageInput(file) {
   };
 }
 
+function readChatImageInput(file) {
+  const absolute = resolve(file);
+  const data = readFileSync(absolute).toString('base64');
+  return {
+    type: 'image_url',
+    image_url: {
+      url: `data:${normalizeMimeType(absolute)};base64,${data}`,
+      detail: 'high',
+    },
+  };
+}
+
 function screenshotItemsFromSummary(summary) {
   const items = [
     ...(Array.isArray(summary.baseline) ? summary.baseline : []),
@@ -124,9 +136,28 @@ function buildPrompt(captureDir, items) {
   ].join('\n');
 }
 
-function buildResponsesRequest(model, captureDir) {
+export function buildInferenceRequest(model, captureDir, api = 'openai-responses') {
   const { summary, items, images } = imageInputsForCapture(captureDir);
   const prompt = buildPrompt(captureDir, items);
+  if (api === 'openai-completions') {
+    return {
+      model,
+      messages: [
+        {
+          role: 'system',
+          content:
+            'Judge the attached UI screenshots and return only one strict JSON object matching the requested rubric. Do not include analysis or Markdown.',
+        },
+        {
+          role: 'user',
+          content: [{ type: 'text', text: prompt }, ...items.map((item) => readChatImageInput(item.path))],
+        },
+      ],
+      temperature: 0,
+      max_tokens: numberArg('max-output-tokens', 4000),
+      response_format: { type: 'json_object' },
+    };
+  }
   return {
     model,
     input: [
@@ -146,7 +177,16 @@ function buildResponsesRequest(model, captureDir) {
   };
 }
 
-function responseText(response) {
+export function responseText(response) {
+  const chatContent = response?.choices?.[0]?.message?.content;
+  if (typeof chatContent === 'string') return chatContent.trim();
+  if (Array.isArray(chatContent)) {
+    return chatContent
+      .map((item) => (typeof item?.text === 'string' ? item.text : ''))
+      .filter(Boolean)
+      .join('\n')
+      .trim();
+  }
   const chunks = [];
   for (const output of Array.isArray(response?.output) ? response.output : []) {
     for (const content of Array.isArray(output?.content) ? output.content : []) {
@@ -171,11 +211,12 @@ function parseJudgeJson(text) {
   }
 }
 
-async function postResponses(baseUrl, apiKey, body, timeoutMs) {
+async function postInference(baseUrl, apiKey, api, body, timeoutMs) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const response = await fetch(`${baseUrl.replace(/\/$/, '')}/responses`, {
+    const endpoint = api === 'openai-completions' ? '/chat/completions' : '/responses';
+    const response = await fetch(`${baseUrl.replace(/\/$/, '')}${endpoint}`, {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
@@ -185,7 +226,7 @@ async function postResponses(baseUrl, apiKey, body, timeoutMs) {
       signal: controller.signal,
     });
     const text = await response.text();
-    if (!response.ok) throw new Error(`/responses returned ${response.status}: ${text}`);
+    if (!response.ok) throw new Error(`${endpoint} returned ${response.status}: ${text}`);
     return text ? JSON.parse(text) : {};
   } finally {
     clearTimeout(timeout);
@@ -196,14 +237,24 @@ function safeModelFileName(model) {
   return model.replace(/[^a-z0-9._-]+/gi, '-').replace(/^-|-$/g, '') || 'model';
 }
 
-function aggregateResults(results) {
+export function aggregateResults(results) {
   const usable = results.filter((result) => result.status === 'pass' && result.judge?.imageAccess === true);
-  const failures = results.filter((result) => result.status !== 'pass' || result.judge?.decision === 'fail');
+  const failures = results.filter(
+    (result) =>
+      result.status !== 'pass' ||
+      result.judge?.imageAccess !== true ||
+      result.judge?.decision === 'fail' ||
+      (Array.isArray(result.judge?.mustFix) && result.judge.mustFix.length > 0),
+  );
   return {
     models: results.map((result) => result.model),
     usableVisualJudges: usable.map((result) => result.model),
     decision:
-      usable.length > 0 && usable.every((result) => result.judge?.decision === 'pass')
+      usable.length === results.length &&
+      usable.length > 0 &&
+      usable.every(
+        (result) => result.judge?.decision === 'pass' && (!Array.isArray(result.judge?.mustFix) || result.judge.mustFix.length === 0),
+      )
         ? 'pass'
         : failures.length > 0
           ? 'fail'
@@ -214,6 +265,7 @@ function aggregateResults(results) {
       imageAccess: result.judge?.imageAccess ?? false,
       decision: result.judge?.decision ?? 'fail',
       overall: result.judge?.overall ?? 1,
+      mustFix: Array.isArray(result.judge?.mustFix) ? result.judge.mustFix : [],
       error: result.error,
     })),
   };
@@ -225,13 +277,14 @@ export async function runVisualJudges() {
   const baseUrl = arg('base-url', process.env.MODEL_GATEWAY_BASE_URL ?? 'http://127.0.0.1:8766/v1');
   const apiKey = arg('api-key', process.env.MODEL_GATEWAY_API_KEY ?? 'visual-judge');
   const models = readModels();
+  const api = arg('api', 'openai-responses');
   const timeoutMs = numberArg('timeout-ms', 300000);
   const dryRun = boolArg('dry-run');
 
   mkdirSync(outDir, { recursive: true });
   const results = [];
   for (const model of models) {
-    const request = buildResponsesRequest(model, captureDir);
+    const request = buildInferenceRequest(model, captureDir, api);
     const requestPath = resolve(outDir, `${safeModelFileName(model)}.request.json`);
     if (dryRun) {
       write(requestPath, `${JSON.stringify({ ...request, input: '[omitted image payloads in dry-run summary]' }, null, 2)}\n`);
@@ -239,7 +292,7 @@ export async function runVisualJudges() {
       continue;
     }
     try {
-      const response = await postResponses(baseUrl, apiKey, request, timeoutMs);
+      const response = await postInference(baseUrl, apiKey, api, request, timeoutMs);
       write(resolve(outDir, `${safeModelFileName(model)}.response.json`), `${JSON.stringify(response, null, 2)}\n`);
       const text = responseText(response);
       write(resolve(outDir, `${safeModelFileName(model)}.txt`), `${text}\n`);

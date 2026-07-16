@@ -124,6 +124,21 @@ vi.mock('../session/sessionSnapshot', () => ({
   fetchSessionsSnapshot: fetchSessionsSnapshotMock,
 }));
 
+vi.mock('../components/Layout', async () => {
+  const { Outlet } = await import('react-router-dom');
+  const { Sidebar } = await import('../components/Sidebar');
+  return {
+    Layout: () => (
+      <div>
+        <Sidebar />
+        <main>
+          <Outlet />
+        </main>
+      </div>
+    ),
+  };
+});
+
 vi.mock('../extensions/useExtensionRegistry', () => ({
   ExtensionRegistryProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   useExtensionRegistry: () => extensionRegistryMock.state,
@@ -136,12 +151,32 @@ vi.mock('../pages/ConversationPage', () => ({
   },
 }));
 
-vi.mock('../extensions/ExtensionRouteHost', () => ({
-  ExtensionRouteHost: () => {
-    const location = useLocation();
-    return <main>{`Extension route ${location.pathname}${location.search}${location.hash}`}</main>;
-  },
-}));
+vi.mock('../extensions/ExtensionRouteHost', async () => {
+  const { useNavigate } = await import('react-router-dom');
+  return {
+    ExtensionRouteHost: () => {
+      const location = useLocation();
+      const navigate = useNavigate();
+      React.useEffect(() => {
+        if (location.pathname !== '/conversations') return;
+        let cancelled = false;
+        void apiMock.readConversationWorkspace().then((layout: TestWorkspaceLayout) => {
+          if (!cancelled && layout.activeConversationId) {
+            navigate(`/conversations/${layout.activeConversationId}`, { replace: true });
+          }
+        });
+        return () => {
+          cancelled = true;
+        };
+      }, [location.pathname, navigate]);
+      if (location.pathname.startsWith('/conversations/')) {
+        const id = location.pathname.slice('/conversations/'.length) || 'missing';
+        return <main>{id === 'new' ? 'Draft conversation route' : `Conversation route ${id}`}</main>;
+      }
+      return <main>{`Extension route ${location.pathname}${location.search}${location.hash}`}</main>;
+    },
+  };
+});
 
 function session(overrides: Partial<SessionMeta> & Pick<SessionMeta, 'id' | 'title'>): SessionMeta {
   return {

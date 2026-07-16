@@ -152,11 +152,17 @@ describe('first-party extension route shell manifests', () => {
 
     for (const extensionId of extensionIds) {
       const manifest = readManifest(extensionId);
-      const navSidebarViews = new Set((manifest.contributes?.nav ?? []).map((item) => item.sidebarView).filter(Boolean));
+      const navSidebarViews = new Set([
+        ...(manifest.contributes?.nav ?? []).map((item) => item.sidebarView).filter(Boolean),
+        ...(manifest.contributes?.applications ?? []).map((application) => application.sidebarView).filter(Boolean),
+      ]);
       const sidebarViews = manifest.contributes?.views?.filter((view) => view.location === 'sidebar') ?? [];
 
       for (const view of sidebarViews) {
-        expect(navSidebarViews.has(view.id), `${extensionId}:${view.id} should be bound by nav[].sidebarView`).toBe(true);
+        expect(
+          navSidebarViews.has(view.id),
+          `${extensionId}:${view.id} should be bound by nav[].sidebarView or applications[].sidebarView`,
+        ).toBe(true);
       }
     }
   });

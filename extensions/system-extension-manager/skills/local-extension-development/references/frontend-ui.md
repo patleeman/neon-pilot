@@ -28,6 +28,10 @@ export function MyPage({ pa, context, params }: ExtensionSurfaceProps) {
 
 Named exports must match manifest `component` values. Do not mount a separate React root.
 
+The builder uses React's automatic JSX runtime, so JSX itself does not need a default `React` import. Interactive components must still import every hook they call from `react`, for example `import { useCallback, useEffect, useMemo, useState } from 'react';`. Import DOM/event types separately with `import type { ChangeEvent } from 'react';` when useful.
+
+Every PascalCase JSX component must have a runtime import or local declaration in that source file. The installed builder strips types but does not turn an undeclared JSX identifier into an import; `validate` rejects these before they become a runtime-only blank/error surface.
+
 The installed-app builder bundles TypeScript and JSX; it does **not** run an extension-local Tailwind compilation step. Do not write `className` utility strings. They may appear plausible in source while rendering as collapsed, unstyled markup in the app. Compose shared primitives and use a narrow React `style={{ ... }}` object only when product-specific grid, flex, sizing, or spacing is not already owned by a primitive. Validation treats `className` and raw `<button>`, `<input>`, `<select>`, or `<textarea>` controls in user extensions as errors.
 
 ## Shared primitives
@@ -73,6 +77,20 @@ For a data-management toolbar, use the primitive's rendered slots. Arbitrary chi
 
 `DataTableToolbar` supports rendered `tabs`, `summary`, `search`, `filters`, and `actions` slots. It does not accept `searchValue`/`onSearchChange`, and it does not render action buttons passed as ordinary children. Every management destination must expose at least one obvious visible action in its page toolbar; Launcher commands supplement rather than replace page controls.
 
+`KeyValueTable` accepts an `items` array; it does not render `KeyValueItem` children:
+
+```tsx
+<KeyValueTable
+  columns={2}
+  items={[
+    { label: 'Engine', value: runtime.engine },
+    { label: 'Endpoint', value: runtime.endpoint },
+  ]}
+/>
+```
+
+Use `KeyValueList` when you need to compose `KeyValueItem` children.
+
 ## Data and actions
 
 Invoke backend actions through:
@@ -82,6 +100,22 @@ const result = await pa.extension.invoke('listItems', { query });
 ```
 
 Use `pa.ui.toast` for brief confirmation and `pa.ui.confirm` immediately before destructive work. Use command contributions for open, create, refresh, run, or other meaningful actions.
+
+Frontend client calls are asynchronous. Await storage reads before using their values, and treat frontend confirmation as a boolean:
+
+```ts
+const selectedId = await pa.storage.get<string>('selected-id');
+
+const confirmed = await pa.ui.confirm({
+  title: 'Delete article?',
+  message: 'This cannot be undone.',
+});
+if (!confirmed) return;
+```
+
+Do not put the Promise returned by `pa.storage.get` into React state. Do not read `decision.confirmed` from `pa.ui.confirm`; only backend `ctx.ui.confirm` returns the structured `{ confirmed, status }` result shown in the backend reference.
+
+Make asynchronous list refreshes race-safe. A slow earlier `list*` response must never overwrite a newer mutation or refresh. Keep a monotonically increasing request id (or an equivalent abort/generation guard), apply a response only when it is still the newest request, and after a successful create/update/delete either apply the returned record deterministically or await one guarded refresh of the persisted list. Do not leave an unguarded mount-time refresh able to restore an item that the user just deleted.
 
 Keep selection or route state deep-linkable when users may navigate back, reload, or reopen it. Read the actual route/search state supplied by the host.
 
@@ -109,6 +143,8 @@ Neon Pilot is a dense operational workbench:
 - Use structured controls instead of comma-separated fields or raw JSON editors.
 - Do not seed fake demo records merely to fill space; use purposeful templates or guidance inside the real workflow.
 - Inspect UI inside the complete Neon Pilot frame.
+
+Before shipping, judge the populated, selected, creating, empty, loading, and error states as one product. Target at least 4/5 for host fit, hierarchy, density, negative-space rhythm, surface discipline, control choice, action chrome, editing model, interaction clarity, accessibility signals, and polish. A structurally correct page still fails this bar when half of a split pane is mostly blank, header actions read as scattered text-button chrome, or a selected resource cannot be usefully inspected or edited. Keep actions in one compact toolbar; use an accessible shared icon button when the symbol is genuinely unambiguous, and otherwise use one concise labeled toolbar action. Make the selected detail region operational with inline edit/actions and purposeful metadata rather than decorative filler.
 
 For CRUD and operational products, these are release requirements rather than optional polish:
 
@@ -174,6 +210,25 @@ For a selectable list in the left pane, use the public row props exactly as show
 ```
 
 `ResourceListItem` is already a semantic button. Do not wrap it in a clickable container. Its supported content props are `label` (required), `detail?`, `meta?`, `leading?`, `selected?`, and `children?`; ordinary button props such as `onClick`, `disabled`, and `aria-label` are also supported. Use `ResourceListRow` instead for a non-clickable display row; it accepts `title`, `detail?`, `meta?`, `leading?`, `actions?`, and `children?`.
+
+For a small fixed set of mutually exclusive modes or statuses, use the typed segmented control directly:
+
+```tsx
+const [status, setStatus] = useState<'all' | 'active' | 'complete'>('all');
+
+<SegmentedControl
+  ariaLabel="Filter by status"
+  value={status}
+  options={[
+    { value: 'all', label: 'All' },
+    { value: 'active', label: 'Active' },
+    { value: 'complete', label: 'Complete' },
+  ]}
+  onChange={setStatus}
+/>;
+```
+
+`Select` is the shared native select primitive. Pass ordinary select props and render `<option>` children: `<Select value={status} onChange={(event) => setStatus(event.currentTarget.value as Status)} aria-label="Filter by status">…</Select>`.
 
 - Use one clear surface hierarchy. Prefer compact rows with dividers and a focused detail region over a grid of individually outlined cards nested inside other panels.
 - A management destination needs its owning action, not only Search and Refresh. Downloads needs a visible start/add-download path; jobs need Run; installed resources need Install or Add where appropriate. Empty states must keep that action reachable.

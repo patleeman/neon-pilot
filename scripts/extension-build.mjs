@@ -2,8 +2,20 @@
 /* eslint-env node */
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { copyFileSync, cpSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import {
+  copyFileSync,
+  cpSync,
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  realpathSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
+import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const HOST_RUNTIME_EXTERNAL_IMPORT_RE = /^(process|@xenova\/transformers|better-sqlite3|esbuild)(\/.*)?$/;
@@ -14,6 +26,36 @@ const FORBIDDEN_BACKEND_IMPORTS = new Set([
   'node:cluster',
   'worker_threads',
   'node:worker_threads',
+]);
+const FORBIDDEN_USER_BACKEND_IMPORTS = new Set([
+  ...FORBIDDEN_BACKEND_IMPORTS,
+  'fs',
+  'fs/promises',
+  'node:fs',
+  'node:fs/promises',
+  'http',
+  'https',
+  'http2',
+  'net',
+  'tls',
+  'dgram',
+  'dns',
+  'node:http',
+  'node:https',
+  'node:http2',
+  'node:net',
+  'node:tls',
+  'node:dgram',
+  'node:dns',
+  'module',
+  'node:module',
+  'process',
+  'node:process',
+  'electron',
+  'fsevents',
+  'esbuild',
+  'better-sqlite3',
+  '@xenova/transformers',
 ]);
 const PUBLIC_BACKEND_SUBPATHS = new Set([
   'agent',
@@ -63,10 +105,20 @@ if (!existsSync(manifestPath)) {
 }
 
 const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+// Trust is derived from the checked-in system-extension source boundary, not
+// from package-controlled manifest metadata. A copied or generated extension
+// cannot opt out of the user build restrictions by claiming packageType=system.
+const systemExtensionSourceRoot = join(repoRoot, 'extensions');
+const isBundledSystemSource =
+  String(manifest.id ?? '').startsWith('system-') &&
+  existsSync(systemExtensionSourceRoot) &&
+  isPathInside(systemExtensionSourceRoot, packageRoot);
+const isUserPackage = !isBundledSystemSource;
 if (manifest.schemaVersion !== 2) {
   console.error('Only native extension manifest schemaVersion 2 is supported by this builder.');
   process.exit(1);
 }
+if (isUserPackage) assertNoUserPackageSymlinks();
 
 // dist is generated, but build it atomically. Native sidecars and bundlers can
 // fail after doing real work; never delete the last good packaged extension
@@ -121,6 +173,7 @@ if (manifest.frontend?.entry && existsSync(frontendSource)) {
     nodePaths: findAppNodeModules(),
     metafile: true,
   });
+  if (isUserPackage) assertUserBuildInputsContained(result.metafile, 'frontend');
   recordBuildOutputs(buildOutputs, result.metafile);
   if (!manifest.backend?.entry || !existsSync(join(packageRoot, 'src', 'backend.ts'))) {
     writeBundledRuntimePackageJson(outfile, buildOutputs);
@@ -141,9 +194,11 @@ if (manifest.backend?.entry && existsSync(backendSource)) {
     target: 'node20',
     sourcemap: emitSourceMaps,
     logLevel: 'info',
-    banner: {
-      js: 'import { createRequire as __paExtensionCreateRequire } from "node:module"; const require = __paExtensionCreateRequire(import.meta.url);',
-    },
+    banner: isUserPackage
+      ? undefined
+      : {
+          js: 'import { createRequire as __paExtensionCreateRequire } from "node:module"; const require = __paExtensionCreateRequire(import.meta.url);',
+        },
     external: [
       '@neon-pilot/extensions/host',
       '@neon-pilot/extensions/ui',
@@ -157,19 +212,19 @@ if (manifest.backend?.entry && existsSync(backendSource)) {
       '@neon-pilot/extensions/settings',
       '@neon-pilot/extensions/data',
       '@neon-pilot/extensions/excalidraw',
-      'electron',
-      'fsevents',
-      'process',
+      ...(isUserPackage ? [] : ['electron', 'fsevents', 'process']),
     ],
     nodePaths: findAppNodeModules(),
     plugins: [
-      createForbiddenBackendImportPlugin(packageRoot),
+      createForbiddenBackendImportPlugin(packageRoot, isUserPackage),
       createExtensionBackendApiPlugin(),
-      createHostRuntimeExternalPlugin(),
+      createHostRuntimeExternalPlugin(isUserPackage),
       createJsdomWorkerPlugin(),
     ],
     metafile: true,
   });
+  if (isUserPackage) assertUserBuildInputsContained(result.metafile, 'backend');
+  if (isUserPackage) assertUserBackendBundleIsStatic(result.metafile, outfile);
   recordBuildOutputs(buildOutputs, result.metafile);
   copyJsdomSyncWorkerIfNeeded(outfile, buildOutputs);
   writeBundledRuntimePackageJson(outfile, buildOutputs);
@@ -263,6 +318,7 @@ async function buildStandaloneWebappIfPresent(buildOutputs) {
       '.svg': 'dataurl',
     },
   });
+  if (isUserPackage) assertUserBuildInputsContained(result.metafile, 'webapp');
   recordBuildOutputs(buildOutputs, result.metafile);
 }
 
@@ -279,6 +335,185 @@ function commitTempDist() {
   renameSync(tempDistPath, distPath);
 }
 
+function isPathInside(parent, child) {
+  const childRelative = relative(realpathSync(parent), realpathSync(child));
+  return childRelative === '' || (!childRelative.startsWith('..') && !isAbsolute(childRelative));
+}
+
+function isTrustedUserBuildInput(inputPath) {
+  if (!existsSync(inputPath)) return false;
+  if (isPathInside(packageRoot, inputPath)) return true;
+  return [
+    ...findAppNodeModules(),
+    join(repoRoot, 'authoring-sdk'),
+    join(repoRoot, 'packages', 'extensions', 'src'),
+    join(repoRoot, 'packages', 'ui', 'src'),
+    join(repoRoot, 'packages', 'desktop', 'ui', 'src', 'extensions'),
+    join(repoRoot, 'vendor'),
+  ].some((root) => existsSync(root) && isPathInside(root, inputPath));
+}
+
+function assertNoUserPackageSymlinks() {
+  const roots = ['extension.json', 'src', 'webapp', 'bin', 'templates', 'skills', 'snapshots', 'exports']
+    .map((name) => join(packageRoot, name))
+    .filter((candidate) => existsSync(candidate));
+  const pending = [...roots];
+  while (pending.length > 0) {
+    const current = pending.pop();
+    const stats = lstatSync(current);
+    if (stats.isSymbolicLink()) {
+      throw new Error(`User extension inputs cannot contain symbolic links: ${current}`);
+    }
+    if (!stats.isDirectory()) continue;
+    for (const entry of readdirSync(current)) pending.push(join(current, entry));
+  }
+}
+
+function maskNonCode(source) {
+  const chars = [...source];
+  const mask = (index) => {
+    if (chars[index] !== '\n' && chars[index] !== '\r') chars[index] = ' ';
+  };
+  const scanString = (start, quote) => {
+    let index = start;
+    mask(index++);
+    while (index < chars.length) {
+      if (chars[index] === '\\') {
+        mask(index++);
+        if (index < chars.length) mask(index++);
+        continue;
+      }
+      const current = chars[index];
+      mask(index++);
+      if (current === quote) break;
+    }
+    return index;
+  };
+  const scanTemplate = (start) => {
+    let index = start;
+    mask(index++);
+    while (index < chars.length) {
+      if (chars[index] === '\\') {
+        mask(index++);
+        if (index < chars.length) mask(index++);
+        continue;
+      }
+      if (chars[index] === '`') {
+        mask(index++);
+        break;
+      }
+      if (chars[index] === '$' && chars[index + 1] === '{') {
+        index = scanCode(index + 2, true);
+        if (chars[index] === '}') index += 1;
+        continue;
+      }
+      mask(index++);
+    }
+    return index;
+  };
+  const scanCode = (start, stopAtClosingBrace = false) => {
+    let index = start;
+    let braceDepth = 0;
+    while (index < chars.length) {
+      const char = chars[index];
+      const next = chars[index + 1];
+      if (stopAtClosingBrace && char === '}' && braceDepth === 0) return index;
+      if (char === '{') {
+        braceDepth += 1;
+        index += 1;
+        continue;
+      }
+      if (char === '}' && braceDepth > 0) {
+        braceDepth -= 1;
+        index += 1;
+        continue;
+      }
+      if (char === '/' && next === '/') {
+        mask(index++);
+        mask(index++);
+        while (index < chars.length && chars[index] !== '\n') mask(index++);
+        continue;
+      }
+      if (char === '/' && next === '*') {
+        mask(index++);
+        mask(index++);
+        while (index < chars.length) {
+          if (chars[index] === '*' && chars[index + 1] === '/') {
+            mask(index++);
+            mask(index++);
+            break;
+          }
+          mask(index++);
+        }
+        continue;
+      }
+      if (char === '/') {
+        let previous = index - 1;
+        while (previous >= 0 && /\s/u.test(chars[previous])) previous -= 1;
+        if (previous < 0 || /[=(:,!&|?{;\[]/u.test(chars[previous])) {
+          mask(index++);
+          while (index < chars.length) {
+            if (chars[index] === '\\') {
+              mask(index++);
+              if (index < chars.length) mask(index++);
+              continue;
+            }
+            const current = chars[index];
+            mask(index++);
+            if (current === '/') {
+              while (index < chars.length && /[a-z]/iu.test(chars[index])) mask(index++);
+              break;
+            }
+          }
+          continue;
+        }
+      }
+      if (char === "'" || char === '"') {
+        index = scanString(index, char);
+        continue;
+      }
+      if (char === '`') {
+        index = scanTemplate(index);
+        continue;
+      }
+      index += 1;
+    }
+    return index;
+  };
+  scanCode(0);
+  return chars.join('');
+}
+
+function assertUserBuildInputsContained(metafile, side) {
+  for (const input of Object.keys(metafile?.inputs ?? {})) {
+    if (input.startsWith('neon-pilot-') || input.startsWith('<')) continue;
+    const inputPath = isAbsolute(input) ? input : resolve(process.cwd(), input);
+    if (!existsSync(inputPath) || isTrustedUserBuildInput(inputPath)) continue;
+    throw new Error(`User extension ${side} import escapes its package or public SDK roots: ${inputPath}`);
+  }
+  if (side !== 'backend') return;
+  for (const input of Object.keys(metafile?.inputs ?? {})) {
+    const inputPath = isAbsolute(input) ? input : resolve(process.cwd(), input);
+    if (!existsSync(inputPath) || !isPathInside(packageRoot, inputPath)) continue;
+    const code = maskNonCode(readFileSync(inputPath, 'utf8'));
+    if (/\bprocess\s*(?:\.|\[)/u.test(code)) {
+      throw new Error(`User extension backend cannot access the host process directly: ${inputPath}`);
+    }
+    if (/\b(?:eval|Function)\s*\(|\bglobalThis\b|\bimport\s*\(/u.test(code)) {
+      throw new Error(`User extension backend cannot use dynamic code, dynamic imports, or host globals: ${inputPath}`);
+    }
+  }
+}
+
+function assertUserBackendBundleIsStatic(metafile, outfile) {
+  const output = Object.entries(metafile?.outputs ?? {}).find(([outputPath]) => resolve(outputPath) === resolve(outfile))?.[1];
+  for (const imported of output?.imports ?? []) {
+    if (imported.kind === 'dynamic-import') {
+      throw new Error(`User extension backend cannot retain dynamic imports: ${imported.path}`);
+    }
+  }
+}
+
 function createFrontendRawCssPlugin() {
   return {
     name: 'neon-pilot-frontend-raw-css',
@@ -287,6 +522,9 @@ function createFrontendRawCssPlugin() {
         const cssPath = args.path.slice(0, -'?raw'.length);
         const resolved = await buildContext.resolve(cssPath, { importer: args.importer, kind: args.kind, resolveDir: args.resolveDir });
         if (resolved.errors.length > 0) return { errors: resolved.errors };
+        if (isUserPackage && resolved.path && !isTrustedUserBuildInput(resolved.path)) {
+          return { errors: [{ text: `User extension raw CSS import escapes its package or trusted dependency roots: ${resolved.path}` }] };
+        }
         return { path: resolved.path, namespace: 'neon-pilot-raw-css' };
       });
       buildContext.onLoad({ filter: /\.css$/, namespace: 'neon-pilot-raw-css' }, (args) => ({
@@ -458,14 +696,15 @@ function createFrontendExtensionSdkPlugin() {
   };
 }
 
-function createForbiddenBackendImportPlugin(extensionPackageRoot) {
-  const sourceRoot = `${resolve(extensionPackageRoot, 'src')}/`;
+function createForbiddenBackendImportPlugin(extensionPackageRoot, userPackage) {
+  const sourceRoot = `${realpathSync(resolve(extensionPackageRoot, 'src'))}/`;
+  const forbiddenImports = userPackage ? FORBIDDEN_USER_BACKEND_IMPORTS : FORBIDDEN_BACKEND_IMPORTS;
   return {
     name: 'neon-pilot-forbidden-backend-imports',
     setup(buildContext) {
       buildContext.onResolve({ filter: /.*/ }, (args) => {
-        if (!FORBIDDEN_BACKEND_IMPORTS.has(args.path)) return;
-        if (!args.importer || !resolve(args.importer).startsWith(sourceRoot)) return;
+        if (!forbiddenImports.has(args.path)) return;
+        if (!args.importer || !existsSync(args.importer) || !realpathSync(args.importer).startsWith(sourceRoot)) return;
         return {
           errors: [
             {
@@ -524,11 +763,19 @@ function firstExistingPath(candidates) {
   return candidates.find((candidate) => typeof candidate === 'string' && existsSync(candidate)) ?? candidates.find(Boolean);
 }
 
-function createHostRuntimeExternalPlugin() {
+function createHostRuntimeExternalPlugin(userPackage) {
   return {
     name: 'neon-pilot-extension-host-runtime-externals',
     setup(buildContext) {
-      buildContext.onResolve({ filter: HOST_RUNTIME_EXTERNAL_IMPORT_RE }, (args) => ({ path: args.path, external: true }));
+      buildContext.onResolve({ filter: HOST_RUNTIME_EXTERNAL_IMPORT_RE }, (args) =>
+        userPackage
+          ? {
+              errors: [
+                { text: `User extension backend cannot import host runtime module ${args.path}. Use a typed ctx capability instead.` },
+              ],
+            }
+          : { path: args.path, external: true },
+      );
     },
   };
 }

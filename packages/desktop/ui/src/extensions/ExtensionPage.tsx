@@ -3,9 +3,10 @@ import { useLocation } from 'react-router-dom';
 
 import { readStoredApplicationWorkspace } from '../applications/applicationWorkspace';
 import { addNotification } from '../components/notifications/notificationStore';
-import { ButtonLink, CenteredMessage, ErrorState, QuietLoadingState } from '../components/ui';
+import { ButtonLink, CenteredMessage, ConfirmDialog, ErrorState, QuietLoadingState } from '../components/ui';
 import { NativeExtensionSurfaceHost } from './NativeExtensionSurfaceHost';
 import { isNativeExtensionPageSurface, type NativeExtensionViewSummary } from './types';
+import { useExtensionBackendConfirmations } from './useExtensionBackendConfirmations';
 import { type ExtensionRegistryEntry, useExtensionRegistry } from './useExtensionRegistry';
 
 const CRITICAL_SYSTEM_EXTENSION_PAGES: NativeExtensionViewSummary[] = [
@@ -118,6 +119,7 @@ export function ExtensionPage() {
     if (!storedView || (registry.applications ?? []).some((application) => application.id === storedView.applicationId)) return null;
     return { title: storedView.title.split(' · ')[0] ?? 'Application', explicitlyUnavailable: false };
   }, [location.pathname, registry.applicationNavigation, registry.applications]);
+  const backendConfirmation = useExtensionBackendConfirmations();
 
   useEffect(() => {
     if (registry.error) {
@@ -139,13 +141,25 @@ export function ExtensionPage() {
 
   if (nativeSurface && !unavailableApplication?.explicitlyUnavailable) {
     return (
-      <NativeExtensionSurfaceHost
-        key={extensionSurfaceKey(nativeSurface)}
-        surface={nativeSurface}
-        pathname={location.pathname}
-        search={location.search}
-        hash={location.hash}
-      />
+      <>
+        <NativeExtensionSurfaceHost
+          key={extensionSurfaceKey(nativeSurface)}
+          surface={nativeSurface}
+          pathname={location.pathname}
+          search={location.search}
+          hash={location.hash}
+        />
+        {backendConfirmation.confirm ? (
+          <ConfirmDialog
+            title={backendConfirmation.confirm.title}
+            message={backendConfirmation.confirm.message}
+            confirmLabel={backendConfirmation.confirm.confirmLabel}
+            cancelLabel={backendConfirmation.confirm.cancelLabel}
+            onCancel={backendConfirmation.declineApproval}
+            onConfirm={backendConfirmation.confirmApproval}
+          />
+        ) : null}
+      </>
     );
   }
 

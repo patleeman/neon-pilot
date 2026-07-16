@@ -1204,11 +1204,11 @@ describe('Sidebar', () => {
     expect(html).not.toContain('>Conversations<');
   });
 
-  it('renders the settings nav section at the bottom with extension-contributed items', () => {
+  it('leaves global settings navigation to the application taskbar', () => {
     const html = renderSidebar('/settings');
     expect(html).not.toContain('Threads');
     expect(html).toContain('aria-label="No contextual sidebar"');
-    expect(html).toContain('<div class="border-t border-border-subtle px-0 py-2 space-y-0.5">');
+    expect(html).not.toContain('<div class="border-t border-border-subtle px-0 py-2 space-y-0.5">');
   });
 
   it('orders bottom utility nav as Skills, Extensions, then Settings', () => {

@@ -101,9 +101,10 @@ vi.mock('../components/Layout', async () => {
   return { Layout: RecoveryLayout };
 });
 
-vi.mock('../extensions/ExtensionRouteHost', () => ({
-  ExtensionRouteHost: () => <main>Extension route</main>,
-}));
+vi.mock('../extensions/ExtensionRouteHost', async () => {
+  const { ConversationPage } = await import('../pages/ConversationPage');
+  return { ExtensionRouteHost: () => <ConversationPage /> };
+});
 
 vi.mock('../pages/ConversationPage', () => ({
   ConversationPage: () => <section>Conversation route conv-recovery</section>,

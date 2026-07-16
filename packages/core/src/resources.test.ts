@@ -1,6 +1,6 @@
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'fs';
 import { rm } from 'fs/promises';
-import { tmpdir } from 'os';
+import { homedir, tmpdir } from 'os';
 import { dirname, join } from 'path';
 import { afterEach, describe, expect, it } from 'vitest';
 
@@ -15,11 +15,13 @@ import {
   resolveRuntimeResources,
 } from './index.js';
 
-const originalEnv = process.env;
+const originalEnv = { ...process.env };
 const tempDirs: string[] = [];
+const defaultMachineInstructionFile = join(homedir(), '.config', 'agents', 'AGENTS.md');
+const existingDefaultMachineInstructions = existsSync(defaultMachineInstructionFile) ? [defaultMachineInstructionFile] : [];
 
 afterEach(async () => {
-  process.env = originalEnv;
+  process.env = { ...originalEnv };
   await Promise.all(tempDirs.splice(0).map((dir) => rm(dir, { recursive: true, force: true })));
 });
 
@@ -86,6 +88,7 @@ describe('runtime resource loader', () => {
     expect(resolved.agentsFiles).toEqual([
       join(repo, 'defaults/agent/AGENTS.md'),
       join(syncRoot, 'AGENTS.md'),
+      ...existingDefaultMachineInstructions,
       join(local, 'agent', 'AGENTS.md'),
     ]);
     expect(resolved.settingsFiles).toEqual([join(runtimeConfigRoot, 'shared', 'settings.json'), join(local, 'agent', 'settings.json')]);
@@ -122,6 +125,7 @@ describe('runtime resource loader', () => {
     expect(resolved.agentsFiles).toEqual([
       join(repo, 'defaults/agent/AGENTS.md'),
       join(syncRoot, 'AGENTS.md'),
+      ...existingDefaultMachineInstructions,
       join(repo, 'custom-instructions.md'),
     ]);
   });
@@ -150,6 +154,7 @@ describe('runtime resource loader', () => {
 
     expect(resolved.agentsFiles).toEqual([
       join(repo, 'defaults/agent/AGENTS.md'),
+      ...existingDefaultMachineInstructions,
       join(repo, '.github', 'copilot-instructions.md'),
       join(repo, 'AGENTS.md'),
       join(repo, 'CLAUDE.md'),
@@ -402,7 +407,7 @@ description: Commit your work.
       localRuntimeConfigDir: join(repo, '.local-profile'),
     });
 
-    expect(resolved.agentsFiles).toEqual([join(repo, 'defaults/agent/AGENTS.md')]);
+    expect(resolved.agentsFiles).toEqual([join(repo, 'defaults/agent/AGENTS.md'), ...existingDefaultMachineInstructions]);
     expect(resolved.settingsFiles).toContain(join(runtimeConfigRoot, 'shared', 'settings.json'));
     expect(resolved.skillDirs).toEqual(expect.arrayContaining([join(syncRoot, 'skills', 'checkpoint')]));
   });

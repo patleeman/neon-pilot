@@ -121,6 +121,8 @@ Use `extensions:read` for listing/status/calling declared public actions and `ex
 
 ## Approval, notifications, and invalidation
 
+The following example is for the **backend** `ctx` API. Its confirmation result is structured. In a frontend surface, `await pa.ui.confirm(...)` returns a boolean instead; use `if (!confirmed) return` and never read `.confirmed` from it.
+
 ```ts
 const decision = await ctx.ui.confirm({
   title: 'Delete article?',
@@ -144,15 +146,18 @@ Declare a service in `backend.services` and export its handler:
 
 ```ts
 export async function startSync(_input: unknown, ctx: ExtensionBackendContext) {
-  const subscription = ctx.events.subscribe('source:changed', async () => {
-    /* refresh */
-  });
-  return () => subscription.unsubscribe();
+  // Start bounded long-lived work here and retain only worker-local state.
+  return { started: true };
+}
+
+export async function stopSync() {
+  // Stop timers, listeners, sockets, and interrupted work idempotently.
+  return { stopped: true };
 }
 ```
 
-The handler must resolve to a cleanup function. Bound retries, make start/stop idempotent, and expose health where the manifest service contract supports it.
+Declare the service with `"handler": "startSync"`, `"stopHandler": "stopSync"`, and `"worker": { "enabled": true }`. Request `network:listen`. Start and stop handlers must return serializable data or nothing; they must not return cleanup functions. Bound retries, make start/stop idempotent, and expose health where the manifest service contract supports it.
 
 ## Permissions
 
-Common permission strings are `storage:read`, `storage:write`, `storage:readwrite`, `secrets:read`, `filesystem:read`, `filesystem:write`, `filesystem:readwrite`, `shell:execute`, `extensions:read`, `extensions:write`, `ui:confirm`, `ui:invalidate`, and `ui:notify`. Start with `[]`; add only permissions used by reachable code. Validation rejects unknown permissions but cannot decide whether your scope is unnecessarily broad.
+Common permission strings are `storage:read`, `storage:write`, `storage:readwrite`, `secrets:read`, `filesystem:read`, `filesystem:write`, `filesystem:readwrite`, `shell:execute`, `extensions:read`, `extensions:write`, `network:listen`, `ui:confirm`, `ui:invalidate`, and `ui:notify`. Start with `[]`; add only permissions used by reachable code. Validation rejects unknown or directly detectable missing permissions but cannot decide whether your scope is unnecessarily broad.

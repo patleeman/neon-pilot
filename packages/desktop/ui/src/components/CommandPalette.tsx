@@ -223,7 +223,7 @@ export function CommandPalette({
   }, [commandContextRevision, extensionCommands, location.pathname, navigate, open]);
   const applicationItems = useMemo<CommandPaletteItem<CommandPaletteAction>[]>(
     () =>
-      extensionRegistry.applications
+      (extensionRegistry.applications ?? [])
         .filter((application) => application.available)
         .map((application, index) => ({
           id: `application:${application.id}`,
@@ -239,12 +239,12 @@ export function CommandPalette({
   );
   const applicationPageItems = useMemo<CommandPaletteItem<CommandPaletteAction>[]>(
     () =>
-      extensionRegistry.applicationNavigation.map((item, index) => ({
+      (extensionRegistry.applicationNavigation ?? []).map((item, index) => ({
         id: `application-page:${item.id}`,
         section: 'pages',
         title: item.label,
         icon: item.icon,
-        parentLabel: extensionRegistry.applications.find((application) => application.id === item.applicationId)?.title,
+        parentLabel: (extensionRegistry.applications ?? []).find((application) => application.id === item.applicationId)?.title,
         pinTarget: { kind: 'page' as const, navigationId: item.id },
         keywords: [item.route, item.applicationId, item.slot],
         order: index,

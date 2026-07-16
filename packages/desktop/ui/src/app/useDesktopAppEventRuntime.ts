@@ -5,7 +5,14 @@ import { bumpConversationScopedEventVersions, INITIAL_CONVERSATION_SCOPED_EVENT_
 import { subscribeDesktopRealtimeAppEvents } from '../desktop/desktopRealtime';
 import { fetchSessionsSnapshot } from '../session/sessionSnapshot';
 import { applyRemoteConversationLayout, forgetConversationTab, openConversationTab } from '../session/sessionTabs';
-import type { AppEventTopic, DaemonState, DesktopAppEvent, DurableRunListResult, ScheduledTaskSummary, SessionMeta } from '../shared/types';
+import type {
+  AppInvalidationTopic,
+  DaemonState,
+  DesktopAppEvent,
+  DurableRunListResult,
+  ScheduledTaskSummary,
+  SessionMeta,
+} from '../shared/types';
 import { conversationRuntimeStore, executionStore, runStore, sessionStore, taskStore, titleStore } from '../store';
 import { buildAppSnapshotRefreshPlan, incrementAppEventVersionsForTopics, incrementRunProjectionEventVersions } from './appEventProjection';
 import { INITIAL_APP_EVENT_VERSIONS } from './contexts';
@@ -42,7 +49,7 @@ export function useDesktopAppEventRuntime() {
   const refreshSessionMetaTimersRef = useRef(new Map<string, ReturnType<typeof setTimeout>>());
   const sessionsSnapshotRetryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const refreshInvalidationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const pendingInvalidationTopicsRef = useRef(new Set<AppEventTopic>());
+  const pendingInvalidationTopicsRef = useRef(new Set<AppInvalidationTopic>());
   const subscriptionGenerationRef = useRef(0);
 
   const setTitle = useCallback((id: string, title: string) => {
@@ -248,7 +255,7 @@ export function useDesktopAppEventRuntime() {
   }, [beginSnapshotRequest, isLatestSnapshotRequest, setDaemon]);
 
   const refreshInvalidatedSnapshots = useCallback(
-    (topics: readonly AppEventTopic[]) => {
+    (topics: readonly AppInvalidationTopic[]) => {
       for (const topic of topics) {
         pendingInvalidationTopicsRef.current.add(topic);
       }
@@ -257,7 +264,7 @@ export function useDesktopAppEventRuntime() {
       refreshInvalidationTimerRef.current = window.setTimeout(() => {
         refreshInvalidationTimerRef.current = null;
         const pendingTopics = pendingInvalidationTopicsRef.current;
-        pendingInvalidationTopicsRef.current = new Set<AppEventTopic>();
+        pendingInvalidationTopicsRef.current = new Set<AppInvalidationTopic>();
         const plan = buildAppSnapshotRefreshPlan(pendingTopics);
 
         if (plan.sessions) loadSessionsSnapshot();

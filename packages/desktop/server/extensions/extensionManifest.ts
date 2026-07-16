@@ -40,6 +40,7 @@ export const EXTENSION_ICON_NAMES = [
   'file',
   'gear',
   'graph',
+  'home',
   'kanban',
   'play',
   'sparkle',

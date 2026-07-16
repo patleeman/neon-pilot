@@ -1,4 +1,4 @@
-import type { AppEventTopic } from '../shared/types';
+import type { AppEventTopic, AppInvalidationTopic } from '../shared/types';
 
 type AppEventVersions = Record<AppEventTopic, number>;
 
@@ -10,7 +10,7 @@ export interface AppSnapshotRefreshPlan {
   daemon: boolean;
 }
 
-export function buildAppSnapshotRefreshPlan(topics: Iterable<AppEventTopic>): AppSnapshotRefreshPlan {
+export function buildAppSnapshotRefreshPlan(topics: Iterable<AppInvalidationTopic>): AppSnapshotRefreshPlan {
   const topicSet = new Set(topics);
   const refreshRunProjection = topicSet.has('runs') || topicSet.has('executions');
   const refreshConversationProjection = topicSet.has('sessions') || topicSet.has('workspace');
@@ -23,7 +23,7 @@ export function buildAppSnapshotRefreshPlan(topics: Iterable<AppEventTopic>): Ap
   };
 }
 
-export function incrementAppEventVersionsForTopics(previous: AppEventVersions, topics: Iterable<AppEventTopic>): AppEventVersions {
+export function incrementAppEventVersionsForTopics(previous: AppEventVersions, topics: Iterable<AppInvalidationTopic>): AppEventVersions {
   let next: AppEventVersions | null = null;
   for (const topic of topics) {
     if (!(topic in previous)) {

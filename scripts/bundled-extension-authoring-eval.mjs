@@ -18,8 +18,12 @@ import { dirname, resolve } from 'node:path';
 import { spawn, spawnSync } from 'node:child_process';
 
 import { analyzeBundledAuthoringManifest } from './bundled-authoring-contract.mjs';
+import { isSuccessfulBehaviorResult } from './bundled-behavior-evidence.mjs';
+import { buildBenchmarkBaseEnv } from './benchmark-child-env.mjs';
+import { hasForbiddenPackagedResourceRead } from './benchmark-packaged-resource-policy.mjs';
 import { createArtifactRedactor } from './benchmark-artifact-redaction.mjs';
 import { resolveBenchmarkProxyAuthStrategy } from './benchmark-provider-proxy-contract.mjs';
+import { validateGeneratedVisualEvidence } from './bundled-visual-evidence.mjs';
 
 const repoRoot = resolve(new URL('..', import.meta.url).pathname);
 const args = process.argv.slice(2).filter((value) => value !== '--');
@@ -34,6 +38,7 @@ const artifactRedactor = createArtifactRedactor();
 const selectedCase = valueArg('case');
 const dryRun = boolArg('dry-run');
 const keepExtensions = boolArg('keep-extensions');
+const keepRuntime = boolArg('keep-runtime');
 const timeoutMs = Number(valueArg('timeout-ms', '1800000'));
 const cliPath = valueArg('cli', 'neon-pilot');
 const appBundleArg = valueArg('app');
@@ -51,6 +56,8 @@ const benchmarkSocket = resolve(ownedRuntimeRoot, 'daemon.sock');
 const benchmarkHome = resolve(ownedRuntimeRoot, 'home');
 const benchmarkConfigRoot = resolve(ownedRuntimeRoot, 'config');
 const benchmarkKnowledgeRoot = resolve(ownedRuntimeRoot, 'knowledge');
+const benchmarkTempRoot = resolve(ownedRuntimeRoot, 'tmp');
+const benchmarkWorkspaceRoot = resolve(ownedRuntimeRoot, 'workspaces');
 const seedStateRootArg = valueArg('seed-state-root');
 const seedStateRoot = seedStateRootArg ? resolve(seedStateRootArg) : '';
 const clearedEnvironmentOverrides = [
@@ -81,13 +88,15 @@ let activeAppProcess;
 let activeProviderProxy;
 let benchmarkProxyBaseUrl = '';
 let benchmarkProxyToken = '';
+let benchmarkJudgeModelId = '';
+let benchmarkJudgeApi = '';
 let runtimeCleaned = false;
 function cleanupOwnedRuntime() {
   if (runtimeCleaned) return;
   runtimeCleaned = true;
   if (activeAppProcess?.exitCode === null) activeAppProcess.kill('SIGKILL');
   if (activeProviderProxy?.exitCode === null) activeProviderProxy.kill('SIGKILL');
-  rmSync(ownedRuntimeRoot, { recursive: true, force: true });
+  if (!keepRuntime) rmSync(ownedRuntimeRoot, { recursive: true, force: true });
 }
 process.once('exit', cleanupOwnedRuntime);
 for (const [signal, exitCode] of [
@@ -105,6 +114,7 @@ const benchmarkEnv = {
   XDG_CONFIG_HOME: resolve(ownedRuntimeRoot, 'xdg-config'),
   XDG_DATA_HOME: resolve(ownedRuntimeRoot, 'xdg-data'),
   XDG_STATE_HOME: resolve(ownedRuntimeRoot, 'xdg-state'),
+  TMPDIR: benchmarkTempRoot,
   NEON_PILOT_RUNTIME_CHANNEL: 'test',
   NEON_PILOT_STATE_ROOT: benchmarkStateRoot,
   NEON_PILOT_CONFIG_ROOT: benchmarkConfigRoot,
@@ -134,11 +144,13 @@ const benchmarkEnv = {
   PI_CODING_AGENT_DIR: undefined,
   PI_PACKAGE_DIR: undefined,
 };
+const benchmarkBaseEnv = buildBenchmarkBaseEnv(process.env);
+const benchmarkChildEnv = { ...benchmarkBaseEnv, ...benchmarkEnv };
 
 function run(command, commandArgs, options = {}) {
   return spawnSync(command, commandArgs, {
     cwd: options.cwd,
-    env: { ...process.env, NEON_PILOT_REPO_ROOT: undefined, ...benchmarkEnv, ...(options.env ?? {}) },
+    env: { ...benchmarkChildEnv, ...(options.env ?? {}) },
     encoding: 'utf8',
     timeout: options.timeoutMs ?? 120000,
     maxBuffer: 50 * 1024 * 1024,
@@ -175,6 +187,27 @@ async function startBenchmarkProviderProxy(sourceRoot) {
   const targetBaseUrl =
     typeof selectedModel?.baseUrl === 'string' ? selectedModel.baseUrl : typeof provider?.baseUrl === 'string' ? provider.baseUrl : '';
   const api = typeof selectedModel?.api === 'string' ? selectedModel.api : typeof provider?.api === 'string' ? provider.api : '';
+  const visualJudgeCandidates = Array.isArray(provider?.models)
+    ? provider.models.filter((candidate) => {
+        const candidateBaseUrl =
+          typeof candidate?.baseUrl === 'string' ? candidate.baseUrl : typeof provider?.baseUrl === 'string' ? provider.baseUrl : '';
+        const candidateApi = typeof candidate?.api === 'string' ? candidate.api : typeof provider?.api === 'string' ? provider.api : '';
+        return (
+          Array.isArray(candidate?.input) &&
+          candidate.input.includes('image') &&
+          candidateBaseUrl === targetBaseUrl &&
+          resolveBenchmarkProxyAuthStrategy(candidateApi).header === resolveBenchmarkProxyAuthStrategy(api).header
+        );
+      })
+    : [];
+  const preferredVisualJudgeModels = ['qwen3.6-plus', 'mimo-v2.5', 'kimi-k2.5'];
+  const visualJudgeModel =
+    preferredVisualJudgeModels.map((id) => visualJudgeCandidates.find((candidate) => candidate?.id === id)).find(Boolean) ??
+    visualJudgeCandidates[0] ??
+    null;
+  benchmarkJudgeModelId = typeof visualJudgeModel?.id === 'string' ? visualJudgeModel.id : benchmarkModelId;
+  benchmarkJudgeApi =
+    typeof visualJudgeModel?.api === 'string' ? visualJudgeModel.api : typeof provider?.api === 'string' ? provider.api : api;
   const authStrategy = resolveBenchmarkProxyAuthStrategy(api);
   let apiKey = '';
   if (process.platform === 'darwin') {
@@ -192,6 +225,7 @@ async function startBenchmarkProviderProxy(sourceRoot) {
   if (!targetBaseUrl || !apiKey) throw new Error(`Could not configure isolated provider proxy for ${benchmarkProvider}.`);
   artifactRedactor.add(apiKey);
   benchmarkProxyToken = randomBytes(32).toString('base64url');
+  artifactRedactor.add(benchmarkProxyToken);
   const child = spawn(process.execPath, [resolve(repoRoot, 'scripts/benchmark-provider-proxy.mjs')], {
     stdio: ['pipe', 'pipe', 'pipe'],
     env: { PATH: process.env.PATH },
@@ -328,7 +362,7 @@ function copyMinimalSeedState(sourceRoot, targetRoot, runtimeConfigRoot) {
   return copied;
 }
 
-function hasSuccessfulComputerUseEvidence(transcriptResult) {
+function hasAnyComputerUseEvidence(transcriptResult) {
   const payload = parseJsonOutput(transcriptResult?.stdout);
   const strings = [];
   const visit = (value) => {
@@ -337,14 +371,7 @@ function hasSuccessfulComputerUseEvidence(transcriptResult) {
     else if (value && typeof value === 'object') Object.values(value).forEach(visit);
   };
   visit(payload);
-  const blocks = strings.join('\n').split(/\n\n(?=\[\d+\])/u);
-  return blocks.some(
-    (block) =>
-      /tool_use:computer_use/u.test(block) &&
-      /"action"\s*:\s*"(?:capture|window_state)"/u.test(block) &&
-      !/"(?:isError|error)"\s*:\s*(?:true|\{)/u.test(block) &&
-      /(?:"type"\s*:\s*"image"|Neon Pilot[^\n]*window_id)/u.test(block),
-  );
+  return strings.some((value) => /tool_use:computer_use|"toolName"\s*:\s*"computer_use"/u.test(value));
 }
 
 function treeBytes(path) {
@@ -397,12 +424,16 @@ function parseJsonOutput(output) {
 }
 
 function launchPackagedApp(logRoot) {
-  const plist = resolve(appBundle, 'Contents/Info.plist');
+  const plist = resolve(runtimeAppBundle, 'Contents/Info.plist');
   const executableName = String(run('/usr/libexec/PlistBuddy', ['-c', 'Print :CFBundleExecutable', plist]).stdout ?? '').trim();
   if (!executableName) throw new Error(`Could not resolve CFBundleExecutable from ${plist}`);
-  activeAppProcess = spawn(resolve(appBundle, 'Contents/MacOS', executableName), ['--no-quit-confirmation'], {
-    cwd: tmpdir(),
-    env: { ...process.env, NEON_PILOT_REPO_ROOT: undefined, ...benchmarkEnv },
+  const executable = resolve(runtimeAppBundle, 'Contents/MacOS', executableName);
+  const appArgs = ['--no-quit-confirmation', '--no-sandbox', '--disable-gpu', `--user-data-dir=${benchmarkUserData}`];
+  const command = benchmarkSandboxProfile ? '/usr/bin/sandbox-exec' : executable;
+  const commandArgs = benchmarkSandboxProfile ? ['-f', benchmarkSandboxProfile, executable, ...appArgs] : appArgs;
+  activeAppProcess = spawn(command, commandArgs, {
+    cwd: ownedRuntimeRoot,
+    env: benchmarkChildEnv,
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   mkdirSync(logRoot, { recursive: true });
@@ -423,7 +454,7 @@ async function waitForApp(child, timeout = 30_000) {
       try {
         const record = JSON.parse(readFileSync(controlPlanePath, 'utf8'));
         if (
-          record?.pid === child.pid &&
+          typeof record?.pid === 'number' &&
           typeof record?.extensionHost?.baseUrl === 'string' &&
           typeof record?.extensionHost?.token === 'string' &&
           typeof record?.localBackend?.baseUrl === 'string' &&
@@ -436,6 +467,7 @@ async function waitForApp(child, timeout = 30_000) {
           });
           const payload = await response.json();
           if (response.ok && payload?.ok === true) {
+            child.runtimePid = record.pid;
             // The local backend is spawned after the extension host and receives
             // its RPC credentials during startup. Give that handoff time to
             // settle; the subsequent agent command is the authoritative
@@ -456,13 +488,28 @@ async function waitForApp(child, timeout = 30_000) {
 
 async function stopPackagedApp(child) {
   if (!child) return;
-  if (child.exitCode === null) {
+  const runtimePid = Number(child.runtimePid);
+  if (Number.isInteger(runtimePid) && runtimePid > 1) {
+    try {
+      process.kill(runtimePid, 'SIGTERM');
+    } catch {
+      // The runtime may already have exited.
+    }
+  } else if (child.exitCode === null) {
     child.kill('SIGTERM');
+  }
+  if (child.exitCode === null || (Number.isInteger(runtimePid) && runtimePid > 1)) {
     await Promise.race([
       new Promise((resolveWait) => child.once('exit', resolveWait)),
       new Promise((resolveWait) => setTimeout(resolveWait, 5_000)),
     ]);
-    if (child.exitCode === null) child.kill('SIGKILL');
+    if (Number.isInteger(runtimePid) && runtimePid > 1) {
+      try {
+        process.kill(runtimePid, 'SIGKILL');
+      } catch {
+        // The graceful termination succeeded.
+      }
+    } else if (child.exitCode === null) child.kill('SIGKILL');
   }
   const logs = child.benchmarkLogs;
   if (logs) {
@@ -552,8 +599,6 @@ async function waitForConversationCompletion(conversationId, timeout) {
   };
   while (Date.now() < deadline) {
     if (activeAppProcess && activeAppProcess.exitCode !== null) {
-      const newestBlock = readNewestBlock();
-      if (newestBlock?.type === 'text') return { ok: true, sawRunning, session: lastSession, appExited: true };
       throw new Error(`Packaged app exited during an unfinished agent tool turn (status ${activeAppProcess.exitCode}).`);
     }
     const result = run(cliPath, ['conversations', 'list', '--json']);
@@ -598,6 +643,8 @@ for (const path of [
   benchmarkHome,
   benchmarkConfigRoot,
   benchmarkKnowledgeRoot,
+  benchmarkTempRoot,
+  benchmarkWorkspaceRoot,
   ...Object.values(benchmarkEnv).filter((value) => typeof value === 'string' && /\/xdg-/u.test(value)),
 ]) {
   mkdirSync(path, { recursive: true, mode: 0o700 });
@@ -605,7 +652,92 @@ for (const path of [
 if (!dryRun && !appBundle) throw new Error('A packaged app is required for a full bundled-authoring benchmark. Pass --app=<path>.');
 if (!dryRun && !valueArg('cli')) throw new Error('The packaged app CLI launcher is required. Pass --cli=<path>.');
 if (!dryRun && appBundle && !existsSync(appBundle)) throw new Error(`Packaged app not found: ${appBundle}`);
-const resourceRoot = appBundle ? resolve(appBundle, 'Contents/Resources') : '';
+const appInfoPlist = appBundle ? resolve(appBundle, 'Contents/Info.plist') : '';
+const appExecutableName =
+  appInfoPlist && existsSync(appInfoPlist)
+    ? String(run('/usr/libexec/PlistBuddy', ['-c', 'Print :CFBundleExecutable', appInfoPlist]).stdout ?? '').trim()
+    : '';
+const appExecutablePath = appExecutableName ? resolve(appBundle, 'Contents/MacOS', appExecutableName) : '';
+let codeSignatureVerification = null;
+let codeSignatureDetails = '';
+if (!dryRun && appBundle) {
+  const verification = run('/usr/bin/codesign', ['--verify', '--deep', '--strict', appBundle]);
+  if (verification.status !== 0) {
+    throw new Error(`Packaged app failed code-signature verification:\n${verification.stderr || verification.stdout}`);
+  }
+  const details = run('/usr/bin/codesign', ['--display', '--verbose=4', appBundle]);
+  const requirement = run('/usr/bin/codesign', ['--display', '--requirements', '-', appBundle]);
+  codeSignatureVerification = 'passed';
+  codeSignatureDetails = `${details.stderr || details.stdout}\n${requirement.stderr || requirement.stdout}`.trim();
+}
+let runtimeAppBundle = appBundle;
+if (!dryRun && process.platform === 'darwin') {
+  runtimeAppBundle = resolve(ownedRuntimeRoot, appBundle.split('/').pop() || 'Neon Pilot.app');
+  const clone = run('/bin/cp', ['-cR', appBundle, runtimeAppBundle], { timeoutMs: 300000 });
+  if (clone.status !== 0) throw new Error(`Could not clone the signed app into the benchmark sandbox: ${clone.stderr || clone.stdout}`);
+  const cloneVerification = run('/usr/bin/codesign', ['--verify', '--deep', '--strict', runtimeAppBundle]);
+  if (cloneVerification.status !== 0) {
+    throw new Error(`Sandbox app clone failed code-signature verification: ${cloneVerification.stderr || cloneVerification.stdout}`);
+  }
+}
+const resourceRoot = runtimeAppBundle ? resolve(runtimeAppBundle, 'Contents/Resources') : '';
+let benchmarkSandboxProfile = '';
+if (!dryRun && process.platform === 'darwin') {
+  const canonicalOwnedRoot = realpathSync(ownedRuntimeRoot);
+  const canonicalBundle = realpathSync(runtimeAppBundle);
+  const sandboxLiteral = (value) => JSON.stringify(value);
+  benchmarkSandboxProfile = resolve(ownedRuntimeRoot, 'agent-app.sb');
+  const homeCanary = resolve(process.env.HOME || '/Users/Shared', `.neon-pilot-authoring-host-canary-${process.pid}`);
+  const tempCanary = resolve('/tmp', `.neon-pilot-authoring-temp-canary-${process.pid}`);
+  const repoCanary = resolve(repoRoot, 'package.json');
+  writeFileSync(homeCanary, 'host home must remain unreadable');
+  writeFileSync(tempCanary, 'host temporary files outside the benchmark root must remain unreadable');
+  const canonicalTempCanary = realpathSync(tempCanary);
+  writeFileSync(
+    benchmarkSandboxProfile,
+    [
+      '(version 1)',
+      '(allow default)',
+      `(deny file-read* (subpath ${sandboxLiteral('/Users')}))`,
+      `(deny file-read* (subpath ${sandboxLiteral('/Volumes')}))`,
+      `(deny file-read* (subpath ${sandboxLiteral('/opt')}))`,
+      `(deny file-read* (subpath ${sandboxLiteral(realpathSync(repoRoot))}))`,
+      `(deny file-read* (literal ${sandboxLiteral(tempCanary)}))`,
+      `(deny file-read* (literal ${sandboxLiteral(canonicalTempCanary)}))`,
+      `(deny file-read-data (subpath ${sandboxLiteral('/private/var/folders')}))`,
+      `(deny file-write* (subpath ${sandboxLiteral('/Users')}))`,
+      `(allow file-read* (subpath ${sandboxLiteral(canonicalBundle)}) (subpath ${sandboxLiteral(canonicalOwnedRoot)}) (subpath ${sandboxLiteral(runtimeAppBundle)}) (subpath ${sandboxLiteral(ownedRuntimeRoot)}))`,
+      `(allow file-write* (subpath ${sandboxLiteral(canonicalOwnedRoot)}) (subpath ${sandboxLiteral(ownedRuntimeRoot)}))`,
+      `(allow process-exec (subpath ${sandboxLiteral(canonicalBundle)}) (subpath ${sandboxLiteral(runtimeAppBundle)}))`,
+      `(deny process-exec (literal ${sandboxLiteral('/usr/bin/security')}) (literal ${sandboxLiteral('/usr/bin/ssh')}) (literal ${sandboxLiteral('/usr/bin/scp')}))`,
+      `(deny process-exec (subpath ${sandboxLiteral('/private/var/folders')}))`,
+      '',
+    ].join('\n'),
+  );
+  const isolationCanaries = [homeCanary, tempCanary, repoCanary];
+  const isolationProbe = spawnSync(
+    '/usr/bin/sandbox-exec',
+    [
+      '-f',
+      benchmarkSandboxProfile,
+      '/usr/bin/python3',
+      '-c',
+      'import pathlib,sys\nfor value in sys.argv[1:]:\n try:\n  pathlib.Path(value).read_text(); print(value); sys.exit(1)\n except PermissionError:\n  pass\nsys.exit(0)',
+      ...isolationCanaries,
+    ],
+    { cwd: ownedRuntimeRoot, encoding: 'utf8' },
+  );
+  rmSync(homeCanary, { force: true });
+  rmSync(tempCanary, { force: true });
+  if (isolationProbe.status === 1) {
+    throw new Error(
+      `Benchmark sandbox can read a host filesystem or repository canary outside its owned root: ${isolationProbe.stdout.trim()}`,
+    );
+  }
+  if (isolationProbe.status !== 0) {
+    throw new Error(`Benchmark sandbox isolation probe failed unexpectedly: ${isolationProbe.stderr || isolationProbe.stdout}`);
+  }
+}
 const packagedSkillPath = resourceRoot
   ? resolve(resourceRoot, 'extensions/system-extension-manager/skills/local-extension-development')
   : '';
@@ -637,6 +769,7 @@ const summary = {
   provenance: {
     cliPath: whichCli && existsSync(whichCli) ? realpathSync(whichCli) : cliPath,
     appBundle: canonicalAppBundle || null,
+    runtimeAppBundle: runtimeAppBundle || null,
     appVersion:
       appBundle && existsSync(resolve(appBundle, 'Contents/Info.plist'))
         ? String(
@@ -649,6 +782,14 @@ const summary = {
     packagedAuthoringPath: packagedAuthoringPath || null,
     packagedAuthoringBytes: packagedAuthoringPath && existsSync(packagedAuthoringPath) ? treeBytes(packagedAuthoringPath) : null,
     packagedAuthoringSha256,
+    appAsarSha256:
+      appBundle && existsSync(resolve(appBundle, 'Contents/Resources/app.asar'))
+        ? hashFile(resolve(appBundle, 'Contents/Resources/app.asar'))
+        : null,
+    appExecutableSha256: appExecutablePath && existsSync(appExecutablePath) ? hashFile(appExecutablePath) : null,
+    appExecutableName: appExecutableName || null,
+    codeSignatureVerification,
+    codeSignatureDetails: codeSignatureDetails || null,
     runtimeChannel: benchmarkEnv.NEON_PILOT_RUNTIME_CHANNEL,
     isolatedStateRoot: benchmarkStateRoot,
     isolatedUserData: benchmarkUserData,
@@ -656,6 +797,8 @@ const summary = {
     isolatedHome: benchmarkHome,
     isolatedConfigRoot: benchmarkConfigRoot,
     isolatedKnowledgeRoot: benchmarkKnowledgeRoot,
+    sandboxProfile: benchmarkSandboxProfile || null,
+    filesystemIsolation: benchmarkSandboxProfile ? 'sandbox-exec-multi-root-denied' : 'unavailable',
     seedStateRoot: seedStateRoot || null,
     seedInputs,
     clearedEnvironmentOverrides,
@@ -665,7 +808,7 @@ const summary = {
 
 for (const testCase of readCases()) {
   const caseOut = resolve(outRoot, testCase.id);
-  const workspace = mkdtempSync(resolve(tmpdir(), `neon-pilot-bundled-authoring-${testCase.id}-`));
+  const workspace = mkdtempSync(resolve(benchmarkWorkspaceRoot, `${testCase.id}-`));
   const prompt = [
     testCase.prompt,
     '',
@@ -674,7 +817,7 @@ for (const testCase of readCases()) {
       : [`Use the bundled local-extension-development skill. Create the extension with the exact id ${testCase.extensionId}.`]),
     'Assume there is no Neon Pilot source checkout and do not search for one. Use only the installed app, its injected skill resources, and its packaged extension commands.',
     'Complete the full create, source edit, build, validate, reload, enable, smoke, and real-app verification loop. Do not merely explain how.',
-    'For real-app verification, one successful computer_use capture or window_state call is sufficient when the accessibility tree is sparse; do not wander into unrelated screenshot tools or private application files.',
+    'Do not call computer_use or control desktop windows during this benchmark. The benchmark opens the exact packaged process and performs independent route, interaction, and visual checks after your authoring loop.',
   ].join('\n');
   write(resolve(caseOut, 'prompt.txt'), prompt);
 
@@ -711,16 +854,17 @@ for (const testCase of readCases()) {
         ? await waitForConversationCompletion(conversationId, timeoutMs)
         : { ok: false, sawRunning: false, session: null };
     write(resolve(caseOut, 'agent-completion.json'), `${JSON.stringify(completion, null, 2)}\n`);
-    if (completion.appExited === true) {
-      await stopPackagedApp(appProcess);
-      appProcess = launchPackagedApp(resolve(caseOut, 'relaunch'));
-      await waitForApp(appProcess);
-    }
     const agent = { ...agentStart, status: agentStart.status === 0 && completion.ok ? 0 : agentStart.status || 5 };
     const transcript = conversationId
       ? run(cliPath, ['conversations', 'transcript', 'read', conversationId, '--limit', '10000', '--order', 'asc', '--json'])
       : null;
     if (transcript) write(resolve(caseOut, 'agent.transcript.json'), transcript.stdout ?? '');
+    const transcriptPayload = parseJsonOutput(transcript?.stdout ?? '');
+    const toolInputTrace = JSON.stringify(
+      (transcriptPayload?.details?.blocks ?? [])
+        .filter((block) => block?.type === 'tool_use' && typeof block?.input === 'string')
+        .map((block) => ({ tool: block.tool, input: block.input })),
+    );
 
     const installed = locateInstalledExtension(testCase.extensionId);
     const packageRoot = typeof installed?.packageRoot === 'string' ? installed.packageRoot : '';
@@ -767,6 +911,11 @@ for (const testCase of readCases()) {
         commands.push({ argv, status: result.status, logicalOk, payload, stdout: result.stdout, stderr: result.stderr });
       }
       for (const check of testCase.behaviorChecks ?? []) {
+        if (check.restartBefore === true) {
+          await stopPackagedApp(appProcess);
+          appProcess = launchPackagedApp(resolve(caseOut, `behavior-restart-${behavior.length}`));
+          await waitForApp(appProcess);
+        }
         const resolvedInput = resolveCapturedValues(check.input ?? {}, captures);
         const argv = [
           'extensions',
@@ -784,6 +933,7 @@ for (const testCase of readCases()) {
         const logicalOk =
           result.status === 0 &&
           payload?.ok !== false &&
+          isSuccessfulBehaviorResult(resultValue) &&
           (!check.expectText || textValue.includes(String(check.expectText).toLowerCase())) &&
           (!check.expectAbsentText || !textValue.includes(String(check.expectAbsentText).toLowerCase())) &&
           (check.expectMinimum === undefined || containsMinimumNumber(resultValue, Number(check.expectMinimum)));
@@ -796,9 +946,26 @@ for (const testCase of readCases()) {
       const sourceText =
         run('rg', ['-n', 'workingdir/neon-pilot|pnpm run|packages/desktop|packages/core|packages/extensions/src', packageRoot]).stdout ??
         '';
-      const agentTrace = `${agent.stdout ?? ''}\n${transcript?.stdout ?? ''}`;
-      const traceLeak = agentTrace.includes(repoRoot) || /"path":"[^"]*packages\/(?:desktop|core|extensions)\/src/u.test(agentTrace);
-      if (sourceText.trim() || traceLeak)
+      // Inspect agent-authored tool inputs, never tool outputs. CLI responses
+      // legitimately expose packaged system-extension paths; treating those
+      // response strings as attempted reads creates false source-leak failures.
+      const agentTrace = `${agent.stdout ?? ''}\n${toolInputTrace}`
+        // The transcript is itself serialized JSON, so shell-escaped spaces can
+        // carry one or more backslashes. Normalize those before redacting the
+        // exact signed-app paths that the benchmark intentionally exposes.
+        .replace(/\\+\s/gu, ' ')
+        .replaceAll('\\/', '/');
+      const privatePackagedRead = hasForbiddenPackagedResourceRead(agentTrace, runtimeAppBundle, [
+        packagedSkillPath,
+        packagedAuthoringPath,
+      ]);
+      const traceWithoutPackagedPaths = [appBundle, runtimeAppBundle, packagedSkillPath, packagedAuthoringPath, cliPath]
+        .filter(Boolean)
+        .reduce((text, allowedPath) => text.replaceAll(String(allowedPath), '[PACKAGED_NEON_PILOT]'), agentTrace);
+      const traceLeak =
+        traceWithoutPackagedPaths.includes(repoRoot) ||
+        /"path":"[^"]*packages\/(?:desktop|core|extensions)\/src/u.test(traceWithoutPackagedPaths);
+      if (sourceText.trim() || traceLeak || privatePackagedRead)
         contract = { ok: false, problems: [...contract.problems, 'agent used source-checkout knowledge'] };
       if (hashTree(packagedSkillPath) !== packagedSkillSha256 || hashTree(packagedAuthoringPath) !== packagedAuthoringSha256) {
         contract = { ok: false, problems: [...contract.problems, 'agent modified immutable packaged authoring resources'] };
@@ -808,6 +975,7 @@ for (const testCase of readCases()) {
     await stopPackagedApp(appProcess);
 
     let visualOk = !appBundle;
+    let tasteJudgeOk = !appBundle;
     if (packageRoot && appBundle && !generatedPackageContainsCredential) {
       const manifest = JSON.parse(readFileSync(resolve(packageRoot, 'extension.json'), 'utf8'));
       const routes = (manifest?.contributes?.views ?? [])
@@ -824,6 +992,7 @@ for (const testCase of readCases()) {
           `--app=${appBundle}`,
           `--extension-dir=${packageRoot}`,
           `--generated-routes=${routes.join(',')}`,
+          `--pre-setup-generated-routes=${(testCase.visualPreSetupRoutes ?? []).join(',')}`,
           `--baseline-routes=/home`,
           `--out=${resolve(caseOut, 'visual-qa')}`,
           `--setup-actions=${visualSetupPath}`,
@@ -836,10 +1005,46 @@ for (const testCase of readCases()) {
       write(resolve(caseOut, 'visual-qa.stderr.txt'), visual.stderr ?? '');
       const visualSummaryPath = resolve(caseOut, 'visual-qa/visual-capture-summary.json');
       const visualSummary = existsSync(visualSummaryPath) ? JSON.parse(readFileSync(visualSummaryPath, 'utf8')) : null;
+      const visualEvidenceProblems = validateGeneratedVisualEvidence(routes, visualSummary?.generated, testCase.visualRouteExpectations);
+      write(resolve(caseOut, 'visual-evidence.json'), `${JSON.stringify({ problems: visualEvidenceProblems }, null, 2)}\n`);
+      tasteJudgeOk = routes.length === 0;
+      if (visual.status === 0 && routes.length > 0) {
+        const judge = run(
+          process.execPath,
+          [
+            resolve(repoRoot, 'scripts/extension-visual-judge.mjs'),
+            `--capture=${resolve(caseOut, 'visual-qa')}`,
+            `--out=${resolve(caseOut, 'visual-qa/visual-judges')}`,
+            `--base-url=${benchmarkProxyBaseUrl}`,
+            `--models=${benchmarkJudgeModelId}`,
+            `--api=${benchmarkJudgeApi}`,
+            '--timeout-ms=300000',
+          ],
+          { timeoutMs: 360000, env: { MODEL_GATEWAY_API_KEY: benchmarkProxyToken } },
+        );
+        write(resolve(caseOut, 'visual-judge.stdout.txt'), judge.stdout ?? '');
+        write(resolve(caseOut, 'visual-judge.stderr.txt'), judge.stderr ?? '');
+        const aggregatePath = resolve(caseOut, 'visual-qa/visual-judges/aggregate.json');
+        const aggregate = existsSync(aggregatePath) ? JSON.parse(readFileSync(aggregatePath, 'utf8')) : null;
+        tasteJudgeOk =
+          judge.status === 0 &&
+          aggregate?.decision === 'pass' &&
+          Array.isArray(aggregate?.results) &&
+          aggregate.results.length > 0 &&
+          aggregate.results.every(
+            (result) =>
+              result?.imageAccess === true &&
+              Number(result?.overall ?? 0) >= 4 &&
+              Array.isArray(result?.mustFix) &&
+              result.mustFix.length === 0,
+          );
+      }
       visualOk =
         visual.status === 0 &&
         visualSummary !== null &&
-        (routes.length === 0 || (Array.isArray(visualSummary.generated) && visualSummary.generated.length >= routes.length));
+        (routes.length === 0 || (Array.isArray(visualSummary.generated) && visualSummary.generated.length >= routes.length)) &&
+        visualEvidenceProblems.length === 0 &&
+        tasteJudgeOk;
     }
 
     write(resolve(caseOut, 'contract.json'), `${JSON.stringify(contract, null, 2)}\n`);
@@ -847,7 +1052,7 @@ for (const testCase of readCases()) {
     write(resolve(caseOut, 'behavior.json'), `${JSON.stringify(behavior, null, 2)}\n`);
     const commandOk = commands.length === 5 && commands.every((entry) => entry.logicalOk === true);
     const behaviorOk = behavior.length === (testCase.behaviorChecks ?? []).length && behavior.every((entry) => entry.logicalOk === true);
-    const realAppOk = testCase.requireRealAppInteraction !== true || (hasSuccessfulComputerUseEvidence(transcript) && visualOk);
+    const realAppOk = testCase.requireRealAppInteraction !== true || (!hasAnyComputerUseEvidence(transcript) && visualOk);
     const agentOk = agent.status === 0;
     summary.cases.push({
       id: testCase.id,
@@ -861,6 +1066,7 @@ for (const testCase of readCases()) {
       behaviorOk,
       realAppOk,
       visualOk,
+      tasteJudgeOk,
       conversationId,
     });
 
@@ -868,6 +1074,18 @@ for (const testCase of readCases()) {
   } catch (error) {
     const message = error instanceof Error ? (error.stack ?? error.message) : String(error);
     write(resolve(caseOut, 'runner-error.txt'), `${message}\n`);
+    const failedPackageRoot = resolve(benchmarkStateRoot, 'extensions', testCase.extensionId);
+    if (existsSync(failedPackageRoot)) {
+      const preserved = resolve(caseOut, 'generated-extension-on-failure');
+      cpSync(failedPackageRoot, preserved, { recursive: true, dereference: false });
+      artifactRedactor.sanitizeTree(preserved);
+    }
+    const failedSessionsRoot = resolve(benchmarkStateRoot, 'sync', 'pi-agent', 'sessions');
+    if (existsSync(failedSessionsRoot)) {
+      const preservedSessions = resolve(caseOut, 'failed-agent-sessions');
+      cpSync(failedSessionsRoot, preservedSessions, { recursive: true, dereference: false });
+      artifactRedactor.sanitizeTree(preservedSessions);
+    }
     if (!summary.cases.some((entry) => entry.id === testCase.id)) {
       summary.cases.push({
         id: testCase.id,

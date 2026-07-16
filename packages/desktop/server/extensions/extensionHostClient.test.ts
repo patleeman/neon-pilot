@@ -117,6 +117,8 @@ describe('extension host client', () => {
       expect.objectContaining({ getRuntimeScope: expect.any(Function) }),
       { conversationId: 'conv' },
       { callId: 'tool-call' },
+      undefined,
+      undefined,
     );
   });
 
@@ -138,6 +140,8 @@ describe('extension host client', () => {
       'doThing',
       { x: 1 },
       { getRuntimeScope: expect.any(Function) },
+      undefined,
+      undefined,
       undefined,
       undefined,
     );
@@ -174,6 +178,8 @@ describe('extension host client', () => {
         sessionFile: '/repo/session.jsonl',
         sessionId: 'session-1',
       },
+      undefined,
+      undefined,
       undefined,
     );
   });
@@ -217,6 +223,8 @@ describe('extension host client', () => {
         onUpdate,
       },
       undefined,
+      undefined,
+      undefined,
     );
   });
 
@@ -246,6 +254,8 @@ describe('extension host client', () => {
         sessionId: 'session-1',
       },
       undefined,
+      undefined,
+      undefined,
     );
   });
 
@@ -261,7 +271,16 @@ describe('extension host client', () => {
       }),
     ).resolves.toEqual({ ok: true, result: { ok: true, result: { done: true } } });
 
-    expect(extensionBackend.invokeExtensionAction).toHaveBeenCalledWith('ext', 'doThing', {}, undefined, undefined, undefined);
+    expect(extensionBackend.invokeExtensionAction).toHaveBeenCalledWith(
+      'ext',
+      'doThing',
+      {},
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+    );
   });
 
   it('converts request handler throws into protocol errors', async () => {

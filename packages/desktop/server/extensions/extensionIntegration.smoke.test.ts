@@ -378,13 +378,17 @@ describe('extension manifests - structural validation', () => {
     for (const ext of snapshot.extensions) {
       const views = ext.contributes?.views ?? [];
       const nav = ext.contributes?.nav ?? [];
-      const routeSidebarViews = new Set(nav.map((item) => item.sidebarView).filter(Boolean));
+      const applications = ext.contributes?.applications ?? [];
+      const routeSidebarViews = new Set([
+        ...nav.map((item) => item.sidebarView).filter(Boolean),
+        ...applications.map((application) => application.sidebarView).filter(Boolean),
+      ]);
 
       for (const view of views) {
         if (view.location !== 'sidebar') continue;
         expect(
           routeSidebarViews.has(view.id),
-          `${ext.id}: sidebar view "${view.id}" must be bound from nav[].sidebarView so the app shell owns the contextual-left region`,
+          `${ext.id}: sidebar view "${view.id}" must be bound from nav[].sidebarView or applications[].sidebarView so its application owns the contextual-left region`,
         ).toBe(true);
       }
     }
@@ -1240,7 +1244,7 @@ describe('extension registry - integration sanity', () => {
   it('has a reasonable number of system extensions', () => {
     const systemCount = getSystemExtensionIds(snapshot).length;
     expect(systemCount).toBeGreaterThanOrEqual(20);
-    expect(systemCount).toBeLessThanOrEqual(40);
+    expect(systemCount).toBeLessThanOrEqual(50);
   });
 
   it('has at least 6 routes registered', () => {

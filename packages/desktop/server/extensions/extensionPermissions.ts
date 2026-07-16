@@ -1,5 +1,5 @@
 import { recordExtensionHostAuditEvent } from './extensionHostAudit.js';
-import type { ExtensionPermission } from './extensionManifest.js';
+import type { ExtensionManifest, ExtensionPermission } from './extensionManifest.js';
 import { findExtensionEntry } from './extensionRegistry.js';
 
 export class ExtensionPermissionError extends Error {
@@ -17,6 +17,10 @@ export class ExtensionPermissionError extends Error {
 export function extensionHasPermission(extensionId: string, permission: ExtensionPermission): boolean {
   const entry = findExtensionEntry(extensionId);
   return Boolean(entry?.manifest.permissions?.includes(permission));
+}
+
+export function manifestHasAnyPermission(manifest: ExtensionManifest, permissions: ExtensionPermission[]): boolean {
+  return permissions.some((permission) => manifest.permissions?.includes(permission));
 }
 
 export function assertExtensionPermission(extensionId: string, permission: ExtensionPermission, capability: string): void {

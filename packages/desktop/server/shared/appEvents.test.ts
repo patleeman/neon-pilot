@@ -74,6 +74,16 @@ describe('app event monitor', () => {
     unsubscribe();
   });
 
+  it('publishes extension-defined invalidation topics to renderer subscribers', () => {
+    const events: AppEvent[] = [];
+    const unsubscribe = subscribeAppEvents((event) => events.push(event));
+
+    invalidateAppTopics('articles');
+
+    expect(events).toContainEqual({ type: 'invalidate', topics: ['articles'] });
+    unsubscribe();
+  });
+
   it('invalidates sessionFiles when an existing session file changes', async () => {
     const repoRoot = createTempDir('neon-pilot-web-app-events-repo-');
     const sessionsDir = getDurableSessionsDir();

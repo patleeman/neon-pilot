@@ -179,6 +179,15 @@ describe('extension quality eval assets', () => {
     expect(visualRunner).toContain('sidebarDiscipline');
     expect(visualRunner).toContain('baseline-screenshots');
     expect(visualRunner).toContain('generated-screenshots');
+    expect(visualRunner).toContain('pre-setup-generated-routes');
+    expect(visualRunner).toContain("variant: 'empty-state'");
+    expect(visualRunner).toContain('document.elementsFromPoint');
+    expect(visualRunner).toContain("'Input.dispatchMouseEvent'");
+    expect(visualRunner).toContain('matchingControls.length === 1');
+    expect(visualRunner).toContain('withinText: interaction?.withinText');
+    expect(visualRunner).toContain('interaction.reloadBeforeCapture === true');
+    expect(visualRunner).toContain('interaction.expectAfterReloadAbsentText');
+    expect(visualRunner).toContain('isSuccessfulBehaviorResult(result)');
     expect(visualJudgeRunner).toContain('input_image');
     expect(visualJudgeRunner).toContain('variant');
     expect(visualJudgeRunner).toContain('visual-capture-summary.json');
