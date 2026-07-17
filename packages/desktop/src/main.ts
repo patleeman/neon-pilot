@@ -11,7 +11,7 @@ import { closeDesktopMainLog, writeDesktopMainLogLine } from './desktop-main-log
 import { HostManager } from './hosts/host-manager.js';
 import { registerDesktopIpc } from './ipc.js';
 import { type DesktopKeyboardShortcuts, validateDesktopKeyboardShortcuts } from './keyboard-shortcuts.js';
-import { resolveDesktopLaunchPresentation } from './launch-mode.js';
+import { readDesktopBackgroundLaunch, resolveDesktopLaunchPresentation } from './launch-mode.js';
 import { installDesktopApplicationMenu, setDesktopApplicationMenuKeyboardShortcutsReader } from './menu.js';
 import { confirmDesktopQuit } from './quit.js';
 import { applyDesktopRuntimeEnvironmentOverrides } from './runtime-env.js';
@@ -142,6 +142,7 @@ const desktopLaunchPresentation = resolveDesktopLaunchPresentation(process.env, 
   packaged: app.isPackaged,
   appName: app.getName(),
 });
+const desktopBackgroundLaunch = readDesktopBackgroundLaunch();
 app.setName(desktopLaunchPresentation.appName);
 if (desktopLaunchPresentation.mode === 'rc' && !process.env.NEON_PILOT_RUNTIME_CHANNEL && !process.env.NEON_PILOT_DESKTOP_VARIANT) {
   process.env.NEON_PILOT_RUNTIME_CHANNEL = 'rc';
@@ -451,7 +452,7 @@ async function bootstrapDesktopApp(): Promise<void> {
 
   registerDesktopAppProtocol(hostManager);
   warmDesktopShellStaticAssets();
-  windowController = new DesktopWindowController(hostManager);
+  windowController = new DesktopWindowController(hostManager, { backgroundLaunch: desktopBackgroundLaunch });
   logStartupMilestone('protocol-ready');
   updateManager = new DesktopUpdateManager({
     onBeforeQuitForUpdate: async () => {

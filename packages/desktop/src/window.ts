@@ -82,6 +82,31 @@ interface DesktopWindowBounds {
   height: number;
 }
 
+interface DesktopWindowPresentationTarget {
+  isVisible(): boolean;
+  show(): void;
+  showInactive(): void;
+  isMinimized(): boolean;
+  restore(): void;
+  focus(): void;
+}
+
+export function showDesktopWindow(window: DesktopWindowPresentationTarget, backgroundLaunch: boolean): void {
+  if (window.isVisible()) return;
+  if (backgroundLaunch) {
+    window.showInactive();
+    return;
+  }
+  window.show();
+}
+
+export function focusDesktopWindow(window: DesktopWindowPresentationTarget, backgroundLaunch: boolean): void {
+  showDesktopWindow(window, backgroundLaunch);
+  if (backgroundLaunch) return;
+  if (window.isMinimized()) window.restore();
+  window.focus();
+}
+
 export function getDesktopWindowChromeOptions(platform = process.platform): {
   titleBarStyle: 'hidden' | 'hiddenInset';
   trafficLightPosition?: { x: number; y: number };
@@ -279,7 +304,10 @@ export class DesktopWindowController {
     { crashedAt: number; reloadAttempts: number; unresponsiveSince: number | null }
   >();
 
-  constructor(private readonly hostManager: HostManager) {}
+  constructor(
+    private readonly hostManager: HostManager,
+    private readonly options: { backgroundLaunch?: boolean } = {},
+  ) {}
 
   /** Handle a renderer process being unexpectedly terminated (crash, OOM, killed). */
   handleRendererProcessGone(webContentsId: number): void {
@@ -788,14 +816,14 @@ export class DesktopWindowController {
     const showFallbackTimer = setTimeout(() => {
       if (!window.isDestroyed() && !window.isVisible()) {
         logWindowMilestone('show-fallback');
-        window.show();
+        showDesktopWindow(window, this.options.backgroundLaunch === true);
       }
     }, WINDOW_SHOW_FALLBACK_MS);
 
     window.once('ready-to-show', () => {
       logWindowMilestone('ready-to-show');
       clearTimeout(showFallbackTimer);
-      window.show();
+      showDesktopWindow(window, this.options.backgroundLaunch === true);
     });
 
     window.webContents.once('did-finish-load', () => {
@@ -1032,19 +1060,8 @@ export class DesktopWindowController {
   }
 
   private focusWindow(window: BrowserWindow): void {
-    let willBeVisible = window.isVisible();
-
-    if (!willBeVisible) {
-      window.show();
-      willBeVisible = true;
-    }
-
-    if (window.isMinimized()) {
-      window.restore();
-    }
-
-    this.syncAppModeForVisibleWindows(willBeVisible);
-    window.focus();
+    focusDesktopWindow(window, this.options.backgroundLaunch === true);
+    this.syncAppModeForVisibleWindows(true);
   }
 
   private syncAppModeForVisibleWindows(visibleWindowHint?: boolean): void {

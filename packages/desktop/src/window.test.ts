@@ -22,13 +22,64 @@ import {
   buildWindowTitle,
   canNavigateWindowInApp,
   constrainDesktopWindowBounds,
+  focusDesktopWindow,
   getDesktopWindowChromeOptions,
   shouldGrantDesktopMediaPermission,
   shouldOpenNavigationExternally,
   shouldOpenWindowExternally,
+  showDesktopWindow,
   toDesktopShellRoute,
   toDesktopShellUrl,
 } from './window.js';
+
+function createPresentationTarget(visible = false, minimized = false) {
+  let isVisible = visible;
+  return {
+    isVisible: vi.fn(() => isVisible),
+    show: vi.fn(() => {
+      isVisible = true;
+    }),
+    showInactive: vi.fn(() => {
+      isVisible = true;
+    }),
+    isMinimized: vi.fn(() => minimized),
+    restore: vi.fn(),
+    focus: vi.fn(),
+  };
+}
+
+describe('desktop window presentation', () => {
+  it('shows QA windows without activating or focusing them', () => {
+    const window = createPresentationTarget();
+
+    focusDesktopWindow(window, true);
+
+    expect(window.showInactive).toHaveBeenCalledTimes(1);
+    expect(window.show).not.toHaveBeenCalled();
+    expect(window.restore).not.toHaveBeenCalled();
+    expect(window.focus).not.toHaveBeenCalled();
+  });
+
+  it('preserves normal foreground launch behavior', () => {
+    const window = createPresentationTarget(false, true);
+
+    focusDesktopWindow(window, false);
+
+    expect(window.show).toHaveBeenCalledTimes(1);
+    expect(window.showInactive).not.toHaveBeenCalled();
+    expect(window.restore).toHaveBeenCalledTimes(1);
+    expect(window.focus).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not show an already-visible window again', () => {
+    const window = createPresentationTarget(true);
+
+    showDesktopWindow(window, true);
+
+    expect(window.showInactive).not.toHaveBeenCalled();
+    expect(window.show).not.toHaveBeenCalled();
+  });
+});
 
 // ── window — desktop window helper functions ─────────────────────────────
 

@@ -6,6 +6,7 @@ import { join, resolve } from 'node:path';
 import { _electron as electron, type ElectronApplication, expect, type Locator, type Page, type TestInfo } from '@playwright/test';
 
 interface LaunchOptions {
+  backgroundLaunch?: boolean;
   initialRoute?: string;
   electronArgs?: string[];
   stateRoot?: string;
@@ -85,9 +86,16 @@ export async function launchTestApp(options: LaunchOptions): Promise<TestApp> {
   await options.prepareState?.(stateRoot);
   const electronExecutable = require('electron') as string;
   const logs: string[] = [];
+  const backgroundLaunchArgs = options.backgroundLaunch === false ? [] : ['--neon-pilot-background-launch'];
   const app = await electron.launch({
     executablePath: electronExecutable,
-    args: [...(options.electronArgs ?? []), desktopMainFile, '--no-quit-confirmation', `--neon-pilot-initial-route=${initialRoute}`],
+    args: [
+      ...(options.electronArgs ?? []),
+      desktopMainFile,
+      '--no-quit-confirmation',
+      ...backgroundLaunchArgs,
+      `--neon-pilot-initial-route=${initialRoute}`,
+    ],
     env: buildLaunchEnv(tempRoot, stateRoot),
   });
   const child = app.process();

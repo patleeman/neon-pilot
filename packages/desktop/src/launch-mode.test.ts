@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
-import { resolveDesktopLaunchPresentation } from './launch-mode.js';
+import { readDesktopBackgroundLaunch, resolveDesktopLaunchPresentation } from './launch-mode.js';
+
+describe('readDesktopBackgroundLaunch', () => {
+  it('enables inactive window presentation only for the explicit QA launch argument', () => {
+    expect(readDesktopBackgroundLaunch(['/path/to/electron', '/path/to/main.js', '--neon-pilot-background-launch'])).toBe(true);
+    expect(readDesktopBackgroundLaunch(['/path/to/electron', '/path/to/main.js'])).toBe(false);
+  });
+});
 
 describe('resolveDesktopLaunchPresentation', () => {
   it('defaults to the stable app presentation', () => {

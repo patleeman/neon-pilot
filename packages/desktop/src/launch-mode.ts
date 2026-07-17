@@ -2,10 +2,16 @@ import { resolveNeonPilotRuntimeChannel } from '@neon-pilot/core';
 
 type DesktopLaunchMode = 'stable' | 'rc' | 'dev' | 'testing';
 
+export const DESKTOP_BACKGROUND_LAUNCH_ARG = '--neon-pilot-background-launch';
+
 export interface DesktopLaunchPresentation {
   mode: DesktopLaunchMode;
   appName: string;
   launchLabel?: string;
+}
+
+export function readDesktopBackgroundLaunch(argv: readonly string[] = process.argv): boolean {
+  return argv.includes(DESKTOP_BACKGROUND_LAUNCH_ARG);
 }
 
 const DEFAULT_APP_NAME = 'Neon Pilot';

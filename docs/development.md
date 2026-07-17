@@ -57,6 +57,8 @@ pnpm run test:e2e:runner --grep @core
 
 The Playwright E2E suite launches Electron directly with a temporary state root, captures traces/screenshots/video on failure, and writes artifacts under `test-results/e2e` and `playwright-report/e2e`. The full command rebuilds the desktop app first; use `test:e2e:runner` only when the build outputs are already fresh. Core happy-path coverage lives under `@core-conversations` and `@core-shell`: seeded conversation navigation/sidebar placement/reload, command palette, app-shell routes, extension routes, routines, and settings.
 
+Automated E2E launches use background window presentation by default, so repeated QA apps remain visible to Playwright without taking keyboard focus from the active app. Pass `backgroundLaunch: false` to `launchTestApp` only when a test specifically needs native foreground activation behavior.
+
 Startup idle smoke:
 
 ```bash
@@ -121,8 +123,10 @@ pnpm run ab:cleanup -- --session <name>
 When launching the test desktop app for QA, pass a non-interactive quit flag:
 
 ```bash
-pnpm run desktop:dev -- --remote-debugging-port=9222 --no-quit-confirmation
+pnpm run desktop:qa -- --remote-debugging-port=9222
 ```
+
+`desktop:qa` also passes `--neon-pilot-background-launch`, which shows the Testing window without focusing it. Use `desktop:dev` for an ordinary foreground development launch.
 
 Desktop runtime channels are intentionally isolated under the `neon-pilot*` namespace. Stable uses `neon-pilot`; RC uses `neon-pilot-rc`; dev uses `neon-pilot-dev`; test launches use `neon-pilot-testing`. The user-facing CLI command remains `neon-pilot` for every channel; channel-local app shells prepend that channel's managed CLI bin directory, and user shell installation is opt-in with `neon-pilot cli install`. Dev/test ports default to random/unset (`0`) and use stable `dev`/`test` daemon namespaces by default, so scheduled automations persist across local restarts. Override only for dev/test with `NEON_PILOT_RUNTIME_CHANNEL`, `NEON_PILOT_DAEMON_NAMESPACE`, or `NEON_PILOT_DAEMON_SOCKET_PATH` when you need an isolated daemon socket, pid lock, runtime DB, or log directory.
 
