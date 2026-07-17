@@ -179,8 +179,12 @@ export {
 } from './liveSessionQueue.js';
 export { isPlaceholderConversationTitle, resolveStableSessionTitle } from './liveSessionTitle.js';
 
-export function prewarmLiveSessionToolSelection(): void {
-  void warmLiveSessionToolSelection(resolveSettingsFile());
+export function prewarmLiveSessionToolSelection(): Promise<void> {
+  // Return the warmup so callers can contain transient startup failures (for
+  // example, before the extension-host RPC client has connected). Detaching
+  // this promise turned an otherwise best-effort prewarm into an unhandled
+  // process rejection.
+  return warmLiveSessionToolSelection(resolveSettingsFile()).then(() => undefined);
 }
 
 function resolveAgentDir(): string {

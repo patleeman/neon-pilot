@@ -268,6 +268,15 @@ function prewarmDesktopModelDefinitions(): void {
   modelDefinitionsPrewarmTimer.unref?.();
 }
 
+function prewarmDesktopLiveSessionCapability(context: LiveSessionCapabilityContext): void {
+  void prewarmLiveSessionCapability({}, context).catch((error) => {
+    logWarn('default live session prewarm failed', {
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+  });
+}
+
 type RouteNext = (error?: unknown) => void;
 type RouteHandler = (req: LocalApiRequest, res: LocalApiResponse, next?: RouteNext) => unknown;
 
@@ -506,6 +515,9 @@ export function configureDesktopExtensionHostClient(input: { baseUrl?: string | 
   if (baseUrl && token) {
     setExtensionHostClient(createExtensionHostRpcClient({ baseUrl, token }));
     startTelegramGatewayRuntimeWhenReady();
+    if (localLiveSessionCapabilityContext) {
+      prewarmDesktopLiveSessionCapability(localLiveSessionCapabilityContext);
+    }
   } else {
     setExtensionHostClient(undefined);
     stopTelegramGatewayRuntime();
@@ -917,12 +929,15 @@ async function buildLocalContexts(): Promise<{ context: ServerRouteContext; perf
   // before their first await. Queue it so context construction stays on the
   // fast path and the work runs before normal user interaction.
   const liveSessionPrewarmTimer = setTimeout(() => {
-    void prewarmLiveSessionCapability({}, liveSessionCapabilityContext).catch((error) => {
-      logWarn('default live session prewarm failed', {
-        message: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined,
-      });
-    });
+    // The desktop local API can become ready before its extension-host RPC
+    // client is connected. In that ordering, configureDesktopExtensionHostClient
+    // performs the warmup as soon as the dependency is available.
+    try {
+      getExtensionHostClient();
+    } catch {
+      return;
+    }
+    prewarmDesktopLiveSessionCapability(liveSessionCapabilityContext);
   }, 0);
   liveSessionPrewarmTimer.unref?.();
 

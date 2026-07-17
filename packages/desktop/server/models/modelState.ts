@@ -142,7 +142,12 @@ export interface ModelState {
 }
 
 export function prewarmModelDefinitions() {
-  void refreshModelDefinitionsInBackground();
+  // Prewarming is best-effort. During desktop startup the extension-host RPC
+  // client can be connected a few hundred milliseconds after the local API is
+  // ready, so discovery may reject on this first pass. Do not promote that
+  // transient startup ordering into an unhandled process rejection; the next
+  // model read retries because an empty cache is not treated as authoritative.
+  void refreshModelDefinitionsInBackground().catch(() => {});
 }
 
 function modelIdHasMultipleProviders(models: readonly ModelDefinition[], modelId: string): boolean {
