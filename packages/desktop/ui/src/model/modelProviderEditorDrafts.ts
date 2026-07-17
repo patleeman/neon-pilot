@@ -68,19 +68,13 @@ export function readJsonObjectDraftEntries(text: string, label: string): JsonObj
 }
 
 export function writeStringRecordDraftEntries(entries: JsonObjectDraftEntry[]): string {
-  const object = Object.fromEntries(
-    entries
-      .map((entry) => [entry.key.trim(), entry.valueText] as const)
-      .filter(([key]) => key.length > 0),
-  );
+  const object = Object.fromEntries(entries.map((entry) => [entry.key.trim(), entry.valueText] as const).filter(([key]) => key.length > 0));
   return formatJsonObject(object);
 }
 
 export function writeJsonObjectDraftEntries(entries: JsonObjectDraftEntry[]): string {
   const object = Object.fromEntries(
-    entries
-      .map((entry) => [entry.key.trim(), parseDraftEntryValue(entry.valueText)] as const)
-      .filter(([key]) => key.length > 0),
+    entries.map((entry) => [entry.key.trim(), parseDraftEntryValue(entry.valueText)] as const).filter(([key]) => key.length > 0),
   );
   return formatJsonObject(object);
 }

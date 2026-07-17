@@ -123,7 +123,7 @@ export function ExtensionPage() {
 
   useEffect(() => {
     if (registry.error) {
-      addNotification({ type: 'error', message: `Extension registry error: ${registry.error}`, source: 'core' });
+      addNotification({ type: 'error', message: 'Extensions are temporarily unavailable.', source: 'core' });
     }
   }, [registry.error]);
 
@@ -131,12 +131,14 @@ export function ExtensionPage() {
     return <QuietExtensionPageLoading />;
   }
 
-  if (registeredExtensionRoute && !nativeSurface) {
-    return <QuietExtensionPageLoading />;
+  if (registry.error && !nativeSurface) {
+    return (
+      <ErrorState message="Extensions are temporarily unavailable. Reload Neon Pilot or try again after the extension host recovers." />
+    );
   }
 
-  if (registry.error && !nativeSurface) {
-    return <ErrorState message={`Extensions unavailable: ${registry.error}`} />;
+  if (registeredExtensionRoute && !nativeSurface) {
+    return <QuietExtensionPageLoading />;
   }
 
   if (nativeSurface && !unavailableApplication?.explicitlyUnavailable) {

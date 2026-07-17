@@ -28,9 +28,7 @@ function canUseBuiltCli() {
 
 const cliArgs = process.argv.slice(2);
 const command = canUseBuiltCli() ? process.execPath : tsxPath;
-const args = canUseBuiltCli()
-  ? [cliDistPath, ...cliArgs]
-  : ['--eval', oneShotSourceCliEval(cliArgs)];
+const args = canUseBuiltCli() ? [cliDistPath, ...cliArgs] : ['--eval', oneShotSourceCliEval(cliArgs)];
 
 function oneShotSourceCliEval(args) {
   const cliSourceUrl = pathToFileURL(cliSourcePath).href;

@@ -167,7 +167,12 @@ const failed = results.filter((item) => item.status !== 'completed');
 return workflow.finish({
   summary: `Completed ${completed.length}/${results.length} scan branches.`,
   counts: { branches: results.length, completed: completed.length, failed: failed.length },
-  findings: completed.map((item, index) => ({ area: args.areas[index]?.name, nodeId: item.nodeId, runId: item.runId, summary: item.summary })),
+  findings: completed.map((item, index) => ({
+    area: args.areas[index]?.name,
+    nodeId: item.nodeId,
+    runId: item.runId,
+    summary: item.summary,
+  })),
 });
 ```
 

@@ -55,7 +55,7 @@ test('Agent sidebar navigation stays flat and never flashes an unregistered rout
     await clickRouteButton(page, '/gateways');
     await expect(page.getByRole('heading', { name: 'Gateways', exact: true })).toBeVisible({ timeout: 45_000 });
     await clickRouteButton(page, '/model-arena');
-    await expect(page.getByRole('heading', { name: 'Model Arena', exact: true })).toBeVisible({ timeout: 45_000 });
+    await expect(page.getByRole('heading', { level: 1, name: 'Model Arena', exact: true })).toBeVisible({ timeout: 45_000 });
     await clickRouteButton(page, '/routines');
     await expect(page.getByRole('heading', { name: 'Routines', exact: true })).toBeVisible({ timeout: 45_000 });
     await page.getByRole('button', { name: 'Chat', exact: true }).click();

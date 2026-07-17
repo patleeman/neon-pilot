@@ -1,5 +1,9 @@
 import type { RuntimeScopeTaskSummary } from '../routes/context.js';
-import { listConversationConnections, type ConversationConnectionItem, type ConversationConnectionVisibility } from './conversationConnections.js';
+import {
+  type ConversationConnectionItem,
+  type ConversationConnectionVisibility,
+  listConversationConnections,
+} from './conversationConnections.js';
 
 export type ConversationActivityKind = 'execution' | 'deferred-resume' | 'scheduled-task' | 'queued-prompt';
 export type ConversationActivityVisibility = ConversationConnectionVisibility;

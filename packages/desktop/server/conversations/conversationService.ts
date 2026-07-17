@@ -496,11 +496,14 @@ export function toggleConversationAttention(input: { profile: string; conversati
   return true;
 }
 
-export function resolveConversationSessionFile(conversationId: string): string | undefined {
-  return resolveConversationSessionFileWithTelemetry(conversationId).sessionFile;
+export function resolveConversationSessionFile(conversationId: string, options: { profile?: string } = {}): string | undefined {
+  return resolveConversationSessionFileWithTelemetry(conversationId, options).sessionFile;
 }
 
-export function resolveConversationSessionFileWithTelemetry(conversationId: string): {
+export function resolveConversationSessionFileWithTelemetry(
+  conversationId: string,
+  options: { profile?: string } = {},
+): {
   sessionFile: string | undefined;
   telemetry: {
     liveLookupMs: number;
@@ -582,7 +585,7 @@ export function resolveConversationSessionFileWithTelemetry(conversationId: stri
   }
 
   const snapshotStartedAtMs = performance.now();
-  const snapshotSessionFile = listConversationSessionsSnapshot()
+  const snapshotSessionFile = listConversationSessionsSnapshot(options)
     .find((session) => session.id === conversationId)
     ?.file?.trim();
   const snapshotEndedAtMs = performance.now();

@@ -112,7 +112,9 @@ describe('extensionConversationMetadata', () => {
     });
     await writeConversationMetadata({ conversationId: 'c3', extensionId: 'ext', values: { status: 'open' }, runtimeScope: 'p', stateRoot });
 
-    expect(queryConversationMetadata({ namespace: 'ext', runtimeScope: 'p', stateRoot, where: [{ key: 'status', value: 'open' }] })).toEqual([
+    expect(
+      queryConversationMetadata({ namespace: 'ext', runtimeScope: 'p', stateRoot, where: [{ key: 'status', value: 'open' }] }),
+    ).toEqual([
       { conversationId: 'c1', metadata: { status: 'open', priority: 1 } },
       { conversationId: 'c3', metadata: { status: 'open' } },
     ]);

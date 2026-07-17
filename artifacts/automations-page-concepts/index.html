@@ -22,7 +22,13 @@
         --button: #252b31;
         --button-hover: #303841;
         font-family:
-          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+          Inter,
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          sans-serif;
       }
 
       * {
@@ -246,7 +252,7 @@
       }
 
       .mono {
-        font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+        font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
         font-size: 12px;
       }
 
@@ -482,7 +488,8 @@
         <div>
           <h1>Automations Page Concepts</h1>
           <p class="artifact-note">
-            Static design artifact only. These are layout directions for the Neon Pilot Automations page before any production implementation.
+            Static design artifact only. These are layout directions for the Neon Pilot Automations page before any production
+            implementation.
           </p>
         </div>
         <p class="tiny-copy">Goal: list first, create/edit in a focused flow, no permanent page form.</p>
@@ -521,7 +528,9 @@
                   </thead>
                   <tbody>
                     <tr>
-                      <td><span class="status"><span class="dot on"></span>On</span></td>
+                      <td>
+                        <span class="status"><span class="dot on"></span>On</span>
+                      </td>
                       <td>
                         <div class="name">Daily release check</div>
                         <div class="secondary">Check open release gates and summarize blockers.</div>
@@ -533,7 +542,9 @@
                       <td><button class="icon-button" aria-label="Actions">...</button></td>
                     </tr>
                     <tr>
-                      <td><span class="status"><span class="dot paused"></span>Paused</span></td>
+                      <td>
+                        <span class="status"><span class="dot paused"></span>Paused</span>
+                      </td>
                       <td>
                         <div class="name">Dependency sweep</div>
                         <div class="secondary">Review dependency updates and report risky packages.</div>
@@ -545,7 +556,9 @@
                       <td><button class="icon-button" aria-label="Actions">...</button></td>
                     </tr>
                     <tr>
-                      <td><span class="status"><span class="dot running"></span>Running</span></td>
+                      <td>
+                        <span class="status"><span class="dot running"></span>Running</span>
+                      </td>
                       <td>
                         <div class="name">CI gate watcher</div>
                         <div class="secondary">Check failed release checks and wake the owner thread.</div>
@@ -557,7 +570,9 @@
                       <td><button class="icon-button" aria-label="Actions">...</button></td>
                     </tr>
                     <tr>
-                      <td><span class="status"><span class="dot on"></span>On</span></td>
+                      <td>
+                        <span class="status"><span class="dot on"></span>On</span>
+                      </td>
                       <td>
                         <div class="name">One-time follow-up</div>
                         <div class="secondary">Ask whether the draft release notes need another pass.</div>
@@ -656,7 +671,9 @@
                   </thead>
                   <tbody>
                     <tr class="selected">
-                      <td><span class="status"><span class="dot on"></span>On</span></td>
+                      <td>
+                        <span class="status"><span class="dot on"></span>On</span>
+                      </td>
                       <td>
                         <div class="name">Daily release check</div>
                         <div class="secondary">Release thread</div>
@@ -666,7 +683,9 @@
                       <td><button class="icon-button" aria-label="Actions">...</button></td>
                     </tr>
                     <tr>
-                      <td><span class="status"><span class="dot paused"></span>Paused</span></td>
+                      <td>
+                        <span class="status"><span class="dot paused"></span>Paused</span>
+                      </td>
                       <td>
                         <div class="name">Dependency sweep</div>
                         <div class="secondary">Neon Pilot</div>
@@ -676,7 +695,9 @@
                       <td><button class="icon-button" aria-label="Actions">...</button></td>
                     </tr>
                     <tr>
-                      <td><span class="status"><span class="dot running"></span>Running</span></td>
+                      <td>
+                        <span class="status"><span class="dot running"></span>Running</span>
+                      </td>
                       <td>
                         <div class="name">CI gate watcher</div>
                         <div class="secondary">Build triage</div>
@@ -742,7 +763,9 @@
                     </td>
                     <td>Weekdays at 9:00 AM</td>
                     <td>Tomorrow</td>
-                    <td><span class="status"><span class="dot on"></span>On</span></td>
+                    <td>
+                      <span class="status"><span class="dot on"></span>On</span>
+                    </td>
                     <td><button class="icon-button" aria-label="Actions">...</button></td>
                   </tr>
                   <tr>
@@ -752,7 +775,9 @@
                     </td>
                     <td>Fridays at noon</td>
                     <td>Paused</td>
-                    <td><span class="status"><span class="dot paused"></span>Paused</span></td>
+                    <td>
+                      <span class="status"><span class="dot paused"></span>Paused</span>
+                    </td>
                     <td><button class="icon-button" aria-label="Actions">...</button></td>
                   </tr>
                   <tr>
@@ -762,12 +787,15 @@
                     </td>
                     <td>Every 30 minutes</td>
                     <td>In 18 min</td>
-                    <td><span class="status"><span class="dot running"></span>Running</span></td>
+                    <td>
+                      <span class="status"><span class="dot running"></span>Running</span>
+                    </td>
                     <td><button class="icon-button" aria-label="Actions">...</button></td>
                   </tr>
                   <tr>
                     <td colspan="5" class="empty-row">
-                      Empty state treatment: if there are no automations, this same list area shows "No automations yet" plus a New automation action.
+                      Empty state treatment: if there are no automations, this same list area shows "No automations yet" plus a New
+                      automation action.
                     </td>
                   </tr>
                 </tbody>

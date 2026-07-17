@@ -61,10 +61,6 @@ export interface AppTelemetryEventRow {
 export const recordTelemetryEvent = (_event: ExtensionTelemetryEventInput, _options?: ExtensionTelemetryRecordOptions): unknown =>
   hostResolved();
 
-export const readTraceTelemetryEvents = (
-  _input: { since: string; limit?: number },
-): Promise<TraceTelemetryLogEvent[]> => hostResolved();
+export const readTraceTelemetryEvents = (_input: { since: string; limit?: number }): Promise<TraceTelemetryLogEvent[]> => hostResolved();
 
-export const queryAppTelemetryEvents = (
-  _input: { since: string; limit?: number },
-): Promise<AppTelemetryEventRow[]> => hostResolved();
+export const queryAppTelemetryEvents = (_input: { since: string; limit?: number }): Promise<AppTelemetryEventRow[]> => hostResolved();

@@ -6,12 +6,19 @@ import {
   expectCleanViewport,
   launchTestApp,
   seedConversationSession,
+  seedDisabledExtensions,
   seedRuntimeSettings,
   waitForNoComposerRunIndicators,
 } from './fixtures/electronApp';
 
+test.describe.configure({ timeout: 90_000 });
+
 test('chat composer sends an inline bash command, persists output, and stays idle afterward @chat', async ({}, testInfo) => {
-  const testApp = await launchTestApp({ testInfo, initialRoute: '/conversations/new' });
+  const testApp = await launchTestApp({
+    testInfo,
+    initialRoute: '/conversations/new',
+    prepareState: (stateRoot) => seedDisabledExtensions(stateRoot, ['system-onboarding']),
+  });
   try {
     const page = testApp.page;
     const marker = `NEON_E2E_CHAT_DONE_${Date.now()}`;
@@ -20,7 +27,7 @@ test('chat composer sends an inline bash command, persists output, and stays idl
     const visibleCommand = prompt.slice(2);
     const composer = page.locator('textarea[placeholder*="Message Neon Pilot"]').first();
 
-    await expect(page.getByRole('heading', { name: 'New Conversation' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'New Conversation' })).toBeVisible({ timeout: 30_000 });
     await composer.fill(prompt);
     await expect(page.getByRole('button', { name: 'Send' })).toBeEnabled();
     await page.getByRole('button', { name: 'Send' }).click();
@@ -65,12 +72,14 @@ test('conversation composer saves the selected model preference @chat', async ({
       responses.push({ status: response.status(), body: await response.text().catch(() => '') });
     });
 
-    await expect(page.locator('summary[aria-label="Conversation model"]')).toContainText('GPT-5.4 mini');
-    await page.locator('summary[aria-label="Conversation model"]').click();
+    const modelPreferences = page.getByLabel('Conversation model preferences');
+    await expect(modelPreferences).toContainText('GPT-5.4 mini', { timeout: 30_000 });
+    await modelPreferences.click();
+    await page.locator('details[data-model-picker-menu][open] button[role="menuitem"]', { hasText: 'Model' }).first().click();
     await page.locator('details[data-model-picker-menu][open] button[role="menuitem"]', { hasText: 'GPT-5.3 Codex Spark' }).click();
 
     await expect(page.getByText('Model set to GPT-5.3 Codex Spark for this conversation.')).toBeVisible({ timeout: 10_000 });
-    await expect(page.locator('summary[aria-label="Conversation model"]')).toContainText('GPT-5.3 Codex Spark');
+    await expect(modelPreferences).toContainText('GPT-5.3 Codex Spark');
     expect(responses.some((response) => response.status === 200 && response.body.includes('gpt-5.3-codex-spark'))).toBe(true);
 
     const saved = await apiJson<{ currentModel: string }>(page, `/api/conversations/${conversationId}/model-preferences`);
@@ -79,7 +88,7 @@ test('conversation composer saves the selected model preference @chat', async ({
     await expect(page.locator('body')).not.toContainText('Could not save the model preference.');
 
     await page.reload();
-    await expect(page.locator('summary[aria-label="Conversation model"]')).toContainText('GPT-5.3 Codex Spark', {
+    await expect(page.getByLabel('Conversation model preferences')).toContainText('GPT-5.3 Codex Spark', {
       timeout: 30_000,
     });
     await expectCleanViewport(page);

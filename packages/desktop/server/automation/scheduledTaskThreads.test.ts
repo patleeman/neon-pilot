@@ -42,7 +42,7 @@ describe('scheduledTaskThreads', () => {
       conversationId: 'conv-1',
       sessionFile: '/session.json',
     });
-    expect(conversationService.resolveConversationSessionFile).toHaveBeenCalledWith('conv-1');
+    expect(conversationService.resolveConversationSessionFile).toHaveBeenCalledWith('conv-1', { profile: undefined });
 
     expect(
       resolveScheduledTaskThreadBinding({ threadMode: 'existing', threadConversationId: 'conv-1', threadSessionFile: ' /explicit.json ' }),
@@ -74,6 +74,18 @@ describe('scheduledTaskThreads', () => {
       conversationId: 'conv-1',
       sessionFile: '/explicit.json',
     });
+  });
+
+  it('passes the explicit runtime profile through conversation lookup', () => {
+    expect(
+      resolveScheduledTaskThreadBinding({
+        threadMode: 'existing',
+        threadConversationId: 'conv-1',
+        profile: 'shared',
+      }),
+    ).toMatchObject({ conversationId: 'conv-1' });
+    expect(conversationService.resolveConversationSessionFile).toHaveBeenCalledWith('conv-1', { profile: 'shared' });
+    expect(conversationService.readConversationSessionMeta).toHaveBeenCalledWith('conv-1', { profile: 'shared' });
   });
 
   it('rejects invalid existing thread selections', () => {

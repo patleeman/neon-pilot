@@ -31,7 +31,12 @@
         background: #030507;
         color: var(--text);
         font-family:
-          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          Inter,
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
           sans-serif;
         font-size: 13px;
         letter-spacing: 0;
@@ -608,10 +613,9 @@
       <section class="brief">
         <h1>Routines Empty-State Concepts</h1>
         <p>
-          Static design artifacts for replacing the current prose-heavy Routines empty state with a
-          more educational first-run workbench pattern. Concept A teaches the feature model first,
-          then offers a fast start. Concept C remains the recommended event-selected/no-routines
-          direction.
+          Static design artifacts for replacing the current prose-heavy Routines empty state with a more educational first-run workbench
+          pattern. Concept A teaches the feature model first, then offers a fast start. Concept C remains the recommended
+          event-selected/no-routines direction.
         </p>
       </section>
 
@@ -664,8 +668,8 @@
                     <div>
                       <h3>How Routines work</h3>
                       <p>
-                        Routines are prompt blocks that run automatically before or after lifecycle
-                        events, such as checkpoint saves, agent starts, or background commands.
+                        Routines are prompt blocks that run automatically before or after lifecycle events, such as checkpoint saves, agent
+                        starts, or background commands.
                       </p>
                     </div>
                     <span class="pill">First run</span>
@@ -700,7 +704,9 @@
                       <div class="event-row">
                         <div>
                           <div class="row-title">Check before checkpoint</div>
-                          <div class="row-meta">Review changed files before saving a checkpoint, then warn if something looks unfinished.</div>
+                          <div class="row-meta">
+                            Review changed files before saving a checkpoint, then warn if something looks unfinished.
+                          </div>
                         </div>
                         <span class="button primary">Create</span>
                       </div>
@@ -721,7 +727,9 @@
                       <div class="event-row">
                         <div>
                           <div class="row-title">Choose a path before agent start</div>
-                          <div class="row-meta">Inspect the request, then route the run through review, implementation, or planning instructions.</div>
+                          <div class="row-meta">
+                            Inspect the request, then route the run through review, implementation, or planning instructions.
+                          </div>
                         </div>
                         <span class="button">Create</span>
                       </div>
@@ -769,7 +777,9 @@
                 </div>
               </div>
               <div></div>
-              <div class="utilities"><div class="nav-row"><span class="nav-dot"></span>Settings</div></div>
+              <div class="utilities">
+                <div class="nav-row"><span class="nav-dot"></span>Settings</div>
+              </div>
             </aside>
             <main class="main">
               <div class="main-header">
@@ -782,15 +792,24 @@
               <section class="templates">
                 <div class="row-list">
                   <div class="template-row">
-                    <div><div class="row-title">Checkpoint review</div><div class="row-meta">Before checkpoint: review changes. After checkpoint: write a short handoff.</div></div>
+                    <div>
+                      <div class="row-title">Checkpoint review</div>
+                      <div class="row-meta">Before checkpoint: review changes. After checkpoint: write a short handoff.</div>
+                    </div>
                     <span class="button primary">Create</span>
                   </div>
                   <div class="template-row">
-                    <div><div class="row-title">Start-run guard</div><div class="row-meta">Before agent starts: ask for confirmation when the workspace is dirty.</div></div>
+                    <div>
+                      <div class="row-title">Start-run guard</div>
+                      <div class="row-meta">Before agent starts: ask for confirmation when the workspace is dirty.</div>
+                    </div>
                     <span class="button">Create</span>
                   </div>
                   <div class="template-row">
-                    <div><div class="row-title">Background command check</div><div class="row-meta">Before background command: route risky commands through a stop or ask path.</div></div>
+                    <div>
+                      <div class="row-title">Background command check</div>
+                      <div class="row-meta">Before background command: route risky commands through a stop or ask path.</div>
+                    </div>
                     <span class="button">Create</span>
                   </div>
                 </div>
@@ -835,7 +854,9 @@
                 </div>
               </div>
               <div></div>
-              <div class="utilities"><div class="nav-row"><span class="nav-dot"></span>Settings</div></div>
+              <div class="utilities">
+                <div class="nav-row"><span class="nav-dot"></span>Settings</div>
+              </div>
             </aside>
             <main class="main">
               <div class="main-header">
@@ -848,7 +869,10 @@
               <section class="timeline">
                 <div class="lane">
                   <div class="lane-head">
-                    <div><div class="lane-title">Before</div><div class="row-meta">Runs before the checkpoint is saved.</div></div>
+                    <div>
+                      <div class="lane-title">Before</div>
+                      <div class="row-meta">Runs before the checkpoint is saved.</div>
+                    </div>
                     <span class="pill">0 routines</span>
                   </div>
                   <div class="lane-body">
@@ -857,7 +881,10 @@
                 </div>
                 <div class="lane">
                   <div class="lane-head">
-                    <div><div class="lane-title">After</div><div class="row-meta">Runs after the checkpoint completes.</div></div>
+                    <div>
+                      <div class="lane-title">After</div>
+                      <div class="row-meta">Runs after the checkpoint completes.</div>
+                    </div>
                     <span class="pill">0 routines</span>
                   </div>
                   <div class="lane-body">
@@ -907,7 +934,9 @@
                 </div>
               </div>
               <div></div>
-              <div class="utilities"><div class="nav-row"><span class="nav-dot"></span>Settings</div></div>
+              <div class="utilities">
+                <div class="nav-row"><span class="nav-dot"></span>Settings</div>
+              </div>
             </aside>
             <main class="main">
               <div class="main-header">
@@ -919,15 +948,24 @@
               <section class="command-panel">
                 <div class="command-input">Search lifecycle events... <span class="kbd">Cmd+K</span></div>
                 <div class="event-row">
-                  <div><div class="row-title">Checkpoint</div><div class="row-meta">Common event - before/after lanes</div></div>
+                  <div>
+                    <div class="row-title">Checkpoint</div>
+                    <div class="row-meta">Common event - before/after lanes</div>
+                  </div>
                   <span class="button primary">Select</span>
                 </div>
                 <div class="event-row">
-                  <div><div class="row-title">Before agent starts</div><div class="row-meta">Run setup checks before a conversation run.</div></div>
+                  <div>
+                    <div class="row-title">Before agent starts</div>
+                    <div class="row-meta">Run setup checks before a conversation run.</div>
+                  </div>
                   <span class="button">Select</span>
                 </div>
                 <div class="event-row">
-                  <div><div class="row-title">Background command</div><div class="row-meta">Gate background commands.</div></div>
+                  <div>
+                    <div class="row-title">Background command</div>
+                    <div class="row-meta">Gate background commands.</div>
+                  </div>
                   <span class="button">Select</span>
                 </div>
               </section>

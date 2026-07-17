@@ -148,10 +148,15 @@ describe('live session subscription', () => {
       const e = entry();
       const send = vi.fn();
 
-      const unsubscribe = subscribeLiveSession(e as never, send, { deferInitialReplayMs: 150 }, {
-        resolveTitle: vi.fn(() => ''),
-        broadcastPresenceState: vi.fn(),
-      });
+      const unsubscribe = subscribeLiveSession(
+        e as never,
+        send,
+        { deferInitialReplayMs: 150 },
+        {
+          resolveTitle: vi.fn(() => ''),
+          broadcastPresenceState: vi.fn(),
+        },
+      );
 
       expect(send).not.toHaveBeenCalled();
       unsubscribe();

@@ -7,12 +7,7 @@ export interface TelegramGatewayHostApi {
   readTelegramGatewayRuntimeStatus: (...args: unknown[]) => unknown;
   readGatewayState: () => unknown;
   ensureGatewayConnection: (input: { provider: string }) => unknown;
-  updateGatewayConnectionStatus: (input: {
-    provider: string;
-    status: string;
-    enabled?: boolean;
-    statusMessage?: string;
-  }) => unknown;
+  updateGatewayConnectionStatus: (input: { provider: string; status: string; enabled?: boolean; statusMessage?: string }) => unknown;
   attachGatewayConversation: (input: {
     provider: string;
     conversationId: string;

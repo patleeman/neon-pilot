@@ -1,4 +1,4 @@
-import { type ChildProcess, spawn, spawnSync, type SpawnOptions } from 'node:child_process';
+import { type ChildProcess, spawn, type SpawnOptions, spawnSync } from 'node:child_process';
 
 import { resolveChildProcessEnv } from '@neon-pilot/core';
 

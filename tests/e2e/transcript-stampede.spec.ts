@@ -2,8 +2,10 @@
 import { expect, test } from '@playwright/test';
 
 import {
+  apiJson,
   expectCleanViewport,
   launchTestApp,
+  resumeSession,
   seedConversationSession,
   seedRuntimeSettings,
   sidebarConversationRow,
@@ -13,8 +15,10 @@ const conversationIds = Array.from({ length: 6 }, (_, index) => `e2e-transcript-
 const workspaceName = 'e2e-transcript-stress-workspace';
 const cwd = '/tmp/neon-pilot-e2e-transcript-stress-workspace';
 const filler = 'large transcript payload '.repeat(28);
+let conversationSessionFiles: string[] = [];
 
 function seedLargeTranscriptConversations(stateRoot: string): void {
+  conversationSessionFiles = [];
   seedRuntimeSettings(stateRoot, {
     openConversationIds: conversationIds,
     activeConversationId: conversationIds[0] ?? null,
@@ -22,16 +26,18 @@ function seedLargeTranscriptConversations(stateRoot: string): void {
   });
 
   for (const [conversationIndex, id] of conversationIds.entries()) {
-    seedConversationSession(stateRoot, {
-      id,
-      title: `Transcript Stress ${conversationIndex + 1}`,
-      workspace: workspaceName,
-      cwd,
-      messages: Array.from({ length: 180 }, (_, messageIndex) => ({
-        role: messageIndex % 2 === 0 ? 'user' : 'assistant',
-        content: `stress-${conversationIndex + 1}-message-${messageIndex} ${filler}`,
-      })),
-    });
+    conversationSessionFiles.push(
+      seedConversationSession(stateRoot, {
+        id,
+        title: `Transcript Stress ${conversationIndex + 1}`,
+        workspace: workspaceName,
+        cwd,
+        messages: Array.from({ length: 180 }, (_, messageIndex) => ({
+          role: messageIndex % 2 === 0 ? 'user' : 'assistant',
+          content: `stress-${conversationIndex + 1}-message-${messageIndex} ${filler}`,
+        })),
+      }),
+    );
   }
 }
 
@@ -64,6 +70,15 @@ test('rapid sidebar transcript switching keeps only the latest large transcript 
     });
 
     await expect(page.locator('body')).toContainText('stress-1-message-179', { timeout: 30_000 });
+    for (const [index, sessionFile] of conversationSessionFiles.slice(1).entries()) {
+      const conversationId = await resumeSession(page, { sessionFile, cwd });
+      expect(conversationId).toBe(conversationIds[index + 1]);
+      await apiJson(page, '/api/conversation-workspace/operation', {
+        method: 'POST',
+        body: { operation: 'open', sessionId: conversationId, active: false },
+      });
+      await expect(sidebarConversationRow(page, conversationId)).toBeVisible();
+    }
     for (const id of conversationIds.slice(1)) {
       await sidebarConversationRow(page, id).click();
     }

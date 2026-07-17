@@ -1,10 +1,10 @@
 import type { DeferredResumeSummary } from '../automation/deferredResumes.js';
-import { listConversationExecutions, type ExecutionRecord } from '../executions/executionService.js';
-import type { RuntimeScopeTaskSummary } from '../routes/context.js';
+import { type ExecutionRecord, listConversationExecutions } from '../executions/executionService.js';
 import { getExtensionHostClient } from '../extensions/extensionHostClient.js';
 import { listExtensionConversationConnectionProviderRegistrations } from '../extensions/extensionRegistry.js';
-import { listQueuedPromptPreviews } from './liveSessions.js';
+import type { RuntimeScopeTaskSummary } from '../routes/context.js';
 import { readConversationSessionMeta } from './conversationService.js';
+import { listQueuedPromptPreviews } from './liveSessions.js';
 
 export type ConversationConnectionKind = 'activity' | 'state' | 'asset' | 'context' | 'integration' | 'surface';
 export type ConversationConnectionSurface = 'activityShelf' | 'composerShelf' | 'rightRail' | 'workbench' | 'sidebar' | 'cli';
@@ -103,7 +103,7 @@ function mapExecution(execution: ExecutionRecord): ConversationConnectionItem {
     source: { type: 'execution', id: execution.id },
     surfaces: ['activityShelf', 'composerShelf', 'cli'],
     ...(execution.createdAt ? { createdAt: execution.createdAt } : {}),
-    ...(execution.updatedAt ?? execution.completedAt ?? execution.startedAt
+    ...((execution.updatedAt ?? execution.completedAt ?? execution.startedAt)
       ? { updatedAt: execution.updatedAt ?? execution.completedAt ?? execution.startedAt }
       : {}),
     actions: [
@@ -163,7 +163,7 @@ function mapScheduledTask(conversationId: string, task: RuntimeScopeTaskSummary)
     conversationId,
     kind: 'activity',
     title: task.title || task.id,
-    ...(task.cron ?? task.at ? { subtitle: task.cron ?? task.at } : {}),
+    ...((task.cron ?? task.at) ? { subtitle: task.cron ?? task.at } : {}),
     status,
     active: task.running || task.enabled,
     meaningful: true,
@@ -255,7 +255,8 @@ function normalizeProviderItem(value: unknown, input: { conversationId: string; 
   const source = isRecord(value.source) ? value.source : {};
   return {
     id: `${input.extensionId}:${id}`,
-    conversationId: typeof value.conversationId === 'string' && value.conversationId.trim() ? value.conversationId.trim() : input.conversationId,
+    conversationId:
+      typeof value.conversationId === 'string' && value.conversationId.trim() ? value.conversationId.trim() : input.conversationId,
     kind: kind as ConversationConnectionKind,
     title,
     ...(typeof value.subtitle === 'string' && value.subtitle.trim() ? { subtitle: value.subtitle.trim() } : {}),
@@ -263,9 +264,7 @@ function normalizeProviderItem(value: unknown, input: { conversationId: string; 
     active: value.active === true,
     meaningful: value.meaningful !== false,
     visibility:
-      value.visibility === 'primary' || value.visibility === 'system' || value.visibility === 'hidden'
-        ? value.visibility
-        : 'system',
+      value.visibility === 'primary' || value.visibility === 'system' || value.visibility === 'hidden' ? value.visibility : 'system',
     extensionId: input.extensionId,
     source: {
       type: typeof source.type === 'string' && source.type.trim() ? source.type.trim() : 'extension',
@@ -297,7 +296,11 @@ async function listExtensionConnections(conversationId: string): Promise<Convers
         input: { conversationId, providerId: provider.id },
       });
       if (!response.ok) continue;
-      const rawItems = Array.isArray(response.result) ? response.result : isRecord(response.result) && Array.isArray(response.result.items) ? response.result.items : [];
+      const rawItems = Array.isArray(response.result)
+        ? response.result
+        : isRecord(response.result) && Array.isArray(response.result.items)
+          ? response.result.items
+          : [];
       for (const rawItem of rawItems) {
         const normalized = normalizeProviderItem(rawItem, { conversationId, extensionId: provider.extensionId });
         if (normalized) results.push(normalized);
@@ -317,10 +320,12 @@ export async function listConversationConnections(
   const normalized = normalizeConversationId(conversationId);
   const sessionMeta = readConversationSessionMeta(normalized, { profile: options.profile });
   const deferredResumes = (sessionMeta?.deferredResumes ?? []) as DeferredResumeSummary[];
-  const executions = (await listConversationExecutions(normalized, { active: options.active, visibility: options.visibility })).executions.map(
-    mapExecution,
-  );
-  const tasks = (options.tasks ?? []).filter((task) => taskConversationId(task) === normalized).map((task) => mapScheduledTask(normalized, task));
+  const executions = (
+    await listConversationExecutions(normalized, { active: options.active, visibility: options.visibility })
+  ).executions.map(mapExecution);
+  const tasks = (options.tasks ?? [])
+    .filter((task) => taskConversationId(task) === normalized)
+    .map((task) => mapScheduledTask(normalized, task));
   const queued = (() => {
     try {
       const previews = listQueuedPromptPreviews(normalized);
@@ -333,7 +338,13 @@ export async function listConversationConnections(
     }
   })();
   const extensionItems = options.includeExtensionProviders === false ? [] : await listExtensionConnections(normalized);
-  const items = [...executions, ...deferredResumes.map((resume) => mapDeferredResume(normalized, resume)), ...tasks, ...queued, ...extensionItems]
+  const items = [
+    ...executions,
+    ...deferredResumes.map((resume) => mapDeferredResume(normalized, resume)),
+    ...tasks,
+    ...queued,
+    ...extensionItems,
+  ]
     .filter((item) => item.meaningful)
     .filter((item) => (options.active ? item.active : true))
     .filter((item) => includeKind(item, options.kind))

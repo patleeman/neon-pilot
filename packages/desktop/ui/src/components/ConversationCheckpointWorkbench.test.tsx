@@ -1,17 +1,17 @@
 // @vitest-environment jsdom
 import React from 'react';
-import { renderToString } from 'react-dom/server';
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
+import { renderToString } from 'react-dom/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { api } from '../client/api.js';
 import { resolveDiffThemeType } from './checkpoints/CheckpointDiffView.js';
-import { ConversationCheckpointWorkbenchPane, ConversationDiffRailContent } from './ConversationCheckpointWorkbench.js';
 import {
   CONVERSATION_OPEN_ACTIVE_CHECKPOINT_COMMAND_EVENT,
   CONVERSATION_OPEN_LATEST_CHECKPOINT_COMMAND_EVENT,
 } from './conversation/checkpointCommands.js';
+import { ConversationCheckpointWorkbenchPane, ConversationDiffRailContent } from './ConversationCheckpointWorkbench.js';
 
 (globalThis as typeof globalThis & { React?: typeof React }).React = React;
 (globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;

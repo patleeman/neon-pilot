@@ -4,8 +4,8 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import type { MessageBlock } from '../../shared/types';
-import { ThinkingBlock } from './TraceBlocks';
 import { THINKING_BLOCK_TOGGLE_FIRST_COMMAND_EVENT, type ThinkingBlockCommandDetail } from './thinkingBlockCommands';
+import { ThinkingBlock } from './TraceBlocks';
 
 Object.assign(globalThis, { React, IS_REACT_ACT_ENVIRONMENT: true });
 

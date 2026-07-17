@@ -5,8 +5,8 @@ import {
   applyWebSecurityHeaders,
   createInMemoryRateLimit,
   enforceSameOriginUnsafeRequests,
-  isSameOriginUnsafeRequestInput,
   isSameOriginUnsafeRequest,
+  isSameOriginUnsafeRequestInput,
   isTrustedOrigin,
   resolveRequestOrigin,
 } from './webSecurity.js';

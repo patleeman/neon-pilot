@@ -4,14 +4,12 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import type { MessageBlock } from '../../shared/types';
-import { SubagentBlock } from './TraceBlocks';
 import { SUBAGENT_BLOCK_TOGGLE_FIRST_COMMAND_EVENT, type SubagentBlockCommandDetail } from './subagentBlockCommands';
+import { SubagentBlock } from './TraceBlocks';
 
 Object.assign(globalThis, { React, IS_REACT_ACT_ENVIRONMENT: true });
 
-function subagentBlock(
-  overrides: Partial<Extract<MessageBlock, { type: 'subagent' }>> = {},
-): Extract<MessageBlock, { type: 'subagent' }> {
+function subagentBlock(overrides: Partial<Extract<MessageBlock, { type: 'subagent' }>> = {}): Extract<MessageBlock, { type: 'subagent' }> {
   return {
     type: 'subagent',
     id: 'subagent-1',

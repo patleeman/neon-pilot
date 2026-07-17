@@ -861,8 +861,8 @@
   }
 
   .ui-home-launcher {
-    @apply mx-auto flex w-full max-w-[42rem] flex-col gap-5;
-    padding-top: clamp(1.5rem, 8vh, 4.5rem);
+    @apply mx-auto flex w-full max-w-[48rem] flex-col gap-5;
+    padding-top: clamp(1.25rem, 5vh, 3rem);
   }
 
   .ui-search-input.ui-home-launcher-search {
@@ -882,7 +882,7 @@
   }
 
   .ui-action-tile.ui-home-launcher-tile {
-    @apply min-h-[3.25rem] gap-2.5 rounded-md border-transparent bg-transparent px-2 py-1.5 text-secondary;
+    @apply min-h-[4rem] gap-2.5 rounded-md border-border-subtle bg-surface/35 px-3 py-2 text-secondary;
   }
 
   .ui-action-tile.ui-home-launcher-tile:hover {
@@ -891,6 +891,10 @@
 
   .ui-home-launcher-tile .ui-action-tile-icon {
     @apply w-8;
+  }
+
+  .ui-home-launcher-tile .ui-action-tile-description {
+    @apply line-clamp-2 text-[11px] leading-4 text-dim;
   }
 
   .ui-application-icon.ui-home-launcher-icon {
@@ -903,6 +907,30 @@
 
   .ui-home-launcher-empty {
     @apply px-2 py-5 text-[12px] text-dim;
+  }
+
+  .ui-home-destination-grid {
+    @apply grid grid-cols-1 gap-1 sm:grid-cols-2;
+  }
+
+  .ui-action-tile.ui-home-destination-tile {
+    @apply min-h-10 gap-2 rounded-md border-transparent bg-transparent px-2 py-1.5 text-secondary;
+  }
+
+  .ui-action-tile.ui-home-destination-tile:hover {
+    @apply border-border-subtle bg-elevated/55;
+  }
+
+  .ui-home-destination-tile .ui-action-tile-icon {
+    @apply w-7;
+  }
+
+  .ui-application-icon.ui-home-destination-icon {
+    @apply h-7 w-7 rounded-md bg-elevated text-secondary;
+  }
+
+  .ui-home-destination-tile .ui-action-tile-meta {
+    @apply text-[10px] text-dim;
   }
 
   .ui-section-count {

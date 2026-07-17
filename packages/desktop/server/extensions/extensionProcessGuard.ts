@@ -90,11 +90,7 @@ export async function withExtensionProcessGuard<T>(extensionId: string, operatio
   return guardContext.run({ extensionId, operation }, fn);
 }
 
-export async function assertExtensionBackendNativeImportsAllowed(
-  extensionId: string,
-  operation: string,
-  entryPath: string,
-): Promise<void> {
+export async function assertExtensionBackendNativeImportsAllowed(extensionId: string, operation: string, entryPath: string): Promise<void> {
   await init;
   const context = { extensionId, operation };
   const pending = [resolve(entryPath)];

@@ -124,7 +124,9 @@ describe('system-telemetry backend routes', () => {
     const { sessionIntegrity } = await backend();
     await expect(sessionIntegrity({ query: { range: '24h' } })).resolves.toEqual({
       status: 200,
-      body: [expect.objectContaining({ id: 'event-2', category: 'session_integrity', metadataJson: JSON.stringify({ issue: 'dangling' }) })],
+      body: [
+        expect.objectContaining({ id: 'event-2', category: 'session_integrity', metadataJson: JSON.stringify({ issue: 'dangling' }) }),
+      ],
     });
     expect(telemetry.queryAppTelemetryEvents).toHaveBeenCalledWith({ since: '2026-05-21T12:00:00.000Z', limit: 200 });
   });

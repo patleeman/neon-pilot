@@ -1127,7 +1127,9 @@ async function runWorkflowScript(input: {
           () => {
             reject(
               new Error(
-                input.signal?.aborted ? 'Workflow cancelled.' : `Workflow timed out after ${input.settings.workflowTimeoutMinutes} minutes.`,
+                input.signal?.aborted
+                  ? 'Workflow cancelled.'
+                  : `Workflow timed out after ${input.settings.workflowTimeoutMinutes} minutes.`,
               ),
             );
           },

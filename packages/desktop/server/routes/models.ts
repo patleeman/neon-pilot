@@ -17,9 +17,9 @@ import {
 } from '@neon-pilot/core';
 import type { Express } from 'express';
 
+import { shouldCloseProviderOAuthSubscription } from '../app/localApiProviderOAuthSubscription.js';
 import { logError } from '../middleware/index.js';
 import { subscribeProviderOAuthLogin } from '../models/providerAuth.js';
-import { shouldCloseProviderOAuthSubscription } from '../app/localApiProviderOAuthSubscription.js';
 import type { ServerRouteContext } from './context.js';
 
 let getRuntimeScopeFn: () => string = () => {

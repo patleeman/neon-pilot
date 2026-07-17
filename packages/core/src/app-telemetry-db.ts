@@ -13,11 +13,7 @@ import {
   readAppTelemetryLogEvents,
   writeAppTelemetryLogEvent,
 } from './app-telemetry-log.js';
-import {
-  applyObservabilityMigrations,
-  ensureObservabilityDbDir,
-  resolveObservabilityDbPath,
-} from './observability-db.js';
+import { applyObservabilityMigrations, ensureObservabilityDbDir, resolveObservabilityDbPath } from './observability-db.js';
 import { openSqliteDatabase, type SqliteDatabase } from './sqlite.js';
 import type { Migration } from './sqlite-migrations.js';
 

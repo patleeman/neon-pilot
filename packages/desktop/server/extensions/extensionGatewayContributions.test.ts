@@ -63,8 +63,8 @@ describe('extensionGatewayContributions', () => {
     expect(() => validateGatewayProviderContributions([{ id: 'telegram', label: 'Telegram', order: 1.5 }])).toThrow(
       'Extension manifest contributes.gatewayProviders[0].order must be an integer.',
     );
-    expect(() =>
-      validateGatewayProviderContributions([{ id: 'telegram', label: 'Telegram', configurationLocation: 'somewhere' }]),
-    ).toThrow('contributes.gatewayProviders[0].configurationLocation');
+    expect(() => validateGatewayProviderContributions([{ id: 'telegram', label: 'Telegram', configurationLocation: 'somewhere' }])).toThrow(
+      'contributes.gatewayProviders[0].configurationLocation',
+    );
   });
 });

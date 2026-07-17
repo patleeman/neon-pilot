@@ -9,9 +9,9 @@ export interface SetupReadinessState {
   loading: boolean;
   error: string | null;
   refresh: () => Promise<void>;
-  runAction: (extensionId: string, itemId: string, actionId: string) => Promise<void>;
-  dismiss: (extensionId: string, itemId: string) => Promise<void>;
-  restore: (extensionId: string, itemId: string) => Promise<void>;
+  runAction: (extensionId: string, itemId: string, actionId: string) => Promise<boolean>;
+  dismiss: (extensionId: string, itemId: string) => Promise<boolean>;
+  restore: (extensionId: string, itemId: string) => Promise<boolean>;
 }
 
 export function useSetupReadiness(): SetupReadinessState {
@@ -31,7 +31,7 @@ export function useSetupReadiness(): SetupReadinessState {
       setError(null);
     } catch (err) {
       if (requestSeqRef.current !== seq) return;
-      setError(err instanceof Error ? err.message : String(err));
+      setError('Setup status could not be refreshed. Try again.');
     } finally {
       if (requestSeqRef.current === seq) setLoading(false);
     }
@@ -43,8 +43,14 @@ export function useSetupReadiness(): SetupReadinessState {
 
   const applyMutation = useCallback(async (run: () => Promise<SetupReadinessSnapshot>) => {
     setError(null);
-    const next = await run();
-    setSnapshot(next);
+    try {
+      const next = await run();
+      setSnapshot(next);
+      return true;
+    } catch {
+      setError('Setup could not be updated. Try again.');
+      return false;
+    }
   }, []);
 
   return {

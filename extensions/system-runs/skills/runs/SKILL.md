@@ -19,12 +19,12 @@ Use intent-shaped tools. For waiting/resuming this conversation later, use the u
 
 ## Choose the tool
 
-| Tool                                    | Use case                                                                 |
-| --------------------------------------- | ------------------------------------------------------------------------ |
-| `bash`                                  | Shell commands; set `background: true` for durable background commands.  |
-| `background_bash`                       | Lifecycle tool for background command records.                           |
-| `subagent`                              | A delegated agent task that should run durably outside the current turn. |
-| `scheduled_task`                        | A persistent automation with a cron/time trigger and delivery policy.    |
+| Tool                                                   | Use case                                                                 |
+| ------------------------------------------------------ | ------------------------------------------------------------------------ |
+| `bash`                                                 | Shell commands; set `background: true` for durable background commands.  |
+| `background_bash`                                      | Lifecycle tool for background command records.                           |
+| `subagent`                                             | A delegated agent task that should run durably outside the current turn. |
+| `scheduled_task`                                       | A persistent automation with a cron/time trigger and delivery policy.    |
 | the unified conversation deferred-resume admin command | Continue this same conversation later.                                   |
 
 ## Background commands

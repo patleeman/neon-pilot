@@ -170,7 +170,11 @@ export async function manageExtension(input: unknown, ctx: ExtensionBackendConte
   const action = typeof body.action === 'string' ? body.action : 'list';
   if (action === 'list') return listExtensions(body, ctx);
   if (action === 'create') return createExtension(body, ctx);
-  if (action === 'build') return buildExtension(body, ctx);
+  if (action === 'build') {
+    const extensionId = requireExtensionId(body);
+    if (body.dryRun === true) return { ok: true, dryRun: true, action, extensionId };
+    return buildExtension(body, ctx);
+  }
   if (action === 'snapshot') return snapshotExtension(body as ExtensionIdInput, ctx);
   if (action === 'delete') return deleteExtension(body as ExtensionIdInput, ctx);
   if (action === 'reload') return reloadExtension(body as ExtensionIdInput, ctx);
@@ -179,6 +183,7 @@ export async function manageExtension(input: unknown, ctx: ExtensionBackendConte
     const extensionId = requireExtensionId(body);
     const actionId = typeof body.actionId === 'string' ? body.actionId.trim() : '';
     if (!actionId) throw new Error('extension action id is required.');
+    if (body.dryRun === true) return { ok: true, dryRun: true, action, extensionId, actionId, input: body.input };
     return {
       ok: true,
       extensionId,
@@ -228,7 +233,7 @@ function normalizeManagerInput(input: unknown): Record<string, unknown> {
       description: flags.description,
       template: flags.template,
     };
-  if (command === 'extensions build') return { ...body, action: 'build', extensionId: args[0] };
+  if (command === 'extensions build') return { ...body, action: 'build', extensionId: args[0], dryRun: flags['dry-run'] === true };
   if (command === 'extensions snapshot') return { ...body, action: 'snapshot', extensionId: args[0] };
   if (command === 'extensions delete' || command === 'extensions uninstall') return { ...body, action: 'delete', extensionId: args[0] };
   if (command === 'extensions catalog') return { ...body, action: 'listInstallable' };
@@ -250,7 +255,14 @@ function normalizeManagerInput(input: unknown): Record<string, unknown> {
         throw new Error('--input-json must be valid JSON.');
       }
     }
-    return { ...body, action: 'invoke', extensionId: args[0], actionId: args[1], input: parsedInput };
+    return {
+      ...body,
+      action: 'invoke',
+      extensionId: args[0],
+      actionId: args[1],
+      input: parsedInput,
+      dryRun: flags['dry-run'] === true,
+    };
   }
   if (command === 'extensions enable') return { ...body, action: 'enable', extensionId: args[0] };
   if (command === 'extensions disable') return { ...body, action: 'disable', extensionId: args[0] };

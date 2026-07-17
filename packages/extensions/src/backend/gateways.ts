@@ -88,10 +88,8 @@ export const attachGatewayConversation = (_input: {
   externalChatId?: string;
   externalChatLabel?: string;
 }): Promise<GatewayState | null> => hostResolved();
-export const detachGatewayConversation = (_input: {
-  provider?: GatewayProviderId;
-  conversationId: string;
-}): Promise<GatewayState | null> => hostResolved();
+export const detachGatewayConversation = (_input: { provider?: GatewayProviderId; conversationId: string }): Promise<GatewayState | null> =>
+  hostResolved();
 export const recordGatewayEvent = (_input: {
   provider: GatewayProviderId;
   conversationId?: string;

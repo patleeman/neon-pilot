@@ -418,6 +418,34 @@ describe('conversationService', () => {
     expect(resolveConversationSessionFile('conversation-3')).toBe('/sessions/stored.jsonl');
   });
 
+  it('uses an explicit profile when session-file resolution falls back to the snapshot', () => {
+    setConversationServiceContext({
+      getRuntimeScope: () => {
+        throw new Error('runtime scope is not initialized');
+      },
+      getRepoRoot: () => '/repo',
+      getSavedUiPreferences: () => defaultPreferences,
+    });
+    listSessionsMock.mockReturnValue([
+      {
+        id: 'heartbeat-conversation',
+        file: '/sessions/heartbeat.jsonl',
+        timestamp: '2026-04-09T12:00:00.000Z',
+        cwd: '/repo/stored',
+        cwdSlug: '-repo-stored',
+        model: 'gpt-5',
+        title: 'Heartbeat conversation',
+        messageCount: 4,
+      },
+    ]);
+
+    expect(resolveConversationSessionFile('heartbeat-conversation', { profile: 'shared' })).toBe('/sessions/heartbeat.jsonl');
+    expect(ensureConversationAttentionBaselinesMock).toHaveBeenCalledWith({
+      profile: 'shared',
+      conversations: [{ conversationId: 'heartbeat-conversation', messageCount: 4 }],
+    });
+  });
+
   it('reads session signatures and tolerates missing files', () => {
     getLocalLiveSessionsMock.mockReturnValue([
       {

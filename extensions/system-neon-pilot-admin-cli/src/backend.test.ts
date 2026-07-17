@@ -281,6 +281,8 @@ describe('system-neon-pilot-admin-cli backend', () => {
 
     expect(toolResult).toEqual(cliResult);
     expect(toolResult).toMatchObject({ ok: true, action: 'heartbeat_start', heartbeat: { id: 'hb-1', intervalMinutes: 5 } });
+    expect(automations.resolveScheduledTaskThreadBinding).toHaveBeenCalledWith(expect.objectContaining({ profile: 'shared' }));
+    expect(automations.applyScheduledTaskThreadBinding).toHaveBeenCalledWith('hb-1', expect.objectContaining({ profile: 'shared' }));
   });
 
   it('starts, lists, and stops heartbeats through the shared admin schema', async () => {

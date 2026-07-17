@@ -4,12 +4,12 @@ import React from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { ConversationAttachmentRecord, ConversationAttachmentSummary } from '../shared/types';
-import { ConversationDrawingsPickerModal } from './ConversationDrawingsPickerModal';
 import {
   DRAWING_PICKER_ATTACH_FIRST_COMMAND_EVENT,
   DRAWING_PICKER_CLOSE_COMMAND_EVENT,
   DRAWING_PICKER_TOGGLE_FIRST_HISTORY_COMMAND_EVENT,
 } from './conversation/drawingPickerCommands';
+import { ConversationDrawingsPickerModal } from './ConversationDrawingsPickerModal';
 
 (globalThis as typeof globalThis & { React?: typeof React }).React = React;
 

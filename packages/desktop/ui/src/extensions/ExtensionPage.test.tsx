@@ -550,6 +550,32 @@ describe('ExtensionPage', () => {
     expect(addNotification).not.toHaveBeenCalled();
   });
 
+  it('shows a safe recovery state when a registered route cannot be projected', () => {
+    vi.mocked(useExtensionRegistry).mockReturnValue({
+      loading: false,
+      error: 'Failed to import file:///private/extensions/broken/frontend.js',
+      applications: [],
+      applicationNavigation: [],
+      routes: [{ route: '/broken', extensionId: 'broken', surfaceId: 'broken-page', packageType: 'user' }],
+      extensions: [],
+      surfaces: [],
+    } as never);
+
+    render(
+      <MemoryRouter initialEntries={['/broken']}>
+        <ExtensionPage />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText(/Extensions are temporarily unavailable/i)).toBeTruthy();
+    expect(screen.queryByText(/file:\/\/\/private/)).toBeNull();
+    expect(addNotification).toHaveBeenCalledWith({
+      type: 'error',
+      message: 'Extensions are temporarily unavailable.',
+      source: 'core',
+    });
+  });
+
   it('recovers a missing saved application view whose route includes search and hash state', () => {
     window.localStorage.setItem(
       'neon-pilot:application-workspace:v1',

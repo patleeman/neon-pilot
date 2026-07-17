@@ -205,7 +205,10 @@ describe('extensionServices', () => {
   it('is idempotent for already-running services', async () => {
     listExtensionInstallSummaries.mockReturnValue([{ id: 'ext', status: 'enabled' }]);
     findExtensionEntry.mockReturnValue({
-      manifest: { permissions: ['network:listen'], backend: { services: [{ id: 'sync', handler: 'startSync', worker: { enabled: true } }] } },
+      manifest: {
+        permissions: ['network:listen'],
+        backend: { services: [{ id: 'sync', handler: 'startSync', worker: { enabled: true } }] },
+      },
     });
     loadExtensionBackend.mockResolvedValue({ startSync: vi.fn() });
 
@@ -269,7 +272,10 @@ describe('extensionServices', () => {
   it('retries transient service startup failures before recording a failure', async () => {
     listExtensionInstallSummaries.mockReturnValue([{ id: 'ext', status: 'enabled' }]);
     findExtensionEntry.mockReturnValue({
-      manifest: { permissions: ['network:listen'], backend: { services: [{ id: 'sync', handler: 'startSync', worker: { enabled: true } }] } },
+      manifest: {
+        permissions: ['network:listen'],
+        backend: { services: [{ id: 'sync', handler: 'startSync', worker: { enabled: true } }] },
+      },
     });
     runExtensionBackendExportInWorker.mockRejectedValueOnce(new Error('worker not ready')).mockResolvedValueOnce({ ok: true });
 

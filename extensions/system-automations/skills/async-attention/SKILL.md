@@ -19,12 +19,12 @@ Use the smallest scheduling surface that matches the owner of the work. For wait
 
 ## Choose the right surface
 
-| Need                                               | Use                                     | Durable home                  |
-| -------------------------------------------------- | --------------------------------------- | ----------------------------- |
+| Need                                               | Use                                                    | Durable home                  |
+| -------------------------------------------------- | ------------------------------------------------------ | ----------------------------- |
 | Agent should continue this conversation later      | the unified conversation deferred-resume admin command | live queue or deferred resume |
-| Unattended automation should run later or recur    | `scheduled_task`                        | automation store + run logs   |
-| Passive async result tied to a thread              | surface the owning conversation         | conversation/activity         |
-| Scheduled task result should come back to a thread | scheduled task conversation callback    | task log + optional wakeup    |
+| Unattended automation should run later or recur    | `scheduled_task`                                       | automation store + run logs   |
+| Passive async result tied to a thread              | surface the owning conversation                        | conversation/activity         |
+| Scheduled task result should come back to a thread | scheduled task conversation callback                   | task log + optional wakeup    |
 
 There is no standalone tell-me-later tool. Human “tell me later” requests are same-thread follow-ups unless they need a true app-wide automation.
 

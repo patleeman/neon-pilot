@@ -22,6 +22,8 @@ async function fillInputByValue(page: import('@playwright/test').Page, currentVa
 async function saveOpenRoutine(page: import('@playwright/test').Page): Promise<void> {
   await expect(page.locator('body')).toContainText('Unsaved changes');
   await page.getByRole('button', { name: /^Save$/ }).click();
+  await expect(page.getByRole('button', { name: /^Save$/ })).toHaveCount(0, { timeout: 15_000 });
+  await expect(page.locator('body')).not.toContainText('Saving…', { timeout: 15_000 });
   await expect(page.locator('body')).not.toContainText('Unsaved changes', { timeout: 15_000 });
 }
 
@@ -43,7 +45,8 @@ test('routines page supports GA editing, sidebar, runs, and drag workflows @rout
     const stopName = `E2E stop ${Date.now()}`;
 
     await expect(page.locator('body')).toContainText('No events added', { timeout: 45_000 });
-    await page.getByText('Use checkpoint example').click();
+    const checkpointExample = page.getByText('Check before checkpoint', { exact: true }).locator('..').locator('..');
+    await checkpointExample.getByRole('button', { name: 'Create' }).click();
     await expect(page.locator('body')).toContainText('When Checkpoint runs', { timeout: 45_000 });
     await saveOpenRoutine(page);
     await expect(page.getByRole('tree', { name: 'Routines' })).toBeVisible();
@@ -51,7 +54,7 @@ test('routines page supports GA editing, sidebar, runs, and drag workflows @rout
     await expect(page.locator('body')).toContainText('Checkpoint');
     await page.getByRole('button', { name: 'Add routine event' }).click();
     await expect(page.getByRole('button', { name: 'Done adding routine event' })).toBeVisible();
-    await page.getByText('Background command').click();
+    await page.getByRole('tree', { name: 'Routines' }).getByText('Background command', { exact: true }).click();
     await expect(page.locator('body')).toContainText('When Background command runs');
     await expect(page.locator('body')).toContainText('No routines before this event.');
     await page.evaluate(() => {

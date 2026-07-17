@@ -1,5 +1,5 @@
-import { Button, ChoiceRow, Pill } from '../ui';
 import type { ExtensionBackendConfirmState } from '../../extensions/useExtensionBackendConfirmations';
+import { Button, ChoiceRow, Pill } from '../ui';
 
 export function ConversationApprovalShelf({
   confirm,

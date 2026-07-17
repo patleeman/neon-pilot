@@ -132,9 +132,9 @@ export function SetupReadinessPopover({
   error: string | null;
   onClose: () => void;
   onRefresh: () => void;
-  onRunAction: (extensionId: string, itemId: string, actionId: string) => Promise<void>;
-  onDismiss: (extensionId: string, itemId: string) => Promise<void>;
-  onRestore: (extensionId: string, itemId: string) => Promise<void>;
+  onRunAction: (extensionId: string, itemId: string, actionId: string) => Promise<unknown>;
+  onDismiss: (extensionId: string, itemId: string) => Promise<unknown>;
+  onRestore: (extensionId: string, itemId: string) => Promise<boolean>;
 }) {
   const navigate = useNavigate();
   const [filter, setFilter] = useState<Filter>('incomplete');
@@ -156,7 +156,7 @@ export function SetupReadinessPopover({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
 
-  const runWithBusy = async (key: string, run: () => Promise<void>) => {
+  const runWithBusy = async (key: string, run: () => Promise<unknown>) => {
     setBusyKey(key);
     try {
       await run();
@@ -167,8 +167,8 @@ export function SetupReadinessPopover({
 
   const restoreItem = (item: SetupReadinessItem) => {
     void runWithBusy(item.key, async () => {
-      await onRestore(item.extensionId, item.id);
-      setFilter('incomplete');
+      const restored = await onRestore(item.extensionId, item.id);
+      if (restored) setFilter('incomplete');
     });
   };
 

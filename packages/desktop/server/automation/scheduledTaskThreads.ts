@@ -56,12 +56,12 @@ export function resolveScheduledTaskThreadBinding(input: ScheduledTaskThreadInpu
   }
 
   const sessionFile = readOptionalString(input.threadSessionFile);
-  const resolvedSessionFile = sessionFile || resolveConversationSessionFile(conversationId);
+  const profile = readOptionalString(input.profile ?? undefined);
+  const resolvedSessionFile = sessionFile || resolveConversationSessionFile(conversationId, { profile });
   if (!resolvedSessionFile) {
     throw new Error('Selected thread was not found.');
   }
 
-  const profile = readOptionalString(input.profile ?? undefined);
   const sessionMeta = sessionFile
     ? readConversationSessionMetaByFile(sessionFile)
     : readConversationSessionMeta(conversationId, { profile });

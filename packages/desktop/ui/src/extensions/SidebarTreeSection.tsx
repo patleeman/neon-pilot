@@ -1,6 +1,6 @@
 import type { CSSProperties, ReactNode } from 'react';
 
-import { type ActivityTreeViewProps, ActivityTreeView } from '../activity/ActivityTreeView';
+import { ActivityTreeView, type ActivityTreeViewProps } from '../activity/ActivityTreeView';
 import { cx, SidebarSection } from '../components/ui';
 
 export interface SidebarTreeSectionProps extends Omit<ActivityTreeViewProps, 'className' | 'style'> {

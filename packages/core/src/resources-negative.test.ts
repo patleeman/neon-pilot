@@ -105,10 +105,7 @@ describe('resources negative tests', () => {
     it('ignores dangerous merge keys without polluting prototypes', () => {
       const repo = createTempDir('neon-pilot-resources-');
       const file = join(repo, 'settings.json');
-      writeFile(
-        file,
-        '{"__proto__":{"polluted":true},"constructor":{"polluted":true},"prototype":{"polluted":true},"nested":{"ok":true}}',
-      );
+      writeFile(file, '{"__proto__":{"polluted":true},"constructor":{"polluted":true},"prototype":{"polluted":true},"nested":{"ok":true}}');
 
       const merged = mergeJsonFiles([file]) as Record<string, unknown>;
 

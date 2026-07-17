@@ -16,11 +16,8 @@ describe('backendApi/mcp', () => {
 
     await expect(mcp.writeExplicitMcpConfigDocument({ path: '/tmp/mcp.json', document: { mcpServers: {} } })).resolves.toBeUndefined();
 
-    expect(resolver.callServerModuleExport).toHaveBeenCalledWith(
-      '@neon-pilot/core',
-      'writePrivateMcpConfigJson',
-      '/tmp/mcp.json',
-      { mcpServers: {} },
-    );
+    expect(resolver.callServerModuleExport).toHaveBeenCalledWith('@neon-pilot/core', 'writePrivateMcpConfigJson', '/tmp/mcp.json', {
+      mcpServers: {},
+    });
   });
 });

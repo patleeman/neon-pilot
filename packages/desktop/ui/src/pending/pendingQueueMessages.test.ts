@@ -201,9 +201,7 @@ describe('appendPendingInitialPromptBlock', () => {
   it('keeps live queued prompts visible while the activity shelf catches up', () => {
     expect(
       mergeLiveAndActivityPendingQueueItems({
-        liveQueue: [
-          { id: 'follow-live', text: 'Testing a followup', imageCount: 0, restorable: true, type: 'followUp', queueIndex: 0 },
-        ],
+        liveQueue: [{ id: 'follow-live', text: 'Testing a followup', imageCount: 0, restorable: true, type: 'followUp', queueIndex: 0 }],
         activityQueue: [],
       }),
     ).toEqual([{ id: 'follow-live', text: 'Testing a followup', imageCount: 0, restorable: true, type: 'followUp', queueIndex: 0 }]);

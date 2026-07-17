@@ -4,8 +4,8 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { setExtensionCommandContext } from '../extensions/commands';
-import { WorkspaceQuickSelectModal } from './WorkspaceQuickSelectModal';
 import { WORKSPACE_QUICK_SELECT_CLOSE_COMMAND_EVENT } from './workspaceQuickSelectCommands';
+import { WorkspaceQuickSelectModal } from './WorkspaceQuickSelectModal';
 
 vi.mock('../extensions/commands', () => ({
   setExtensionCommandContext: vi.fn(),

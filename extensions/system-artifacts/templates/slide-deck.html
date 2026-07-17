@@ -37,7 +37,7 @@
         overflow: hidden;
         background: var(--bg);
         color: var(--ink);
-        font-family: "Plus Jakarta Sans", "Aptos", "Segoe UI", sans-serif;
+        font-family: 'Plus Jakarta Sans', 'Aptos', 'Segoe UI', sans-serif;
       }
 
       .deck {
@@ -259,21 +259,21 @@
     </nav>
 
     <script>
-      const slides = Array.from(document.querySelectorAll("[data-slide]"));
-      const count = document.querySelector("[data-count]");
-      const dots = document.querySelector("[data-dots]");
+      const slides = Array.from(document.querySelectorAll('[data-slide]'));
+      const count = document.querySelector('[data-count]');
+      const dots = document.querySelector('[data-dots]');
       let index = 0;
 
       function render() {
-        slides.forEach((slide, i) => slide.classList.toggle("active", i === index));
+        slides.forEach((slide, i) => slide.classList.toggle('active', i === index));
         count.textContent = `${index + 1} / ${slides.length}`;
-        dots.innerHTML = "";
+        dots.innerHTML = '';
         slides.forEach((_, i) => {
-          const dot = document.createElement("button");
-          dot.type = "button";
-          dot.className = `dot${i === index ? " active" : ""}`;
-          dot.setAttribute("aria-label", `Go to slide ${i + 1}`);
-          dot.addEventListener("click", () => {
+          const dot = document.createElement('button');
+          dot.type = 'button';
+          dot.className = `dot${i === index ? ' active' : ''}`;
+          dot.setAttribute('aria-label', `Go to slide ${i + 1}`);
+          dot.addEventListener('click', () => {
             index = i;
             render();
           });
@@ -286,16 +286,16 @@
         render();
       }
 
-      document.querySelector("[data-prev]").addEventListener("click", () => go(-1));
-      document.querySelector("[data-next]").addEventListener("click", () => go(1));
-      window.addEventListener("keydown", (event) => {
-        if (event.key === "ArrowLeft") go(-1);
-        if (event.key === "ArrowRight") go(1);
-        if (event.key === "Home") {
+      document.querySelector('[data-prev]').addEventListener('click', () => go(-1));
+      document.querySelector('[data-next]').addEventListener('click', () => go(1));
+      window.addEventListener('keydown', (event) => {
+        if (event.key === 'ArrowLeft') go(-1);
+        if (event.key === 'ArrowRight') go(1);
+        if (event.key === 'Home') {
           index = 0;
           render();
         }
-        if (event.key === "End") {
+        if (event.key === 'End') {
           index = slides.length - 1;
           render();
         }

@@ -1,6 +1,6 @@
 import type { ExtensionPackageType } from './extensionManifest.js';
-import type { ExtensionRegistryEntry } from './extensionRegistry.js';
 import { assertRecordArray, requireString, validateEnum, validateOptionalString } from './extensionManifestValidation.js';
+import type { ExtensionRegistryEntry } from './extensionRegistry.js';
 
 const GATEWAY_CONFIGURATION_LOCATIONS = ['gateways', 'settings', 'extension', 'external'] as const;
 const GATEWAY_PROVIDER_ID_PATTERN = /^[a-z0-9][a-z0-9_.:-]{0,79}$/i;

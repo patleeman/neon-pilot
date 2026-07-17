@@ -59,7 +59,7 @@ function renderPopover(overrides: Partial<React.ComponentProps<typeof SetupReadi
     onRefresh: vi.fn(),
     onRunAction: vi.fn(async () => undefined),
     onDismiss: vi.fn(async () => undefined),
-    onRestore: vi.fn(async () => undefined),
+    onRestore: vi.fn(async () => true),
     ...overrides,
   };
   function LocationProbe() {
@@ -87,7 +87,7 @@ describe('SetupReadinessPopover', () => {
           onRefresh={() => undefined}
           onRunAction={async () => undefined}
           onDismiss={async () => undefined}
-          onRestore={async () => undefined}
+          onRestore={async () => true}
         />
       </MemoryRouter>,
     );
@@ -150,6 +150,24 @@ describe('SetupReadinessPopover', () => {
 
     fireEvent.change(screen.getByLabelText('Setup readiness filter'), { target: { value: 'all' } });
     expect(screen.getByText('Ready item')).toBeTruthy();
+  });
+
+  it('keeps a dismissed item visible when restore fails', async () => {
+    const dismissedSnapshot = {
+      ...snapshot,
+      counts: { ...snapshot.counts, actionable: 0, dismissed: 1 },
+      items: [{ ...snapshot.items[0], dismissed: true }, snapshot.items[1]],
+    };
+    renderPopover({ snapshot: dismissedSnapshot, onRestore: vi.fn(async () => false) });
+
+    fireEvent.change(screen.getByLabelText('Setup readiness filter'), { target: { value: 'dismissed' } });
+    await act(async () => {
+      fireEvent.click(screen.getByLabelText('Restore setup item'));
+    });
+
+    expect((screen.getByLabelText('Setup readiness filter') as HTMLSelectElement).value).toBe('dismissed');
+    expect(screen.getByText('Install the Neon Pilot shell command')).toBeTruthy();
+    await waitFor(() => expect((screen.getByLabelText('Restore setup item') as HTMLButtonElement).disabled).toBe(false));
   });
 
   it('closes from button, backdrop, and Escape interactions', () => {

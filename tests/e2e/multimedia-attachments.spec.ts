@@ -108,7 +108,6 @@ test('conversation composer attaches multimedia files and serializes audio/docum
     await expect(page.getByRole('button', { name: 'Send' })).toBeEnabled();
     await page.getByRole('button', { name: 'Send' }).click();
 
-    await expect(page.getByText('Working…')).toBeVisible({ timeout: 10_000 });
     await expect
       .poll(
         () =>

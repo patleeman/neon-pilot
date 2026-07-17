@@ -413,6 +413,7 @@ async function startHeartbeat(input: Record<string, unknown>, ctx: ExtensionBack
     threadSessionFile:
       conversationId === ctx.toolContext?.conversationId ? ctx.toolContext?.sessionFile : readString(existing?.threadSessionFile),
     cwd: readString(input.cwd) ?? readString(existing?.cwd) ?? ctx.toolContext?.cwd,
+    profile: 'shared',
   });
   const saved = existing
     ? await automationsApi().updateStoredAutomation(heartbeatId, {
@@ -443,6 +444,7 @@ async function startHeartbeat(input: Record<string, unknown>, ctx: ExtensionBack
     threadConversationId: readString(binding.conversationId),
     threadSessionFile: readString(binding.sessionFile),
     cwd: readString(input.cwd) ?? readString(existing?.cwd),
+    profile: 'shared',
   });
   await automationsApi().invalidateAppTopics(['tasks', 'runs', 'sessions']);
   return {

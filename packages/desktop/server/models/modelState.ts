@@ -28,9 +28,7 @@ function modelDefinitionCacheKey(models: readonly ModelDefinition[]): string {
 }
 
 function invalidateModelTopicInBackground(): void {
-  void import('../shared/appEvents.js')
-    .then(({ invalidateAppTopics }) => invalidateAppTopics('models'))
-    .catch(() => {});
+  void import('../shared/appEvents.js').then(({ invalidateAppTopics }) => invalidateAppTopics('models')).catch(() => {});
 }
 
 export function invalidateModelDefinitionsCache() {

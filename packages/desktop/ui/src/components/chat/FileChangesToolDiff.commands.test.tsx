@@ -3,8 +3,8 @@ import React, { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { FileChangesToolDiff } from './FileChangesToolDiff';
 import { FILE_CHANGE_TOGGLE_FIRST_COMMAND_EVENT, type FileChangeCommandDetail } from './fileChangeCommands';
+import { FileChangesToolDiff } from './FileChangesToolDiff';
 
 Object.assign(globalThis, { React, IS_REACT_ACT_ENVIRONMENT: true });
 
@@ -63,12 +63,8 @@ describe('FileChangesToolDiff commands', () => {
     act(() => {
       root?.render(
         <>
-          <FileChangesToolDiff
-            fileChanges={[{ path: 'src/first.ts', status: 'modified', additions: 1, deletions: 1 }]}
-          />
-          <FileChangesToolDiff
-            fileChanges={[{ path: 'src/second.ts', status: 'modified', additions: 1, deletions: 1 }]}
-          />
+          <FileChangesToolDiff fileChanges={[{ path: 'src/first.ts', status: 'modified', additions: 1, deletions: 1 }]} />
+          <FileChangesToolDiff fileChanges={[{ path: 'src/second.ts', status: 'modified', additions: 1, deletions: 1 }]} />
         </>,
       );
     });

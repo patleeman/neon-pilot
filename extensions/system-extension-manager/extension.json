@@ -400,8 +400,8 @@
         "action": "manageExtension",
         "jsonDefault": true,
         "inputAction": "build",
-        "usage": "extensions build <extensionId> [--json]",
-        "examples": ["neon-pilot extensions build local-models --json"],
+        "usage": "extensions build <extensionId> [--dry-run] [--json]",
+        "examples": ["neon-pilot extensions build local-models --dry-run --json"],
         "argsSchema": {
           "type": "array",
           "items": { "type": "string" },
@@ -411,7 +411,10 @@
         },
         "flagsSchema": {
           "type": "object",
-          "properties": { "json": { "type": "boolean", "description": "Print structured JSON output." } },
+          "properties": {
+            "dry-run": { "type": "boolean", "description": "Validate the request without building the extension." },
+            "json": { "type": "boolean", "description": "Print structured JSON output." }
+          },
           "additionalProperties": false
         },
         "mode": "write",
@@ -419,7 +422,7 @@
         "destructive": false,
         "idempotent": true,
         "startsBackgroundWork": false,
-        "supportsDryRun": false,
+        "supportsDryRun": true,
         "outputModes": ["text", "json"]
       },
       {
@@ -781,7 +784,7 @@
         "action": "manageExtension",
         "jsonDefault": true,
         "inputAction": "invoke",
-        "usage": "extensions invoke <extensionId> <actionId> [--input-json <json>] [--json]",
+        "usage": "extensions invoke <extensionId> <actionId> [--input-json <json>] [--dry-run] [--json]",
         "examples": ["neon-pilot extensions invoke reading-list listArticles --input-json '{}' --json"],
         "argsSchema": {
           "type": "array",
@@ -793,6 +796,7 @@
         "flagsSchema": {
           "type": "object",
           "properties": {
+            "dry-run": { "type": "boolean", "description": "Validate the request without invoking the extension action." },
             "json": { "type": "boolean", "description": "Print structured JSON output." },
             "input-json": { "type": "string", "description": "JSON value passed to the extension action." }
           },
@@ -803,7 +807,7 @@
         "destructive": false,
         "idempotent": false,
         "startsBackgroundWork": false,
-        "supportsDryRun": false,
+        "supportsDryRun": true,
         "outputModes": ["text", "json"]
       },
       {

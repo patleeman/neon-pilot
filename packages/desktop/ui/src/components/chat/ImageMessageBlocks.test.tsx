@@ -3,13 +3,13 @@ import React, { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { ImageInspectModal, ImagePreview } from './ImageMessageBlocks';
 import {
   IMAGE_PREVIEW_CLOSE_COMMAND_EVENT,
   IMAGE_PREVIEW_INSPECT_FIRST_COMMAND_EVENT,
   IMAGE_PREVIEW_LOAD_FIRST_COMMAND_EVENT,
   type ImagePreviewCommandDetail,
 } from './imagePreviewCommands';
-import { ImageInspectModal, ImagePreview } from './ImageMessageBlocks';
 
 Object.assign(globalThis, { React, IS_REACT_ACT_ENVIRONMENT: true });
 
@@ -31,7 +31,9 @@ describe('ImageInspectModal', () => {
     root = createRoot(container);
 
     act(() => {
-      root?.render(<ImageInspectModal image={{ alt: 'Plot', src: 'data:image/png;base64,ZmFrZQ==', caption: 'Run chart' }} onClose={onClose} />);
+      root?.render(
+        <ImageInspectModal image={{ alt: 'Plot', src: 'data:image/png;base64,ZmFrZQ==', caption: 'Run chart' }} onClose={onClose} />,
+      );
     });
     expect(container.querySelector('[role="dialog"][aria-label="Run chart"]')).not.toBeNull();
 

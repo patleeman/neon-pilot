@@ -106,18 +106,22 @@ async function clickMessageAction(page: Page, text: string, action: 'fork' | 're
   const existing = new Set((await readSessions(page)).map((session) => session.id).filter((id): id is string => typeof id === 'string'));
   const clicked = await page.evaluate(
     ({ needle, actionText }) => {
-      const expectedButtonText = actionText === 'fork' ? '⑂ fork' : '↩ rewind';
+      const expectedButtonLabel = actionText === 'fork' ? 'Fork into a new conversation' : 'Rewind into a new conversation';
       const blocks = Array.from(document.querySelectorAll('[data-transcript-block-id]')).filter(
         (candidate) => !candidate.closest('[data-chat-rail="1"]'),
       );
       const block = blocks.find((candidate) => (candidate.textContent || '').includes(needle));
       if (!block) return { ok: false, reason: 'block not found' };
       block.scrollIntoView({ block: 'center', inline: 'nearest' });
-      const button = Array.from(block.querySelectorAll('button')).find(
-        (candidate) => (candidate.textContent || '').trim().toLowerCase() === expectedButtonText,
+      const button = Array.from(block.querySelectorAll('button')).find((candidate) =>
+        (candidate.getAttribute('aria-label') || '').startsWith(expectedButtonLabel),
       ) as HTMLButtonElement | undefined;
       if (!button)
-        return { ok: false, reason: 'button not found', buttons: Array.from(block.querySelectorAll('button')).map((b) => b.textContent) };
+        return {
+          ok: false,
+          reason: 'button not found',
+          buttons: Array.from(block.querySelectorAll('button')).map((candidate) => candidate.getAttribute('aria-label')),
+        };
       button.click();
       return { ok: true };
     },

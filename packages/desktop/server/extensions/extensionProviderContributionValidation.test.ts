@@ -35,9 +35,7 @@ describe('extensionProviderContributionValidation', () => {
     expect(() => validateConversationConnectionProviderContributions([{ id: 'connections', action: 'load', kind: 'bad' }])).toThrow(
       'Extension manifest contributes.conversationConnectionProviders[0].kind must be one of: activity, state, asset, context, integration, surface.',
     );
-    expect(() =>
-      validateConversationConnectionProviderContributions([{ id: 'connections', action: 'load', surfaces: ['bad'] }]),
-    ).toThrow(
+    expect(() => validateConversationConnectionProviderContributions([{ id: 'connections', action: 'load', surfaces: ['bad'] }])).toThrow(
       'Extension manifest contributes.conversationConnectionProviders[0].surfaces[0] must be one of: activityShelf, composerShelf, rightRail, workbench, sidebar, cli.',
     );
     expect(() => validateRuntimeProviderContributions([{ id: 'runtime', handler: 'load' }])).toThrow(

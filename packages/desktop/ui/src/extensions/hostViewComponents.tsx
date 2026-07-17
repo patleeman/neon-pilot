@@ -79,10 +79,10 @@ function ConversationPageHost({ context, hostProps }: ExtensionHostViewComponent
 
 function ApplicationHomeHost() {
   const navigate = useNavigate();
-  const { applications } = useExtensionRegistry();
+  const { applications, applicationNavigation } = useExtensionRegistry();
   const [query, setQuery] = useState('');
+  const normalizedQuery = query.trim().toLocaleLowerCase();
   const availableApplications = useMemo(() => {
-    const normalizedQuery = query.trim().toLocaleLowerCase();
     return applications
       .filter((application) => application.available && application.id !== 'system-home:home')
       .filter(
@@ -92,16 +92,40 @@ function ApplicationHomeHost() {
           application.description?.toLocaleLowerCase().includes(normalizedQuery),
       )
       .sort((left, right) => (left.order ?? 0) - (right.order ?? 0) || left.title.localeCompare(right.title));
-  }, [applications, query]);
+  }, [applications, normalizedQuery]);
+  const availableDestinations = useMemo(() => {
+    const applicationById = new Map(
+      applications
+        .filter((application) => application.available && application.id !== 'system-home:home')
+        .map((application) => [application.id, application]),
+    );
+    return applicationNavigation
+      .map((destination) => ({ destination, application: applicationById.get(destination.applicationId) }))
+      .filter((entry): entry is typeof entry & { application: NonNullable<typeof entry.application> } =>
+        Boolean(
+          entry.application &&
+          (!normalizedQuery ||
+            entry.destination.label.toLocaleLowerCase().includes(normalizedQuery) ||
+            entry.application.title.toLocaleLowerCase().includes(normalizedQuery)),
+        ),
+      )
+      .sort(
+        (left, right) =>
+          left.application.order - right.application.order ||
+          left.destination.slotOrder - right.destination.slotOrder ||
+          left.destination.order - right.destination.order ||
+          left.destination.label.localeCompare(right.destination.label),
+      );
+  }, [applicationNavigation, applications, normalizedQuery]);
 
   return (
     <AppPageLayout shellClassName="ui-home-launcher-shell">
       <main className="ui-home-launcher" aria-labelledby="home-applications-title">
         <SearchInput
           autoFocus
-          aria-label="Search applications"
+          aria-label="Search applications and destinations"
           className="ui-home-launcher-search"
-          placeholder="Search applications"
+          placeholder="Search applications and destinations"
           value={query}
           onChange={(event) => setQuery(event.currentTarget.value)}
         />
@@ -116,6 +140,7 @@ function ApplicationHomeHost() {
                   key={application.id}
                   className="ui-home-launcher-tile"
                   label={application.title}
+                  description={application.description}
                   onClick={() => navigate(application.startRoute)}
                   icon={<ApplicationIcon className="ui-home-launcher-icon" icon={application.icon} title={application.title} />}
                 />
@@ -127,6 +152,31 @@ function ApplicationHomeHost() {
             </p>
           )}
         </section>
+        {availableDestinations.length > 0 ? (
+          <section className="ui-home-launcher-section" aria-labelledby="home-destinations-title">
+            <h2 id="home-destinations-title" className="ui-home-launcher-title">
+              Destinations
+            </h2>
+            <div className="ui-home-destination-grid">
+              {availableDestinations.map(({ destination, application }) => (
+                <ActionTile
+                  key={destination.id}
+                  className="ui-home-destination-tile"
+                  label={destination.label}
+                  meta={application.title}
+                  onClick={() => navigate(destination.route)}
+                  icon={
+                    <ApplicationIcon
+                      className="ui-home-destination-icon"
+                      icon={destination.icon ?? application.icon}
+                      title={destination.label}
+                    />
+                  }
+                />
+              ))}
+            </div>
+          </section>
+        ) : null}
       </main>
     </AppPageLayout>
   );

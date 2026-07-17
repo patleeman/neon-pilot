@@ -55,7 +55,7 @@ function runGit(cwd: string, args: string[], options?: { encoding?: BufferEncodi
       args,
       cwd,
       timeoutMs: options?.timeout ?? 4_000,
-  });
+    });
     if (options?.encoding === 'buffer') return Buffer.from(result.stdout, 'utf-8');
     return result.stdout;
   } catch {

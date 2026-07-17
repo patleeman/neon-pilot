@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -104,10 +104,14 @@ describe('secretStore', () => {
 
     setProviderApiKeySecret('openrouter', 'provider-secret', stateRoot);
 
-    expect(execFileSyncMock).toHaveBeenCalledWith('security', ['add-generic-password', '-U', '-s', 'neon-pilot', '-a', 'provider:openrouter:apiKey', '-w'], {
-      input: 'provider-secret\nprovider-secret\n',
-      stdio: ['pipe', 'ignore', 'pipe'],
-    });
+    expect(execFileSyncMock).toHaveBeenCalledWith(
+      'security',
+      ['add-generic-password', '-U', '-s', 'neon-pilot', '-a', 'provider:openrouter:apiKey', '-w'],
+      {
+        input: 'provider-secret\nprovider-secret\n',
+        stdio: ['pipe', 'ignore', 'pipe'],
+      },
+    );
     expect(execFileSyncMock.mock.calls.flatMap(([, args]) => args as string[])).not.toContain('provider-secret');
     expect(JSON.parse(readFileSync(join(stateRoot, 'secrets.index.json'), 'utf-8'))).toEqual(['provider:openrouter:apiKey']);
   });
